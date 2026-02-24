@@ -609,6 +609,13 @@ function startResolution() {
     // ----------------------------------------------------
 
     if (state.phase !== 'planning') return;
+    // --- SCARE ENFORCEMENT ---
+    const playerBlocks = state.player.timeline.filter(c => c && c.type === 'block').length;
+    if (state.player.statuses.mustBlock > 0 && playerBlocks < state.player.statuses.mustBlock) {
+        return alert(`⚠️ SCARED: You must place at least ${state.player.statuses.mustBlock} Block(s) this turn!`);
+    }
+    state.player.statuses.mustBlock = 0; 
+    state.ai.statuses.mustBlock = 0;
     state.phase = 'flash';
     document.querySelectorAll('button').forEach(b => b.disabled = true);
     

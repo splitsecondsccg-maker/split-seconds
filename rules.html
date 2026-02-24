@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Seconds - Official Rulebook</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #ddd;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #222;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+        }
+        h1 {
+            color: #f1c40f;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+        }
+        h2 {
+            color: #fff;
+            text-align: center;
+            margin-top: 0;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        h3 {
+            color: #e74c3c;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 5px;
+            margin-top: 40px;
+            text-transform: uppercase;
+        }
+        h4 {
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        ul {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .highlight {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+        .cost-note {
+            color: #aaa;
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+        .example-box {
+            background: #111;
+            padding: 15px 20px;
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .example-box p {
+            margin-bottom: 10px;
+        }
+        .example-box p:last-child {
+            margin-bottom: 0;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #fff;
+            background: #e74c3c;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #c0392b;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #444;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">⬅ Back to Game</a>
+
+    <h1>📜 Welcome to the Arena</h1>
+    <h2>Split Seconds - Official Rulebook</h2>
+    <hr>
+
+    <h3>The Premise</h3>
+    <p><strong>Split Seconds</strong> is a high-speed, double-blind dueling game where combat happens in flashes of precognition. You and your opponent will secretly plan a sequence of strikes, defenses, and abilities across a <strong>5-Moment Timeline</strong>. Before the clash begins, you will both get a glimpse of the future. Will you stick to your plan, or will you pay the price to panic, pivot, and outsmart your enemy?</p>
+    <p><span class="highlight">The Objective:</span> Reduce your opponent's Health Points (HP) to 0 before they do the same to you!</p>
+
+    <h3>1. Core Resources & Classes</h3>
+    <ul>
+        <li><strong style="color: #2ecc71;">Health (HP):</strong> Your life force. If it hits 0, you lose.</li>
+        <li><strong style="color: #f1c40f;">Stamina (⚡):</strong> The energy used to play cards. Powerful attacks and parries cost Stamina.</li>
+        <li><strong style="color: #3498db;">The Timeline:</strong> A board with <strong>5 Slots (Moments)</strong>. Every turn, you arrange your moves into these 5 moments. Fast actions take 1 moment; heavy attacks take 2 or 3 moments to "charge up" and trigger on their final slot.</li>
+        <li><strong style="color: #9b59b6;">Class Passives:</strong> Every class (Brute, Rogue, Paladin, etc.) has a unique <strong>Passive Ability</strong> that is permanently active during the match. Check your class details to see your unique advantage!</li>
+        <li><strong style="color: #e67e22;">Hand Limit:</strong> You can only hold a maximum of <strong>7 cards</strong> in your hand at once. Managing your hand size through planning and Exertion is key to making sure you have room to draw new cards!</li>
+    </ul>
+
+    <h3>2. The Combat System & Actions</h3>
+    <p>Combat is built around predicting your opponent's exact sequence. The core triangle is simple: <strong>Attacks beat Grabs, Grabs beat Defenses, and Defenses beat Attacks.</strong></p>
+    
+    <ul>
+        <li><strong>Attacks ⚔️ :</strong> Deal damage to the opponent's HP. They will hit unless Blocked or Parried. Attacks will also completely interrupt and defeat an opponent who is trying to Grab you.</li>
+        <li><strong>Blocks 🛡️ <span class="cost-note">(Cost: 0 ⚡ | Limit: Unlimited)</span>:</strong> Reduces incoming damage. Since they cost nothing, you can fill as many empty slots with Blocks as you want to survive a turn when you are low on Stamina.</li>
+        <li><strong>Parries 🤺 <span class="cost-note">(Cost: 1 ⚡ | Limit: Unlimited)</span>:</strong> Completely negates an incoming Attack. <span class="highlight">If you successfully Parry an Attack, the attacker is staggered and will draw 1 less card at the start of the next round.</span> You can play multiple Parries per turn, provided you have the Stamina.</li>
+        <li><strong>Grabs 🤚 <span class="cost-note">(Limit: Based on cards)</span>:</strong> Grappling moves designed specifically to punish defensive players. <strong>Grabs completely bypass Blocks and Parries.</strong> However, Grabs <em>only</em> resolve if the opponent is actively Blocking or Parrying in that moment! If the opponent is Attacking, or if their slot is simply empty, your Grab completely misses.</li>
+        <li><strong>Empty Slots 🕳️ <span class="cost-note">(Cost: 0 ⚡ | Limit: Unlimited)</span>:</strong> You do not <em>have</em> to fill every moment! Leaving a slot completely blank costs no Stamina. While this leaves you defenseless against Attacks, <strong>it is a brilliant way to make an opponent's Grab completely miss</strong> if you anticipate one and don't have the Stamina to Attack!</li>
+        <li><strong>Class Abilities 🌟 <span class="cost-note">(Limit: Once per turn)</span>:</strong> Unique active skills based on your chosen class. You may only place each specific ability onto the timeline <strong>once per round</strong>.</li>
+    </ul>
+
+    <div class="example-box">
+        <h4>⚔️ Combat Examples:</h4>
+        <p><strong>Example 1 (The Parry):</strong> You place a 3-moment Heavy Attack (Moments 1, 2, 3). Your opponent places a Parry in Moment 3. Your attack triggers on Moment 3, hits the Parry, and is negated. You take no damage, but you will draw 1 less card next turn.</p>
+        <p><strong>Example 2 (The Grab):</strong> You place a Grab in Moment 2. Your opponent placed a Block in Moment 2. Because they are in a defensive stance, your Grab connects, bypassing their Block and dealing its full effect!</p>
+        <p><strong>Example 3 (The Empty Dodge):</strong> You place a Grab in Moment 2. Your opponent anticipated this, so they left Moment 2 <strong>Empty</strong>. Because they are not Blocking or Parrying, your Grab fails completely!</p>
+    </div>
+
+    <h3>3. Turn Phases</h3>
+    <p>Every round follows a strict sequence of events:</p>
+
+    <h4>Phase 1: Upkeep & Exertion</h4>
+    <p>Before you plan your moves, you prepare your resources for the round:</p>
+    <ol>
+        <p>At the very start of the match, both players begin with a starting hand of <strong>3 cards</strong>. Each subsequent round follows this flow:</p>
+        <li><strong>Regeneration:</strong> Both players automatically regenerate <strong>3 Stamina</strong> (up to their character's maximum).</li>
+        <li><strong>Exertion (Optional):</strong> You may permanently discard cards from your hand to gain <strong>+1 Stamina</strong> per card discarded. This happens before you draw!</li>
+        <li><strong>Draw:</strong> Both players draw up to <strong>2 new cards</strong> to replenish their hands. 
+            <ul>
+                <li><em>The Hand Limit:</em> If drawing would put you over your maximum hand size of <strong>7</strong>, you stop drawing and the excess cards are discarded to the void.</li>
+                <li><em>The Parry Penalty:</em> If your attack was Parried in the previous round, your draw is reduced by 1!</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h4>Phase 2: Planning (Double-Blind)</h4>
+    <p>Both players secretly drag and drop cards onto their 5-Moment Timeline. You must pay the Stamina cost of the cards upfront. Once you are happy with your sequence, you Lock In.</p>
+
+    <h4>Phase 3: The Precognition Flash</h4>
+    <p>The engine randomly selects <strong>one of the 5 moments</strong> and reveals what both players have placed in that exact slot. You now have a glimpse of the future.</p>
+
+    <h4>Phase 4: The Pivot</h4>
+    <p>Did the Flash reveal that your heavy attack is about to get Parried? It's time to Pivot!</p>
+    <ul>
+        <li>Both players evaluate the revealed cards simultaneously.</li>
+        <li>You may choose to pay a <strong>1 Stamina Tax</strong> to cancel the exact card you revealed in the Flash. <em>(You must have at least 1 Stamina saved up to do this!)</em></li>
+        <li>The canceled card is returned to your hand, and its initial Stamina cost is refunded to you.</li>
+        <li>You now enter a "Mini-Planning" phase where you can secretly drop new cards into those freed-up slots.</li>
+    </ul>
+
+    <h4>Phase 5: The Clash (Resolution)</h4>
+    <p>The Timeline unlocks and the engine resolves the combat moment by moment, from Moment 1 to Moment 5. Cards placed in the same moment clash against each other based on the Combat System rules above. Once Moment 5 resolves, the round ends and a new Turn begins at Phase 1!</p>
+
+    <div class="example-box" style="border-left-color: #f1c40f;">
+        <h4 style="color: #f1c40f;">💡 Advanced Tactical Tips</h4>
+        <p><strong>Save 1 Stamina for the Pivot:</strong> If you end your Planning Phase with 0 Stamina, <strong>you cannot afford to Pivot</strong>. If the Flash reveals you are walking into a trap, you will be forced to just watch it happen!</p>
+        <p><strong>Bait the Pivot:</strong> If the Flash reveals your opponent is Blocking, and you are Attacking, they might Pivot to try and Grab you. You can anticipate this by Pivoting your <em>own</em> Attack into a fast 1-moment Attack to counter their incoming Grab!</p>
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,83 @@
+
+
+# 📜 Split Seconds - Official Rulebook
+
+### **The Premise**
+
+**Split Seconds** is a high-speed, double-blind dueling game where combat happens in flashes of precognition. You and your opponent will secretly plan a sequence of strikes, defenses, and abilities across a **5-Moment Timeline**. Before the clash begins, you will both get a glimpse of the future. Will you stick to your plan, or will you pay the price to panic, pivot, and outsmart your enemy?
+
+**The Objective:** Reduce your opponent's Health Points (HP) to 0 before they do the same to you!
+
+---
+
+### **1. Core Resources & Classes**
+
+* **Health (HP):** Your life force. If it hits 0, you lose.
+* **Stamina (⚡):** The energy used to play cards. Powerful attacks and parries cost Stamina.
+* **The Timeline:** A board with **5 Slots (Moments)**. Every turn, you arrange your moves into these 5 moments. Fast actions take 1 moment; heavy attacks take 2 or 3 moments to "charge up" and trigger on their final slot.
+* **Class Passives:** Every class (Brute, Rogue, Paladin, etc.) has a unique **Passive Ability** that is permanently active during the match. Check your class details to see your unique advantage!
+Hand Limit: You can only hold a maximum of 7 cards in your hand at once. Managing your hand size through planning and Exertion is key to making sure you have room to draw new cards!
+
+---
+
+### **2. The Combat System & Actions**
+
+Combat is built around predicting your opponent's exact sequence.
+
+* **Attacks:** Deal damage to the opponent's HP. They will hit unless Blocked or Parried. Attacks will also completely interrupt and defeat an opponent who is trying to Grab you.
+* **Blocks (Cost: 0 ⚡ | Limit: Unlimited):** Reduces incoming damage. Since they cost nothing, you can fill as many empty slots with Blocks as you want to survive a turn when you are low on Stamina.
+* **Parries (Cost: 1 ⚡ | Limit: Unlimited):** Completely negates an incoming Attack. **If you successfully Parry an Attack, the attacker is staggered and will draw 1 less card at the start of the next round.** You can play multiple Parries per turn, provided you have the Stamina.
+* **Grabs:** Grappling moves designed specifically to punish defensive players. **Grabs completely bypass Blocks and Parries.** However, Grabs *only* resolve if the opponent is actively Blocking or Parrying in that moment! If the opponent is Attacking, or if their slot is simply empty, your Grab completely misses.
+* **Empty Slots (Cost: 0 ⚡ | Limit: Unlimited):** You do not *have* to fill every moment! Leaving a slot completely blank costs no Stamina. While this leaves you defenseless against Attacks, **it is a brilliant way to make an opponent's Grab completely miss** if you anticipate one and don't have the Stamina to Attack!
+* **Class Abilities (Limit: Once per turn):** Unique active skills based on your chosen class. You may only place each specific ability onto the timeline **once per round**.
+
+#### **⚔️ Combat Examples:**
+
+* *Example 1 (The Parry):* You place a 3-moment Heavy Attack (Moments 1, 2, 3). Your opponent places a Parry in Moment 3. Your attack triggers on Moment 3, hits the Parry, and is negated. You take no damage, but you will draw 1 less card next turn.
+* *Example 2 (The Grab):* You place a Grab in Moment 2. Your opponent placed a Block in Moment 2. Because they are in a defensive stance, your Grab connects, bypassing their Block and dealing its full effect!
+* *Example 3 (The Empty Dodge):* You place a Grab in Moment 2. Your opponent anticipated this, so they left Moment 2 **Empty**. Because they are not Blocking or Parrying, your Grab fails completely!
+
+---
+
+### **3. Turn Phases**
+
+Every round follows a strict sequence of events:
+
+#### **Phase 1: Upkeep & Exertion**
+
+Before you plan your moves, you prepare your resources for the round:
+
+1. **Regeneration:** Both players regenerate **3 Stamina** (up to their character's maximum).
+2. **Exertion (Optional):** You may permanently discard cards from your hand to gain **+1 Stamina** per card discarded.
+3. **Draw:** Both players draw up to **2 new cards** to replenish their hands. The Hand Limit: If drawing would put you over your maximum hand size of 7, you only draw until you hit the limit (or excess cards are immediately discarded).*(Penalty: If your attack was Parried in the previous round, your draw is reduced by 1, meaning you only draw 1 card!)*
+
+#### **Phase 2: Planning (Double-Blind)**
+
+Both players secretly drag and drop cards onto their 5-Moment Timeline.
+
+* You must pay the Stamina cost of the cards upfront.
+* Once you are happy with your sequence, you Lock In.
+
+#### **Phase 3: The Precognition Flash**
+
+The engine randomly selects **one of the 5 moments** and reveals what both players have placed in that exact slot. You now have a glimpse of the future.
+
+#### **Phase 4: The Pivot**
+
+Did the Flash reveal that your heavy attack is about to get Parried? It's time to Pivot!
+
+* Both players evaluate the revealed cards simultaneously.
+* You may choose to pay a **1 Stamina Tax** to cancel the exact card you revealed in the Flash. *(You must have at least 1 Stamina saved up to do this!)*
+* The canceled card is returned to your hand, and its initial Stamina cost is refunded to you.
+* You now enter a "Mini-Planning" phase where you can secretly drop new cards into those freed-up slots.
+
+#### **Phase 5: The Clash (Resolution)**
+
+The Timeline unlocks and the engine resolves the combat moment by moment, from Moment 1 to Moment 5. Cards placed in the same moment clash against each other based on the Combat System rules above. Once Moment 5 resolves, the round ends and a new Turn begins at Phase 1!
+
+---
+
+### **💡 Advanced Tactical Tips**
+
+* **Save 1 Stamina for the Pivot:** If you end your Planning Phase with 0 Stamina, **you cannot afford to Pivot**. If the Flash reveals you are walking into a trap, you will be forced to just watch it happen!
+* **Bait the Pivot:** If the Flash reveals your opponent is Blocking, and you are Attacking, they might Pivot to try and Grab you. You can anticipate this by Pivoting your *own* Attack into a fast 1-moment Attack to counter their incoming Grab!

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Seconds</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="char-select-screen">
+        <h1 style="text-shadow: 0 4px 6px rgba(0,0,0,0.8); font-size: 3.5em; margin-bottom: 10px; color: #f1c40f;">SPLIT SECONDS</h1>
+        <div class="select-container">
+            <div style="text-align: center;">
+                <h3 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Select Player</h3>
+                <div class="roster" id="player-roster">
+                    <button class="char-btn selected" style="background-image: url('rogue.png');" onclick="selectChar('player', 'Rogue')">
+                        <span>Rogue</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Rogue</b><hr style="border-color:#555;margin:4px 0;">Fly like a butterfly, sting like a bee. Fast attacks, low costs, and sudden damage spikes.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('brute.png');" onclick="selectChar('player', 'Brute')">
+                        <span>Brute</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Brute</b><hr style="border-color:#555;margin:4px 0;">The king of raw damage. Slow, devastating attacks that crush through defenses.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('paladin.png');" onclick="selectChar('player', 'Paladin')">
+                        <span>Paladin</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Paladin</b><hr style="border-color:#555;margin:4px 0;">The defensive powerhouse. High armor, strong sustain, and punishing blocks.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('vampiress.png');" onclick="selectChar('player', 'Vampiress')">
+                        <span>Vampiress</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Vampiress</b><hr style="border-color:#555;margin:4px 0;">The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('necromancer.png');" onclick="selectChar('player', 'Necromancer')">
+                        <span>Necromancer</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
+                    </button>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <h3 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Select Opponent</h3>
+                <div class="roster" id="ai-roster">
+                    <button class="char-btn ai-selected" style="background-image: url('brute.png');" onclick="selectChar('ai', 'Brute')">
+                        <span>Brute</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Brute</b><hr style="border-color:#555;margin:4px 0;">The king of raw damage. Slow, devastating attacks that crush through defenses.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('rogue.png');" onclick="selectChar('ai', 'Rogue')">
+                        <span>Rogue</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Rogue</b><hr style="border-color:#555;margin:4px 0;">Fly like a butterfly, sting like a bee. Fast attacks, low costs, and sudden damage spikes.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('paladin.png');" onclick="selectChar('ai', 'Paladin')">
+                        <span>Paladin</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Paladin</b><hr style="border-color:#555;margin:4px 0;">The defensive powerhouse. High armor, strong sustain, and punishing blocks.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('vampiress.png');" onclick="selectChar('ai', 'Vampiress')">
+                        <span>Vampiress</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Vampiress</b><hr style="border-color:#555;margin:4px 0;">The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('necromancer.png');" onclick="selectChar('ai', 'Necromancer')">
+                        <span>Necromancer</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+        <a href="rules.html" target="_blank" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 8px 20px; border-radius: 5px; background: rgba(241, 196, 15, 0.1);">
+            📖 HOW TO PLAY (RULES)
+        </a>
+    </div>
+        <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="top-bar">
+            <div class="stats-area" id="ai-stats">
+                <div class="portrait-container" id="ai-portrait-anchor">
+                    <div class="portrait" id="ai-portrait"></div>
+                    <div class="portrait-tooltip" id="ai-portrait-tooltip"></div>
+                </div>
+                <div class="char-details"><strong>Opponent<br><span id="ai-class-name" style="color: #ccc;">Brute</span></strong></div>
+                <div class="bars">
+                    <div class="bar-container"><div class="bar-label" id="ai-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="ai-hp-bar"></div></div><div class="bar-label">HP</div></div>
+                    <div class="bar-container"><div class="bar-label" id="ai-stam-label">10/10</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="ai-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                </div>
+                <div class="armor-box">🛡️<span id="ai-armor">3</span></div>
+                
+                <div id="ai-ability-container" style="margin-left: 10px; display: flex; flex-direction: row; gap: 10px; flex-wrap: wrap;"></div>
+                <div class="status-container" id="ai-statuses"></div>
+                <div id="ai-hand-count" style="font-size: 14px; font-weight: bold; color: #ddd; margin-left: 15px;"></div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; flex-grow: 1; margin: 20px 0;">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="timeline" id="ai-timeline"><div class="slot" data-moment="1">1</div><div class="slot" data-moment="2">2</div><div class="slot" data-moment="3">3</div><div class="slot" data-moment="4">4</div><div class="slot" data-moment="5">5</div></div>
+                <div class="timeline" id="player-timeline"><div class="slot" data-moment="1">1</div><div class="slot" data-moment="2">2</div><div class="slot" data-moment="3">3</div><div class="slot" data-moment="4">4</div><div class="slot" data-moment="5">5</div></div>
+            </div>
+            
+            <button id="btn-lock" class="submit-btn" onclick="startResolution()">
+                ⚔️<br>LOCK
+            </button>
+        </div>
+
+        <div class="bottom-bar" style="display: flex; justify-content: flex-start; align-items: flex-end; gap: 40px; width: 100%; padding-right: 280px; box-sizing: border-box;">
+            
+            <div class="stats-area" id="player-stats">
+                <div class="portrait-container" id="p-portrait-anchor">
+                    <div class="portrait" id="p-portrait"></div>
+                    <div class="portrait-tooltip" id="p-portrait-tooltip"></div>
+                </div>
+                <div class="char-details"><strong>Player<br><span id="p-class-name" style="color: #4facfe;">Rogue</span></strong></div>
+                <div class="bars">
+                    <div class="bar-container"><div class="bar-label" id="p-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="p-hp-bar"></div></div><div class="bar-label">HP</div></div>
+                    <div class="bar-container"><div class="bar-label" id="p-stam-label">6/6</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="p-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                </div>
+                <div class="armor-box" style="border-color: #4facfe;">🛡️<span id="p-armor">2</span></div>
+                
+                <div id="player-ability-container" style="margin-left: 10px; display: flex; flex-direction: row; gap: 10px; flex-wrap: wrap;"></div>
+                <div class="status-container" id="p-statuses"></div>
+            </div>
+            
+            <div class="controls" id="action-controls" style="display: flex; gap: 15px; align-items: center; margin-bottom: 5px;">
+                <button id="btn-block" class="basic-action-btn" onclick="addBasicAction('Block', 0, 1, 0, 'block')">
+                    <span style="font-size: 24px;">🛡️</span><br><b>Block</b><br><small>0⚡ | 1⏳</small>
+                </button>
+                <button id="btn-parry" class="basic-action-btn" onclick="addBasicAction('Parry', 1, 1, 0, 'parry')">
+                    <span style="font-size: 24px;">🤺</span><br><b>Parry</b><br><small>1⚡ | 1⏳</small>
+                </button>
+                <button class="btn-danger basic-action-btn" onclick="backToMenu()" style="height: 100%;">
+                    <span style="font-size: 24px;">🚪</span><br><b>Menu</b><br><small>Quit</small>
+                </button>
+            </div>
+
+            <div class="controls" id="exert-controls" style="display: none; flex-direction: column; gap: 10px; align-items: center; margin-bottom: 5px; background: rgba(255, 71, 87, 0.1); padding: 15px; border: 2px dashed #ff4757; border-radius: 10px;">
+                <h3 style="margin: 0; color: #ff4757; text-transform: uppercase; letter-spacing: 2px;">⚡ Phase 1: Exertion ⚡</h3>
+                <p style="margin: 0; font-size: 14px; color: #ddd;">Select cards to burn for +1 Stamina each, or click confirm to skip.</p>
+                
+                <div style="display: flex; gap: 15px;">
+                    <button id="btn-confirm-exert" class="submit-btn" onclick="confirmExert()" style="background: #ff4757; width: 250px; border-radius: 5px; border: none;">
+                        CONFIRM & DRAW
+                    </button>
+                    <button class="btn-danger basic-action-btn" onclick="backToMenu()">
+                        <span style="font-size: 18px;">🚪</span><br><b>Menu</b>
+                    </button>
+                </div>
+            </div>
+            <div class="hand" id="player-hand" style="margin-top: 0; margin-bottom: 5px;"></div>
+        </div>
+
+        <div class="log" id="battle-log"><strong>Battle Log</strong></div>
+        <div id="flash-modal" style="display: none;">
+            <div class="flash-header" id="flash-header">
+                <h3 id="flash-moment-title" style="margin: 0; color: #4facfe; text-shadow: 0 0 5px #4facfe;">FLASH: MOMENT X</h3>
+                <button onclick="toggleFlashSize()" style="background: none; border: 1px solid #fff; color: #fff; cursor: pointer; padding: 2px 8px; border-radius: 4px;">_</button>
+            </div>
+            <div class="flash-body" id="flash-body">
+                <div style="display: flex; gap: 40px; justify-content: center; margin-bottom: 20px;">
+                    <div class="flash-card-box">
+                        <h3 style="color: #ff5e62; margin-top: 0;">Opponent</h3>
+                        <div id="flash-ai-card" class="flash-card-render"></div>
+                    </div>
+                    <div class="flash-card-box">
+                        <h3 style="color: #4facfe; margin-top: 0;">You</h3>
+                        <div id="flash-p-card" class="flash-card-render"></div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 20px; justify-content: center;">
+                    <button class="submit-btn" onclick="lockIn()">🔒 LOCK IN (0 ⚡)</button>
+                    <button class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="engine.js"></script>
+</body>
+</html>

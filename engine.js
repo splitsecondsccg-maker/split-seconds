@@ -802,10 +802,35 @@ function resolveMoment() {
         setTimeout(() => nextTurn(), 1500); return; 
     }
     
-    document.querySelectorAll('.slot').forEach(s => s.style.backgroundColor = 'transparent');
-    document.querySelector(`#player-timeline .slot:nth-child(${state.currentMoment+1})`).style.backgroundColor = 'rgba(255,255,255,0.2)';
-    document.querySelector(`#ai-timeline .slot:nth-child(${state.currentMoment+1})`).style.backgroundColor = 'rgba(255,255,255,0.2)';
+    // 1. Clear all previous glows from both slots AND cards
+    document.querySelectorAll('.slot, .card').forEach(el => {
+        el.style.boxShadow = 'none';
+        el.style.filter = 'none'; // Clear any brightness filters
+    });
 
+    // 2. Identify the current slots
+    const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${state.currentMoment+1})`);
+    const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${state.currentMoment+1})`);
+    
+    // 3. Helper function to make the 'top-most' element glow
+    const applyGlow = (slot) => {
+        if (!slot) return;
+        
+        // Check if there is a card inside this slot
+        const card = slot.querySelector('.card');
+        const target = card || slot; // Glow the card if it exists, otherwise the slot
+        
+        target.style.boxShadow = '0 0 20px 8px rgba(255, 255, 255, 0.7)';
+        
+        // If it's a card, let's also make it slightly brighter so it "pops"
+        if (card) {
+            card.style.filter = 'brightness(1.2)';
+            card.style.zIndex = '10'; // Ensure it sits above neighboring cards
+        }
+    };
+
+    applyGlow(pSlot);
+    applyGlow(aiSlot);
     let pAction = state.player.timeline[state.currentMoment];
     let aiAction = state.ai.timeline[state.currentMoment];
 
@@ -951,6 +976,14 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         case 'heal_2_on_hit': 
             if (context.hitLanded || context.grabHit) {
                 source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); 
+            }
+            break;
+        case 'poison_dagger':
+            if (context.hitLanded) {
+                target.hp -= 1;
+                target.roundData.lostLife = true;
+                log(`${sourceKey}'s Poison Dagger deals 1 extra DMG!`);
+                spawnFloatingText(targetKey, '-1', 'float-dmg');
             }
             break;
         case 'heal_3': 

@@ -10,14 +10,15 @@ function buildDeck(blueprint) {
 
 const classData = {
     'Rogue': {
-        maxStam: 8, armor: 3, 
+        maxStam: 7, armor: 2, 
         passiveDesc: 'Upon hit, opponent next attack has -1 DMG.',
         deck: [
             { id: 'r1', copies: 3, name: 'Quick Jab', type: 'attack', cost: 0, moments: 1, dmg: 2, desc: 'A fast, free strike.' },
             { id: 'r2', copies: 3, name: 'Flurry', type: 'attack', cost: 1, moments: 1, dmg: 3, desc: 'Standard assassin strike.' },
             { id: 'r3', copies: 3, name: 'Lunging Dagger', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Sacrifices time for reach.' },
+            { id: 'r3', copies: 3, name: 'Cutthroat', type: 'attack', cost: 4, moments: 1, dmg: 7, desc: 'Never trust a rogue...' },
             { id: 'r4', copies: 4, name: 'Kidney Strike', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Destroys 1 enemy Stamina on hit.', effect: 'exhaust_1' },
-            { id: 'r6', copies: 4, name: 'Sharpen', type: 'buff', cost: 1, moments: 1, desc: '+3 DMG to next Attack.', effect: 'buff_next_atk_3' }
+            { id: 'r6', copies: 6, name: 'Sharpen', type: 'buff', cost: 1, moments: 1, desc: '+3 DMG to next Attack.', effect: 'buff_next_atk_3' }
         ]
     },
     'Brute': {

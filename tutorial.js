@@ -362,7 +362,7 @@ const tutorialSteps = [
     },
     {
         // FIXED: there is no second flash after a pivot fill.
-        message: "Nice pivot. There is **no second Flash** — after you fill the slot(s) and press LOCK, the round goes straight to RESOLUTION.\n\nWatch the timeline resolve, then click NEXT.",
+        message: "Nice pivot. There is **no second Flash** — after you fill the slot(s) and press LOCK, the round goes straight to RESOLUTION.\n\nBEWARE - your oponent can also pivot! Always Watch for how much stamina they have left!\n\nWatch the timeline resolve, then click NEXT.",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());

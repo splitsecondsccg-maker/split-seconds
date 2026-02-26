@@ -452,6 +452,9 @@ function renderAITimeline() {
 }
 
 function planAI() {
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        return; // The tutorial will handle AI placement, don't do random stuff!
+    }
     state.ai.timeline = [null, null, null, null, null];
     let slotsLeft = 5; 
     let aiClass = state.ai.class;
@@ -601,6 +604,27 @@ function generateCardHTML(card) {
 }
 
 function startResolution() {
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        const lockSteps = [4, 7, 10, 13, 15]; // Updated steps
+        if (lockSteps.includes(currentStep)) {
+            if (!state.player.timeline[0]) {
+                alert("Coach: Make sure you place your action in Slot 1!");
+                for (let i = 0; i < 5; i++) {
+                    if (state.player.timeline[i]) {
+                        state.player.stam += state.player.timeline[i].cost;
+                        state.player.hand.push(state.player.timeline[i]);
+                        state.player.timeline[i] = null;
+                    }
+                }
+                updateUI();
+                runStep(); 
+                return; 
+            }
+            advanceTutorial();
+        } else {
+            return; 
+        }
+    }
     // --- NEW: If they click Lock In to finish a pivot ---
     if (state.phase === 'pivot_wait') {
         handleAIReaction();
@@ -644,18 +668,32 @@ function startResolution() {
     
     document.getElementById('flash-modal').style.display = 'flex';
     document.querySelectorAll('#flash-modal button').forEach(b => b.disabled = false);
+
 }
 
 function lockIn() {
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        const lockInSteps = [5, 8, 11, 16]; // Updated steps
+        if (lockInSteps.includes(currentStep)) {
+            advanceTutorial();
+        } else { return; }
+    }
+
     // Remove the glow
     document.querySelectorAll('.slot').forEach(s => s.classList.remove('flash-highlight'));
     
     document.getElementById('flash-modal').style.display = 'none';
     log("Player Locks In!");
     handleAIReaction();
+
 }
 
 function pivot() {
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        if (currentStep === 14) { // Pivot step
+            advanceTutorial();
+        } else { return; }
+    }
     if (state.player.stam < 1) return alert("Not enough stamina to Pivot!");
     // Remove the glow (it will be replaced by the yellow Pivot glow)
     document.querySelectorAll('.slot').forEach(s => s.classList.remove('flash-highlight'));
@@ -695,6 +733,7 @@ function pivot() {
     });
     
     log("Player Pivots! Fill the glowing slots, then click your main LOCK IN button.");
+
 }
 
 function handleAIReaction() {
@@ -894,19 +933,20 @@ function resolveMoment() {
     if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; }
     if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = 1; }
 
+    // --- FIXED ARMOR LOGIC: Now safely catches ALL active blocks properly ---
     if(pBlock && aiDmg > 0 && !aiGrab) { 
         if (pActive.name === 'Bone Cage') {
             if(pActive.currentBlock === undefined) pActive.currentBlock = 6;
             let blocked = Math.min(aiDmg, pActive.currentBlock);
             aiDmg -= blocked; pActive.currentBlock -= blocked;
             log(`Player's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('player', 'CAGE', 'float-block'); playSound('block');
-        } else if (pAction && pAction.type === 'block') { 
-            let effectiveArmor = Math.max(0, state.player.armor - state.player.statuses.armorDebuff);
+        } else { 
+            let effectiveArmor = Math.max(0, state.player.armor - (state.player.statuses.armorDebuff || 0));
             aiDmg = Math.max(0, aiDmg - effectiveArmor); 
             log(`Player blocks!`); spawnFloatingText('player', 'BLOCK', 'float-block'); playSound('block'); 
-            if(state.player.class === 'Paladin') { state.player.statuses.nextAtkMod += 1; log("Player Paladin Passive: +1 DMG next attack!"); }
-            if(state.player.statuses.stamOnBlock) state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1);
-            if(state.player.statuses.drawOnBlock) { drawCards(1); state.player.statuses.drawOnBlock = false; }
+            if(state.player.class === 'Paladin' && pAction && pAction.type === 'block') { state.player.statuses.nextAtkMod += 1; log("Player Paladin Passive: +1 DMG next attack!"); }
+            if(state.player.statuses.stamOnBlock && pAction && pAction.type === 'block') state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1);
+            if(state.player.statuses.drawOnBlock && pAction && pAction.type === 'block') { drawCards(1); state.player.statuses.drawOnBlock = false; }
         }
     }
     
@@ -916,34 +956,28 @@ function resolveMoment() {
             let blocked = Math.min(pDmg, aiActive.currentBlock);
             pDmg -= blocked; aiActive.currentBlock -= blocked;
             log(`AI's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('ai', 'CAGE', 'float-block'); playSound('block');
-        } else if (aiAction && aiAction.type === 'block') {
-            let effectiveArmor = Math.max(0, state.ai.armor - state.ai.statuses.armorDebuff);
+        } else {
+            let effectiveArmor = Math.max(0, state.ai.armor - (state.ai.statuses.armorDebuff || 0));
             pDmg = Math.max(0, pDmg - effectiveArmor); 
             log(`AI blocks!`); spawnFloatingText('ai', 'BLOCK', 'float-block'); playSound('block'); 
-            if(state.ai.class === 'Paladin') { state.ai.statuses.nextAtkMod += 1; log("AI Paladin Passive: +1 DMG next attack!"); }
-            if(state.ai.statuses.stamOnBlock) state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1);
+            if(state.ai.class === 'Paladin' && aiAction && aiAction.type === 'block') { state.ai.statuses.nextAtkMod += 1; log("AI Paladin Passive: +1 DMG next attack!"); }
+            if(state.ai.statuses.stamOnBlock && aiAction && aiAction.type === 'block') state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1);
         }
     }
 
     // 1. Apply Damage Reduction (e.g., Brace)
-    if(pDmg > 0) pDmg = Math.max(0, pDmg - state.ai.statuses.dmgReduction);
-    if(aiDmg > 0) aiDmg = Math.max(0, aiDmg - state.player.statuses.dmgReduction);
-
-    // // 2. Clash Length Bonus - disabled for now
-    // if(pAction && aiAction && pAction.type === 'attack' && aiAction.type === 'attack') {
-    //     if(pAction.moments > aiAction.moments) { pDmg++; log("Player length +1 DMG"); }
-    //     else if(aiAction.moments > pAction.moments) { aiDmg++; log("AI length +1 DMG"); }
-    // }
-
-    // 3. Apply Final Damage ONCE
+    if(pDmg > 0) pDmg = Math.max(0, pDmg - (state.ai.statuses.dmgReduction || 0));
+    if(aiDmg > 0) aiDmg = Math.max(0, aiDmg - (state.player.statuses.dmgReduction || 0));
+    
+    // 3. Apply Final Damage ONCE (Attack vs Attack resolves simultaneously here)
     if(pDmg > 0) { 
         state.ai.hp -= pDmg; state.ai.roundData.lostLife = true;
         log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg'); 
         if(pAction && pAction.moments >= 3) { playSound('heavy_impact'); triggerShake(); } else playSound('hit');
         
-        // Passives
+        // Passives - FIXED ROGUE LOGIC
         if(state.player.class === 'Vampiress') { state.player.statuses.nextAtkMod += 1; log("Player Vampiress Passive: +1 DMG next attack!"); }
-        if(state.ai.class === 'Rogue') { state.player.statuses.rogueDebuff = (state.player.statuses.rogueDebuff || 0) + 1; log("AI Rogue Passive: Player next attack -1 DMG!"); }
+        if(state.player.class === 'Rogue') { state.ai.statuses.rogueDebuff = (state.ai.statuses.rogueDebuff || 0) + 1; log("Player Rogue Passive: AI next attack -1 DMG!"); }
     }
     
     if(aiDmg > 0) { 
@@ -951,9 +985,9 @@ function resolveMoment() {
         log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg'); 
         if(aiAction && aiAction.moments >= 3) { playSound('heavy_impact'); triggerShake(); } else playSound('hit');
 
-        // Passives
+        // Passives - FIXED ROGUE LOGIC
         if(state.ai.class === 'Vampiress') { state.ai.statuses.nextAtkMod += 1; log("AI Vampiress Passive: +1 DMG next attack!"); }
-        if(state.player.class === 'Rogue') { state.ai.statuses.rogueDebuff = (state.ai.statuses.rogueDebuff || 0) + 1; log("Player Rogue Passive: AI next attack -1 DMG!"); }
+        if(state.ai.class === 'Rogue') { state.player.statuses.rogueDebuff = (state.player.statuses.rogueDebuff || 0) + 1; log("AI Rogue Passive: Player next attack -1 DMG!"); }
     }
 
     // 4. Trigger Effects
@@ -984,6 +1018,12 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             if (context.hitLanded || context.grabHit) {
                 source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); 
             }
+            break;
+        case 'heal_2':
+            source.hp = Math.min(source.maxHp, source.hp + 2);
+            log(`${sourceKey} heals 2!`);
+            spawnFloatingText(sourceKey, '+2', 'float-heal');
+            playSound('heal');
             break;
         case 'poison_dagger':
             if (context.hitLanded) {

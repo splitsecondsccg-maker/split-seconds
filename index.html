@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Split Seconds</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="tutorial.css">
 </head>
 <body>
 
@@ -66,6 +67,7 @@
         <a href="rules.html" target="_blank" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 8px 20px; border-radius: 5px; background: rgba(241, 196, 15, 0.1);">
             📖 HOW TO PLAY (RULES)
         </a>
+        <button onclick="startTutorial()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em; background-color: #f1c40f; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">PLAY TUTORIAL</button>
     </div>
         <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
     </div>
@@ -96,7 +98,7 @@
                 <div class="timeline" id="player-timeline"><div class="slot" data-moment="1">1</div><div class="slot" data-moment="2">2</div><div class="slot" data-moment="3">3</div><div class="slot" data-moment="4">4</div><div class="slot" data-moment="5">5</div></div>
             </div>
             
-            <button id="btn-lock" class="submit-btn" onclick="startResolution()">
+            <button id="btn-start-resolution" class="submit-btn" onclick="startResolution()">
                 ⚔️<br>LOCK
             </button>
         </div>
@@ -165,8 +167,9 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 20px; justify-content: center;">
-                    <button class="submit-btn" onclick="lockIn()">🔒 LOCK IN (0 ⚡)</button>
-                    <button class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>
+                    <button id="btn-lock" class="submit-btn" onclick="lockIn()">🔒 LOCK IN (0 ⚡)</button>
+                    
+                    <button id="btn-pivot" class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>
                 </div>
             </div>
         </div>
@@ -174,5 +177,16 @@
 
     <script src="data.js"></script>
     <script src="engine.js"></script>
+    </div> <div id="tutorial-overlay">
+        <div id="tutorial-dialogue">
+            <h3 style="color: #f1c40f; margin-top: 0;">Tutorial Coach</h3>
+            <p id="tutorial-text">Tutorial text goes here.</p>
+            <button id="tutorial-next-btn" onclick="advanceTutorial()">Next</button>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="engine.js"></script>
+    <script src="tutorial.js"></script> 
 </body>
 </html>

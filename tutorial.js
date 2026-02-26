@@ -412,7 +412,7 @@ const tutorialSteps = [
 
     // Abilities
     {
-        message: "Last piece: each class has 2 special ABILITIES (⭐). You can use each ability at most once per turn.\n\nClick your first Rogue ability (Quick Step), then hit LOCK.",
+        message: "Last piece: each class has 2 special ABILITIES (⭐) And passive! (you can see it by hover over the portrait!.\n\nYou can use each ability at most once per turn.\n\nClick your first Rogue ability (Quick Step), then hit LOCK.",
         expect: 'lock',
         requiredSlot: 0,
         highlightSelectors: ['#player-ability-container .ability-wrapper:nth-child(1) .ability-btn', '#btn-start-resolution', slotSel('player', 1)],

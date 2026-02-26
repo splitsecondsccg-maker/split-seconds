@@ -604,28 +604,31 @@ function generateCardHTML(card) {
 }
 
 function startResolution() {
+    // --- Tutorial gating (data-driven via tutorial.js `expect`) ---
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
-        const lockSteps = [4, 7, 10, 13, 15]; // Updated steps
-        if (lockSteps.includes(currentStep)) {
-            if (!state.player.timeline[0]) {
-                alert("Coach: Make sure you place your action in Slot 1!");
-                for (let i = 0; i < 5; i++) {
-                    if (state.player.timeline[i]) {
-                        state.player.stam += state.player.timeline[i].cost;
-                        state.player.hand.push(state.player.timeline[i]);
-                        state.player.timeline[i] = null;
-                    }
+        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
+        const expect = step ? step.expect : null;
+        if (expect !== 'lock') return;
+
+        // Optional: enforce Slot 1 for lessons that require it.
+        if (typeof step.requiredSlot === 'number' && step.requiredSlot === 0 && !state.player.timeline[0]) {
+            alert("Coach: Make sure you place your action in Slot 1!");
+            for (let i = 0; i < 5; i++) {
+                if (state.player.timeline[i]) {
+                    state.player.stam += (state.player.timeline[i].cost || 0);
+                    if (!state.player.timeline[i].isBasic) state.player.hand.push(state.player.timeline[i]);
+                    state.player.timeline[i] = null;
                 }
-                updateUI();
-                runStep(); 
-                return; 
             }
-            advanceTutorial();
-        } else {
-            return; 
+            updateUI();
+            runStep();
+            return;
         }
+
+        // Advance the tutorial immediately on successful LOCK.
+        advanceTutorial();
     }
-    // --- NEW: If they click Lock In to finish a pivot ---
+    // --- If they click Lock to finish a pivot ---
     if (state.phase === 'pivot_wait') {
         handleAIReaction();
         return;
@@ -643,7 +646,12 @@ function startResolution() {
     state.phase = 'flash';
     document.querySelectorAll('button').forEach(b => b.disabled = true);
     
-    state.flashMoment = Math.floor(Math.random() * 5);
+    // Pick the flash moment (tutorial can force a specific one)
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode && typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep] && typeof tutorialSteps[currentStep].forceFlashMoment === 'number') {
+        state.flashMoment = Math.max(0, Math.min(4, tutorialSteps[currentStep].forceFlashMoment));
+    } else {
+        state.flashMoment = Math.floor(Math.random() * 5);
+    }
     // --- ADD THE HIGHLIGHT GLOW ---
     const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${state.flashMoment + 1})`);
     const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${state.flashMoment + 1})`);
@@ -672,11 +680,12 @@ function startResolution() {
 }
 
 function lockIn() {
+    // --- Tutorial gating (data-driven via tutorial.js `expect`) ---
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
-        const lockInSteps = [5, 8, 11, 16]; // Updated steps
-        if (lockInSteps.includes(currentStep)) {
-            advanceTutorial();
-        } else { return; }
+        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
+        const expect = step ? step.expect : null;
+        if (expect !== 'lockIn') return;
+        advanceTutorial();
     }
 
     // Remove the glow
@@ -689,10 +698,12 @@ function lockIn() {
 }
 
 function pivot() {
+    // --- Tutorial gating (data-driven via tutorial.js `expect`) ---
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
-        if (currentStep === 14) { // Pivot step
-            advanceTutorial();
-        } else { return; }
+        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
+        const expect = step ? step.expect : null;
+        if (expect !== 'pivot') return;
+        advanceTutorial();
     }
     if (state.player.stam < 1) return alert("Not enough stamina to Pivot!");
     // Remove the glow (it will be replaced by the yellow Pivot glow)
@@ -845,7 +856,7 @@ function resolveMoment() {
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
         if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Brute' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Brute gained 1 Stam (Passive)."); }
-        setTimeout(() => nextTurn(), 1500); return; 
+        setTimeout(() => nextTurn(), 1000); return; 
     }
     
     // 1. Clear all previous glows from both slots AND cards
@@ -853,6 +864,8 @@ function resolveMoment() {
         el.style.boxShadow = 'none';
         el.style.filter = 'none'; // Clear any brightness filters
     });
+    document.querySelectorAll('.resolving').forEach(el => el.classList.remove('resolving'));
+
 
     // 2. Identify the current slots
     const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${state.currentMoment+1})`);
@@ -1001,7 +1014,7 @@ function resolveMoment() {
     }
 
     state.currentMoment++;
-    setTimeout(resolveMoment, 1200);
+    setTimeout(resolveMoment, 800);
 }
 
 function applyEffect(sourceKey, targetKey, effectString, context = {}) {
@@ -1018,12 +1031,6 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             if (context.hitLanded || context.grabHit) {
                 source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); 
             }
-            break;
-        case 'heal_2':
-            source.hp = Math.min(source.maxHp, source.hp + 2);
-            log(`${sourceKey} heals 2!`);
-            spawnFloatingText(sourceKey, '+2', 'float-heal');
-            playSound('heal');
             break;
         case 'poison_dagger':
             if (context.hitLanded) {
@@ -1119,8 +1126,9 @@ function nextTurn(isFirstTurn = false) {
     if (exertUI) exertUI.style.display = 'flex';
     document.getElementById('btn-confirm-exert').innerText = "Confirm Exert (0⚡)";
 
-    if (!isFirstTurn && state.player.hand.length === 0) {
-        // Auto-skip exert if hand is empty
+    const tutorialActive = (typeof isTutorialMode !== 'undefined' && isTutorialMode);
+    if (!tutorialActive && !isFirstTurn && state.player.hand.length === 0) {
+        // Auto-skip exert if hand is empty (disabled during tutorial to avoid soft-locks)
         confirmExert();
     } else {
         log("--- EXERT PHASE ---");
@@ -1145,6 +1153,13 @@ function toggleExertCard(index) {
 
 function confirmExert() {
     if (state.phase !== 'exert') return;
+
+    // Tutorial: confirm exert is the expected action for some steps.
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
+        if (!step || step.expect !== 'confirmExert') return;
+        advanceTutorial();
+    }
     document.body.classList.remove('exert-mode');
 
     // 1. Process Player Discards

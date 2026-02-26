@@ -1,0 +1,207 @@
+:root {
+    --panel: rgba(43, 43, 54, 0.85); --text: #f8f8f2;
+}
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+    background: url('bg.png') no-repeat center center fixed; background-size: cover;
+}
+
+#char-select-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: rgba(17, 17, 17, 0.85); z-index: 100; backdrop-filter: blur(5px); }
+#game-screen { display: none; flex-direction: column; justify-content: space-between; height: 100vh; background: rgba(0, 0, 0, 0.6); padding: 20px; box-sizing: border-box; }
+
+/* === Responsive centering + log-safe layout (patch) === */
+#game-screen{
+  position: relative;
+  /* Reserve space for the battle log on the right so the core board can sit centered */
+  padding-right: 290px;
+}
+
+/* Center the timelines within the playable area and make them responsive */
+.timeline{
+  width: min(600px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Ensure timeline rows are centered even if wrappers are plain divs */
+#ai-timeline, #player-timeline{
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* On smaller screens, stack the log below and remove the right padding */
+@media (max-width: 980px){
+  #game-screen{ padding-right: 20px; }
+  .log{
+    position: static;
+    width: auto;
+    height: 200px;
+    margin-top: 12px;
+  }
+}
+
+
+.select-container { display: flex; gap: 40px; margin-bottom: 30px; }
+.roster { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 400px; }
+.char-btn { 
+    width: 120px; height: 160px; background-size: cover; background-position: center; 
+    border: 3px solid #555; border-radius: 12px; cursor: pointer; transition: 0.3s;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px;
+    font-weight: bold; font-size: 1.1em; color: white; text-shadow: 0 2px 4px black; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    position: relative; /* <--- ADDED THIS */
+}
+.char-btn span { background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 6px; }
+.char-btn:hover { transform: scale(1.05); border-color: #fff; box-shadow: 0 0 15px #fff; }
+.char-btn.selected { border-color: #4facfe; box-shadow: 0 0 20px #4facfe; transform: scale(1.1); }
+.char-btn.ai-selected { border-color: #ff5e62; box-shadow: 0 0 20px #ff5e62; transform: scale(1.1); }
+
+/* --- CLASSIC VERTICAL BARS & STATS AREA --- */
+.stats-area, .player-info { 
+    display: flex; 
+    align-items: center; 
+    background: transparent; /* <--- Removes the weird grey box */
+    padding: 15px; 
+    border: none; /* <--- Removes the border */
+    position: relative; 
+}
+.char-details { margin: 0 15px; text-align: center; font-size: 18px; }
+.bars { display: flex; gap: 10px; }
+.bar-container { width: 40px; height: 80px; background: #222; border-radius: 8px; border: 2px solid #444; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; }
+.v-bar-bg { width: 100%; height: 100%; position: absolute; bottom: 0; left: 0; display: flex; align-items: flex-end; }
+.v-bar-fill { width: 100%; transition: height 0.4s ease-in-out; }
+.hp-fill { background: linear-gradient(0deg, #c0392b, #e74c3c); }
+.stam-fill { background: linear-gradient(0deg, #f39c12, #f1c40f); }
+.bar-label { font-size: 12px; font-weight: bold; padding: 2px 0; z-index: 2; text-shadow: 1px 1px 2px black; color: white; }
+.armor-box { width: 60px; height: 60px; background: #333; border: 3px solid #ff5e62; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin-left: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
+#player-stats .armor-box { border-color: #4facfe; }
+
+/* --- PORTRAITS FIX: 180px & Circular --- */
+.portrait-container { position: relative; display: inline-block; cursor: help; }
+.portrait { 
+    width: 180px; height: 180px; border-radius: 50%; border: 4px solid #aaa; 
+    background-size: cover; 
+    background-position: top center; /* <--- This fixes the zooming/cropping! */
+    background-color: transparent; 
+    box-shadow: 0 6px 15px rgba(0,0,0,0.8);
+    aspect-ratio: 1 / 1; overflow: hidden;
+}
+
+/* --- HAND & CARDS FIX: Wrapping instead of scrolling --- */
+.hand { 
+    display: flex; gap: 15px; min-width: 600px; padding: 10px; 
+    background: rgba(0,0,0,0.3); border-radius: 12px; border: 2px dashed #555; 
+    flex-wrap: wrap; overflow: visible; min-height: 160px;
+    align-content: flex-start;
+}
+.card { 
+    width: 110px; height: 150px; background: linear-gradient(135deg, #34495e, #2c3e50); border: 2px solid #7f8c8d; 
+    border-radius: 8px; padding: 8px; cursor: grab; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.6); position: relative; user-select: none; transition: transform 0.2s;
+}
+.card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.8); border-color: #bdc3c7; }
+.card-header { font-weight: bold; font-size: 13px; text-align: center; border-bottom: 1px solid #7f8c8d; padding-bottom: 4px; margin-bottom: 4px; color: #ecf0f1; }
+.card-stats { display: flex; justify-content: space-between; font-size: 12px; color: #f1c40f; font-weight: bold; margin-bottom: 4px; }
+.card-desc { font-size: 10px; flex-grow: 1; color: #bdc3c7; text-align: center; font-style: italic; }
+.card-dmg { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; border: 1px solid #c0392b; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+/* --- TIMELINES --- */
+.timeline { display: flex; gap: 10px; background: var(--panel); padding: 15px; border-radius: 12px; border: 2px solid #555; box-shadow: 0 8px 16px rgba(0,0,0,0.6); position: relative; width: 600px; height: 100px; }
+.slot { flex: 1; background: rgba(0, 0, 0, 0.5); border: 2px dashed #7f8c8d; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #555; transition: background 0.2s; }
+.timeline-card { position: absolute; height: calc(100% - 30px); top: 15px; background: linear-gradient(135deg, #2980b9, #2c3e50); border: 2px solid #3498db; border-radius: 8px; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; box-shadow: 0 6px 12px rgba(0,0,0,0.7); z-index: 10; font-size: 12px; text-align: center; transition: all 0.3s ease; }
+.card-desc-timeline { font-size: 10px; color: #bdc3c7; font-style: italic; margin-top: 2px; }
+.ai-timeline-card { background: linear-gradient(135deg, #c0392b, #8e44ad); border-color: #e74c3c; }
+
+/* --- BUTTONS & STATUSES --- */
+.status-container { display: flex; flex-wrap: wrap; gap: 5px; width: 200px; max-height: 80px; overflow-y: auto; margin-left: 10px; align-items: flex-start; padding: 5px; background: rgba(0,0,0,0.4); border-radius: 8px; border: 1px solid #555; }
+.status-badge { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; text-shadow: 1px 1px 1px black; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.status-buff { background: linear-gradient(135deg, #27ae60, #2ecc71); border: 1px solid #2ecc71; }
+.status-debuff { background: linear-gradient(135deg, #c0392b, #e74c3c); border: 1px solid #e74c3c; }
+
+.floating-text { position: absolute; font-size: 28px; font-weight: bold; text-shadow: 2px 2px 4px black; z-index: 100; pointer-events: none; animation: floatUp 1.2s ease-out forwards; white-space: nowrap; }
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.3); } }
+.dmg-text { color: #ff4757; } .heal-text { color: #2ed573; } .block-text { color: #7bed9f; } .status-text { color: #feca57; font-size: 22px; }
+
+.log { position: absolute; right: 20px; top: 20px; bottom: 20px; width: 250px; background: rgba(20, 20, 25, 0.9); padding: 15px; border-radius: 12px; font-family: monospace; overflow-y: auto; border: 2px solid #555; box-shadow: 0 4px 8px rgba(0,0,0,0.6); color: #ecf0f1; font-size: 14px; line-height: 1.4; z-index: 10; }
+.log div { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+
+.submit-btn { background: linear-gradient(135deg, #27ae60, #2ecc71); border: 3px solid #fff; color: white; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 12px rgba(0,0,0,0.6); transition: 0.2s; height: 100px; }
+.submit-btn:hover { transform: scale(1.05); box-shadow: 0 8px 16px rgba(0,0,0,0.8); }
+.btn-danger { background: linear-gradient(135deg, #c0392b, #e74c3c); border: 2px solid #fff; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { transform: scale(1.05); background: linear-gradient(135deg, #ff6b6b, #e74c3c); }
+.basic-action-btn { background: #2c3e50; border: 2px solid #34495e; padding: 10px 15px; text-align: center; border-radius: 8px; line-height: 1.2; color: white; cursor: pointer; }
+.basic-action-btn:hover { background: #34495e; }
+
+.ability-wrapper { position: relative; display: inline-block; }
+.ability-btn { background: linear-gradient(135deg, #8e44ad, #9b59b6); border: 2px solid #f1c40f; padding: 8px 12px; border-radius: 8px; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); transition: 0.2s; font-size: 14px; margin-bottom: 5px; text-align: center; }
+.ability-btn:hover { transform: scale(1.05); }
+
+.ability-tooltip { visibility: hidden; width: 180px; background-color: rgba(20, 20, 25, 0.95); color: #fff; text-align: center; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; border: 1px solid #f1c40f; box-shadow: 0 4px 8px rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.2s; font-size: 14px; pointer-events: none; }
+.player-tooltip { bottom: 120%; left: 50%; transform: translateX(-50%); }
+.ai-tooltip { top: 120%; left: 50%; transform: translateX(-50%); }
+.ability-wrapper:hover .ability-tooltip { visibility: visible; opacity: 1; }
+
+@keyframes cameraShake { 0% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-6px, 6px) rotate(-1deg); } 40% { transform: translate(6px, -6px) rotate(1deg); } 60% { transform: translate(-6px, -6px) rotate(-1deg); } 80% { transform: translate(6px, 6px) rotate(1deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
+.shake { animation: cameraShake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+/* --- PORTRAIT TOOLTIPS --- */
+.portrait-tooltip {
+    visibility: hidden; width: 240px; background-color: rgba(20,20,25,0.95); color: #f1c40f;
+    text-align: center; border-radius: 6px; padding: 12px; position: absolute;
+    z-index: 1000; border: 2px solid #4facfe; box-shadow: 0 4px 12px rgba(0,0,0,0.9);
+    opacity: 0; transition: opacity 0.2s; font-size: 14px; left: 50%; transform: translateX(-50%); pointer-events: none;
+}
+#p-portrait-tooltip { bottom: 120%; top: auto !important; margin-bottom: 10px; }
+#ai-portrait-tooltip { top: 120%; bottom: auto !important; border-color: #ff5e62; margin-top: 10px; }
+.portrait-container:hover .portrait-tooltip { visibility: visible; opacity: 1; }
+/* --- CHARACTER SELECT PITCH TOOLTIPS --- */
+.pitch-tooltip {
+    visibility: hidden; width: 180px; background-color: rgba(20,20,25,0.95); color: #fff;
+    text-align: center; border-radius: 6px; padding: 10px; position: absolute;
+    z-index: 200; border: 1px solid #4facfe; box-shadow: 0 4px 8px rgba(0,0,0,0.9);
+    opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: normal; 
+    text-shadow: none; bottom: 105%; left: 50%; transform: translateX(-50%); pointer-events: none;
+}
+#ai-roster .pitch-tooltip { border-color: #ff5e62; }
+.char-btn:hover .pitch-tooltip { visibility: visible; opacity: 1; }
+/* --- FLASH PRECOGNITION UI (FLOATING) --- */
+#flash-modal {
+    position: absolute; top: 20px; left: 50%; width: 400px; margin-left: -190px;
+    background: rgba(30, 30, 40, 0.95); border: 2px solid #4facfe; border-radius: 8px;
+    z-index: 2000; display: none; flex-direction: column; padding: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+.flash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 10px; margin-bottom: 15px; cursor: grab; }
+.flash-header:active { cursor: grabbing; }
+.flash-card-render {
+    width: 120px; height: 160px; border: 2px dashed #555; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);
+}
+.empty-flash { color: #777; font-weight: bold; font-size: 1.1em; text-align: center; }
+/* Add this to your CSS */
+.exert-mode .card-item {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.exert-mode .card-item:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 0 15px #ff4757;
+}
+
+.exert-mode .card-item.selected-for-exert {
+    border: 3px solid #ff4757;
+    filter: grayscale(0.5) sepia(1) hue-rotate(-50deg);
+}
+/* Glowing effect for the sampled Flash moment */
+.flash-highlight {
+    box-shadow: inset 0 0 15px 5px #4facfe, 0 0 20px 5px #4facfe !important;
+    border-color: #4facfe !important;
+    transition: all 0.3s ease-in-out;
+    animation: flash-pulse 1.5s infinite;
+    z-index: 10;
+}
+
+@keyframes flash-pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}

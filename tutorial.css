@@ -28,6 +28,17 @@
     z-index: 9001;
 }
 
+/* During exertion, ensure the coach never covers the Confirm Exert button. */
+body.exert-mode.tutorial-active #tutorial-dialogue {
+    top: 14%;
+    bottom: auto;
+}
+
+/* If there's no Next button (interactive prompt), always make the coach click-through. */
+body.tutorial-no-next #tutorial-dialogue {
+    pointer-events: none;
+}
+
 #tutorial-text {
     font-size: 1.2em;
     margin-bottom: 20px;
@@ -43,6 +54,14 @@
     border-radius: 5px;
     cursor: pointer;
     font-size: 1em;
+}
+
+/* During interactive steps we make the coach click-through so it can't block required clicks. */
+body.tutorial-passive-dialogue #tutorial-dialogue {
+    pointer-events: none;
+}
+body.tutorial-passive-dialogue #tutorial-next-btn {
+    pointer-events: auto;
 }
 
 

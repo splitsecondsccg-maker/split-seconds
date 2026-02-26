@@ -10,6 +10,59 @@ body {
 #char-select-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: rgba(17, 17, 17, 0.85); z-index: 100; backdrop-filter: blur(5px); }
 #game-screen { display: none; flex-direction: column; justify-content: space-between; height: 100vh; background: rgba(0, 0, 0, 0.6); padding: 20px; box-sizing: border-box; }
 
+/* === Responsive centering + log-safe layout (patch) === */
+#game-screen{
+  position: relative;
+  /* Reserve space for the battle log on the right so the core board can sit centered */
+  padding-right: 290px;
+}
+
+/* Timelines + LOCK should stay on one row (LOCK to the RIGHT of the timelines) */
+#timeline-and-lock{
+  flex-wrap: nowrap;
+}
+.timeline-stack{
+  flex: 0 1 auto;
+}
+#btn-start-resolution{
+  flex: 0 0 auto;
+}
+
+/* Center the timelines within the playable area and make them responsive */
+.timeline{
+  width: min(600px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Ensure timeline rows are centered even if wrappers are plain divs */
+#ai-timeline, #player-timeline{
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* On smaller screens, stack the log below and remove the right padding */
+@media (max-width: 980px){
+  #game-screen{ padding-right: 20px; }
+  #timeline-and-lock{ flex-direction: column; gap: 14px; }
+  .log{
+    position: static;
+    width: auto;
+    height: 200px;
+    margin-top: 12px;
+  }
+}
+
+/* Keep the top/bottom stat rows from pushing the board around on medium screens */
+.stats-area{
+  flex-wrap: wrap;
+  align-items: center;
+}
+#ai-ability-container, #player-ability-container{
+  max-width: min(520px, 100%);
+}
+
+
 .select-container { display: flex; gap: 40px; margin-bottom: 30px; }
 .roster { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 400px; }
 .char-btn { 

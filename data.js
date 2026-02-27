@@ -28,7 +28,7 @@ const classData = {
             { id: 'b1', copies: 3, name: 'Heavy Strike', type: 'attack', cost: 2, moments: 1, dmg: 3, desc: 'Drains stamina, hits hard.' },
             { id: 'b2', copies: 3, name: 'Cleave', type: 'attack', cost: 2, moments: 2, dmg: 5, desc: 'Wide, heavy swing.' },
             { id: 'b3', copies: 2, name: 'Devastating Blow', type: 'attack', cost: 3, moments: 3, dmg: 9, desc: 'Massive, slow attack.' },
-            { id: 'b4', copies: 2, name: 'Suplex', type: 'grab', cost: 2, moments: 2, dmg: 5, desc: 'Massive punish for blocking.' },
+            { id: 'b4', copies: 2, name: 'Suplex', type: 'grab', cost: 2, moments: 2, dmg: 6, desc: 'Massive punish for blocking.' },
             { id: 'b5', copies: 3, name: 'Sunder', type: 'attack', cost: 2, moments: 1, dmg: 2, desc: 'Enemy loses 2 Armor this turn.', effect: 'sunder' },
             { id: 'b6', copies: 2, name: 'Warcry', type: 'buff', cost: 2, moments: 2, desc: '+5 DMG to next Attack.', effect: 'buff_next_atk_5' }
         ]
@@ -50,11 +50,11 @@ const classData = {
         passiveDesc: 'Upon hit, your next attack gains +1 DMG this turn.',
         deck: [
             { id: 'v1', copies: 4, name: 'Claw Swipe', type: 'attack', cost: 0, moments: 1, dmg: 2, desc: 'A fast, free scratch.' },
-            { id: 'v2', copies: 3, name: 'Siphon Strike', type: 'attack', cost: 1, moments: 1, dmg: 2, desc: 'Deals 2 DMG, Heals 1 HP if succeeded.', effect: 'heal_1_on_hit' },
+            { id: 'v2', copies: 4, name: 'Siphon Strike', type: 'attack', cost: 1, moments: 1, dmg: 2, desc: 'Deals 2 DMG, Heals 1 HP if succeeded.', effect: 'heal_1_on_hit' },
             { id: 'v3', copies: 4, name: 'Vampiric Bite', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Deals 3 DMG, Heals 1 HP if succeeded.', effect: 'heal_1_on_hit' },
-            { id: 'v4', copies: 3, name: 'Lethal Embrace', type: 'grab', cost: 2, moments: 2, dmg: 6, desc: 'Deals 6 DMG, Heals 2 HP if succeeded.', effect: 'heal_2_on_hit' },
+            { id: 'v4', copies: 3, name: 'Lethal Embrace', type: 'grab', cost: 2, moments: 2, dmg: 7, desc: 'Deals 6 DMG, Heals 2 HP if succeeded.', effect: 'heal_2_on_hit' },
             { id: 'v5', copies: 2, name: 'Hypnotic Gaze', type: 'buff', cost: 1, moments: 1, desc: 'Steal 1 Stamina from the enemy.', effect: 'steal_stam' },
-            { id: 'n1', copies: 4, name: 'Scare', type: 'buff', cost: 0, moments: 1, desc: 'Draw 1. Opponent MUST block next turn.', effect: 'scare' },
+            { id: 'n1', copies: 5, name: 'Scare', type: 'buff', cost: 0, moments: 1, desc: 'Draw 1. Opponent MUST block next turn.', effect: 'scare' },
         ]
     },
     'Necromancer': {

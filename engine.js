@@ -930,17 +930,57 @@ function resolveMoment() {
 
     if (aiActive && aiActive.type === 'block') aiBlock = true;
 
-    let pGrabHit = false; let aiGrabHit = false;
+    let pGrabHit = false; 
+let aiGrabHit = false;
 
-    if(pGrab) {
-        if(aiBlock || aiParry) { pGrabHit = true; log(`Player ${pAction.name} GRABS!`); }
-        else if(aiAction && aiAction.type === 'attack') { pDmg = 0; log("Player Grab interrupted!"); }
-        else { pDmg = 0; log("Player Grab misses."); }
+// NEW: track interruption so we can cancel the grabbed action's effect
+let pActionInterrupted = false;
+let aiActionInterrupted = false;
+
+if (pGrab) {
+  const aiIsBuffLike = aiAction && (aiAction.type === 'buff' || aiAction.type === 'utility');
+
+  if (aiBlock || aiParry) {
+    pGrabHit = true;
+    log(`Player ${pAction.name} GRABS!`);
+  }
+  // NEW: grab also works on buffs/utilities (and interrupts them)
+  else if (aiIsBuffLike) {
+    pGrabHit = true;
+    aiActionInterrupted = true;
+    log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiAction.name}!`);
+  }
+  else if (aiAction && aiAction.type === 'attack') {
+    pDmg = 0;
+    log("Player Grab interrupted!");
+  }
+  else {
+    pDmg = 0;
+    log("Player Grab misses.");
+  }
     }
-    if(aiGrab) {
-        if(pBlock || pParry) { aiGrabHit = true; log(`AI ${aiAction.name} GRABS!`); }
-        else if(pAction && pAction.type === 'attack') { aiDmg = 0; log("AI Grab interrupted!"); }
-        else { aiDmg = 0; log("AI Grab misses."); }
+
+    if (aiGrab) {
+      const pIsBuffLike = pAction && (pAction.type === 'buff' || pAction.type === 'utility');
+
+      if (pBlock || pParry) {
+        aiGrabHit = true;
+        log(`AI ${aiAction.name} GRABS!`);
+      }
+      // NEW: grab also works on buffs/utilities (and interrupts them)
+      else if (pIsBuffLike) {
+        aiGrabHit = true;
+        pActionInterrupted = true;
+        log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pAction.name}!`);
+      }
+      else if (pAction && pAction.type === 'attack') {
+        aiDmg = 0;
+        log("AI Grab interrupted!");
+      }
+      else {
+        aiDmg = 0;
+        log("AI Grab misses.");
+      }
     }
 
     if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; }
@@ -1004,9 +1044,12 @@ function resolveMoment() {
     }
 
     // 4. Trigger Effects
-    if(pAction && pAction.effect) applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
-    if(aiAction && aiAction.effect) applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiDmg > 0, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
-
+    if (pAction && pAction.effect && !pActionInterrupted) {
+    applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
+    }
+    if (aiAction && aiAction.effect && !aiActionInterrupted) {
+      applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiDmg > 0, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
+    }
     updateUI();
     if(state.player.hp <= 0 || state.ai.hp <= 0) {
         setTimeout(() => alert(state.player.hp <= 0 ? "You Lose!" : "You Win!"), 500);

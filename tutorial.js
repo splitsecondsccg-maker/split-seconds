@@ -316,7 +316,7 @@ const tutorialSteps = [
         setup: () => { hideNext(); }
     },
     {
-        message: "Yep — Grab punishes Block.\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
+        message: "Yep — Grab punishes Block.\n\nThey will also work and interrupt Buffs!\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());

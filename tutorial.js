@@ -156,7 +156,7 @@ const tutorialSteps = [
         highlightIds: ['player-timeline', 'ai-timeline']
     },
     {
-        message: "This is your Hand. Cards cost Stamina (⚡) and take time (⏱️). Drag cards onto the timeline to schedule them.",
+        message: "This is your Hand. Cards cost Stamina (⚡) and take time (⏱️).\n\nYou regen 3 Stamina (⚡) at the start of each turn!\n\nDrag cards onto the timeline to schedule them.",
         highlightIds: ['player-hand']
     },
 
@@ -316,7 +316,7 @@ const tutorialSteps = [
         setup: () => { hideNext(); }
     },
     {
-        message: "Yep — Grab punishes Block.\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
+        message: "Yep — Grab punishes Block.\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());

@@ -357,7 +357,7 @@ function returnToHand(index) {
     const startIdx = index - (card.moments - 1);
     for(let i=0; i<card.moments; i++) state.player.timeline[startIdx + i] = null;
     
-    if(card.id || card.uniqueId) state.player.hand.push(card);
+    if(card.id) state.player.hand.push(card);
     
     renderPlayerTimeline(); updateUI();
 }
@@ -1083,6 +1083,9 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                 spawnFloatingText(targetKey, '-1', 'float-dmg');
             }
             break;
+        case 'heal_2': 
+            source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); 
+            spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); break;
         case 'heal_3': 
             source.hp = Math.min(source.maxHp, source.hp + 3); log(`${sourceKey} heals 3!`); 
             spawnFloatingText(sourceKey, '+3', 'float-heal'); playSound('heal'); break;

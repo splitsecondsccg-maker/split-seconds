@@ -71,7 +71,7 @@ const classData = {
     }
     ,
     'Ice Djinn': {
-        maxHp: 35, maxStam: 6, armor: 3,
+        maxHp: 37, maxStam: 7, armor: 3,
         passiveDesc: 'Upon successful Parry: apply FREEZE 2 to the enemy.',
         deck: [
             { id: 'i1', copies: 6, name: 'Cold Wind', type: 'buff', cost: 0, moments: 1, desc: 'Apply FREEZE 1. Draw 1.', effect: 'cold_wind' },

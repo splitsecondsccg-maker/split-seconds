@@ -8,7 +8,7 @@ const sounds = {
     place3: new Audio('place3.mp3'), lock: new Audio('lock.mp3') 
 };
 // ===== Balatro-snappy resolve pacing =====
-const SPEED_MULT = 0.65; // lower = faster
+const SPEED_MULT = 0.7; // lower = faster
 const RESOLVE_DELAY = Math.round(650 * SPEED_MULT);        // empty moments
 const LIGHT_IMPACT_DELAY = Math.round(700 * SPEED_MULT);  // small/medium hit
 const HEAVY_IMPACT_DELAY = Math.round(1200 * SPEED_MULT); // big hit

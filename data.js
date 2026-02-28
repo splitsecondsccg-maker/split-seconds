@@ -69,6 +69,18 @@ const classData = {
             { id: 'n6', copies: 2, name: 'Bone Cage', type: 'block', cost: 1, moments: 3, dmg: 0, desc: 'Blocks up to 6 total DMG over 3 moments.', currentBlock: 6 }
         ]
     }
+    ,
+    'Ice Djinn': {
+        maxHp: 35, maxStam: 6, armor: 3,
+        passiveDesc: 'Upon successful Parry: apply FREEZE 2 to the enemy.',
+        deck: [
+            { id: 'i1', copies: 6, name: 'Cold Wind', type: 'buff', cost: 0, moments: 1, desc: 'Apply FREEZE 1. Draw 1.', effect: 'cold_wind' },
+            { id: 'i2', copies: 4, name: 'Ice Spear', type: 'attack', cost: 2, moments: 2, dmg: 5, desc: '5 DMG. On hit: FREEZE 1.', effect: 'freeze_1_on_hit' },
+            { id: 'i3', copies: 2, name: 'Break the Ice', type: 'grab', cost: 2, moments: 1, dmg: 2, desc: '2 DMG. On hit: Remove all FREEZE on opponent. Deal that much DMG.', effect: 'break_the_ice' },
+            { id: 'i4', copies: 4, name: 'Ice Wall', type: 'block', cost: 3, moments: 3, dmg: 0, desc: 'Blocks up to 8 total DMG over 3 moments. Each time it blocks an attack: FREEZE 1.', currentBlock: 8 }
+        ]
+    }
+
 };
 
-const charImages = { 'Rogue': 'rogue.png', 'Brute': 'brute.png', 'Paladin': 'paladin.png', 'Vampiress': 'vampiress.png', 'Necromancer': 'necromancer.png' };
+const charImages = { 'Rogue': 'rogue.png', 'Brute': 'brute.png', 'Paladin': 'paladin.png', 'Vampiress': 'vampiress.png', 'Necromancer': 'necromancer.png', 'Ice Djinn': 'ice_djinn.png' };

@@ -254,3 +254,55 @@ body {
     50% { opacity: 1; }
     100% { opacity: 0.6; }
 }
+/* --- KEYWORDS (hover tooltips) --- */
+.keyword {
+    position: relative;
+    display: inline-block;
+    padding: 0 4px;
+    margin: 0 1px;
+    border-radius: 4px;
+    background: rgba(79, 172, 254, 0.18);
+    border: 1px solid rgba(79, 172, 254, 0.35);
+    color: #d7efff;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    cursor: help;
+}
+
+.keyword:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 125%;
+    transform: translateX(-50%);
+    width: 240px;
+    background: rgba(10, 10, 14, 0.95);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(79, 172, 254, 0.6);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    font-weight: normal;
+    font-size: 12px;
+    line-height: 1.25;
+    z-index: 3000;
+    pointer-events: none;
+}
+
+.keyword:hover::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 115%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(79, 172, 254, 0.6);
+    z-index: 3000;
+    pointer-events: none;
+}
+
+/* Floating text for FREEZE */
+.float-freeze {
+    color: #9ad8ff;
+    text-shadow: 0 0 10px rgba(79, 172, 254, 0.9);
+}

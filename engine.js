@@ -62,10 +62,62 @@ function getIcon(type) {
 }
 
 const getBaseStatuses = () => ({ 
-    dmgMod: 0, nextAtkMod: 0, nextGrabMod: 0, dmgReduction: 0, 
-    stamOnBlock: false, drawOnBlock: false, forceBlock: false, drawLess: 0,
-    armorDebuff: 0, mustBlock: 0, stamPenalty: 0 
+    dmgMod: 0,
+    nextAtkMod: 0,
+    nextGrabMod: 0,
+    dmgReduction: 0,
+    stamOnBlock: false,
+    drawOnBlock: false,
+    forceBlock: false,
+    drawLess: 0,
+    armorDebuff: 0,
+    bonusArmor: 0,      // temporary armor for this turn
+    armorNextTurn: 0,   // queued armor gain applied at start of next turn
+    mustBlock: 0,
+    stamPenalty: 0,
+    rogueDebuff: 0,
+    freeze: 0           // persistent counters (NOT cleared end of turn)
 });
+
+const KEYWORD_DEFS = {
+    FREEZE: 'Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.'
+};
+
+function formatKeywords(text = '') {
+    if (!text) return '';
+    return text.replace(/\b(FREEZE)\b/g, (m) => {
+        const tip = KEYWORD_DEFS[m] || '';
+        return `<span class="keyword" data-tip="${tip}">${m}</span>`;
+    });
+}
+
+function getAttackTax(charKey) {
+    return ((state?.[charKey]?.statuses?.freeze) || 0) >= 10 ? 1 : 0;
+}
+
+function getMoveCost(charKey, card) {
+    if (!card) return 0;
+    const base = card.cost || 0;
+    return base + ((card.type === 'attack') ? getAttackTax(charKey) : 0);
+}
+
+function getEffectiveArmor(charKey) {
+    const c = state?.[charKey];
+    if (!c) return 0;
+    return Math.max(0, (c.armor || 0) + (c.statuses.bonusArmor || 0) - (c.statuses.armorDebuff || 0));
+}
+
+function applyFreezeCounters(sourceKey, targetKey, amount) {
+    const source = state?.[sourceKey];
+    const target = state?.[targetKey];
+    if (!target || amount <= 0) return;
+
+    target.statuses.freeze = (target.statuses.freeze || 0) + amount;
+    if (source) source.roundData.appliedStatus = true;
+
+    spawnFloatingText(targetKey, `+${amount}❄`, 'float-freeze');
+    log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} FREEZE (${target.statuses.freeze}).`);
+}
 
 const state = {
     player: { class: '', hp: 40, maxHp: 40, stam: 6, maxStam: 6, armor: 0, deck: [], hand: [], timeline: [null, null, null, null, null], statuses: getBaseStatuses(), roundData: { lostLife: false, appliedStatus: false } },
@@ -141,6 +193,10 @@ function getAbilityCard(className, index) {
         if(index === 1) return { name: 'Meditate', type: 'utility', cost: 0, moments: 2, dmg: 0, desc: 'Draw 1, Gain 2 Stamina', effect: 'meditate', isBasic: true };
         if(index === 2) return { name: 'Death Touch', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Cheap, deadly magic', isBasic: true };
     }
+    if(className === 'Ice Djinn') {
+        if(index === 1) return { name: 'Spirit Form', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: 'Next turn: +2 Armor', effect: 'spirit_form', isBasic: true };
+        if(index === 2) return { name: 'Ice Blast', type: 'attack', cost: 3, moments: 3, dmg: 7, desc: '7 DMG. On hit: FREEZE 1', effect: 'freeze_1_on_hit', isBasic: true };
+    }
     return null;
 }
 
@@ -151,7 +207,8 @@ function useAbility(index) {
 
     const alreadyUsed = state.player.timeline.some(c => c && c.name === abilityCard.name);
     if (alreadyUsed) return alert("This ability can only be used once per turn!");
-    if(state.player.stam < abilityCard.cost) return alert("Not enough stamina!");
+    const effectiveCost = getMoveCost('player', abilityCard);
+    if(state.player.stam < effectiveCost) return alert("Not enough stamina!");
     
     let slot = -1;
     if (state.phase === 'pivot_wait') {
@@ -175,9 +232,9 @@ function useAbility(index) {
         if(slot === -1) return alert("Not enough timeline space!");
     }
     
-    state.player.stam -= abilityCard.cost;
+    state.player.stam -= effectiveCost;
     for(let i=0; i<abilityCard.moments; i++) { 
-        state.player.timeline[slot + i] = (i === abilityCard.moments - 1) ? { ...abilityCard, uniqueId: 'basic_'+Math.random() } : 'occupied'; 
+        state.player.timeline[slot + i] = (i === abilityCard.moments - 1) ? { ...abilityCard, uniqueId: 'basic_'+Math.random(), paidCost: effectiveCost, paidUpfront: true } : 'occupied'; 
     }
     
     playPlaceSound(abilityCard.moments); 
@@ -217,6 +274,12 @@ function updateUI() {
     document.getElementById('ai-hp-label').innerText = `${state.ai.hp}/${state.ai.maxHp}`;
     document.getElementById('ai-stam-bar').style.height = `${(state.ai.stam / state.ai.maxStam) * 100}%`;
     document.getElementById('ai-stam-label').innerText = `${state.ai.stam}/${state.ai.maxStam}`;
+
+    // Dynamic armor (includes temporary bonuses / debuffs)
+    const pArmorEl = document.getElementById('p-armor');
+    const aiArmorEl = document.getElementById('ai-armor');
+    if (pArmorEl) pArmorEl.innerText = getEffectiveArmor('player');
+    if (aiArmorEl) aiArmorEl.innerText = getEffectiveArmor('ai');
     
     renderStatuses('player');
     renderStatuses('ai');
@@ -239,6 +302,7 @@ function renderAbilities() {
         for(let i=1; i<=2; i++) {
             const ability = getAbilityCard(state[char].class, i);
             if (!ability) continue;
+            const costDisplay = (char === 'player') ? getMoveCost('player', ability) : (ability.cost || 0);
             
             container.innerHTML += `
                 <div class="ability-wrapper">
@@ -247,9 +311,9 @@ function renderAbilities() {
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
                         <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
-                        Cost: ${ability.cost}⚡ | Time: ${ability.moments}⏳<br>
+                        Cost: ${costDisplay}⚡ | Time: ${ability.moments}⏳<br>
                         ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}⚔️</span><br>` : ''}
-                        <i>${ability.desc}</i>
+                        <i>${formatKeywords(ability.desc)}</i>
                     </div>
                 </div>
             `;
@@ -270,6 +334,13 @@ function renderStatuses(target) {
     if(statuses.forceBlock) { html += `<div class="status-badge status-debuff">Intimidated (Must Block)</div>`; count++; }
     if(statuses.mustBlock > 0) { html += `<div class="status-badge status-debuff">Scared (${statuses.mustBlock}x Block Req)</div>`; count++; }
     if(statuses.stamPenalty > 0) { html += `<div class="status-badge status-debuff">Chilled (-${statuses.stamPenalty} Stam Recov)</div>`; count++; }
+    if((statuses.bonusArmor || 0) > 0) { html += `<div class="status-badge status-buff">+${statuses.bonusArmor} Armor (this turn)</div>`; count++; }
+    if((statuses.freeze || 0) > 0) {
+        const fr = statuses.freeze;
+        const taxed = fr >= 10;
+        html += `<div class="status-badge status-debuff">${taxed ? 'FROZEN' : 'Freeze'} (${fr})${taxed ? ' · Attacks +1⚡' : ''}</div>`;
+        count++;
+    }
     if(statuses.drawOnBlock) { html += `<div class="status-badge status-buff">Draw on Block</div>`; count++; }
     if(statuses.stamOnBlock) { html += `<div class="status-badge status-buff">Stamina on Block</div>`; count++; }
     
@@ -314,8 +385,8 @@ function renderHand() {
         
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
-            <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${card.cost}</span></div>
-            <div class="card-desc">${card.desc ? card.desc : ''}</div>
+            <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
+            <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         `;
         handEl.appendChild(div);
@@ -347,9 +418,11 @@ pSlots.forEach(slot => {
 
         if(startMoment + card.moments > 5) return alert("Not enough space!");
         for(let i=0; i<card.moments; i++) { if(state.player.timeline[startMoment + i] !== null) return alert("Slot occupied!"); }
-        if(state.player.stam < card.cost) return alert("Not enough stamina!");
-
-        state.player.stam -= card.cost;
+        const effectiveCost = getMoveCost('player', card);
+                if(state.player.stam < effectiveCost) return alert("Not enough stamina!");
+                state.player.stam -= effectiveCost;
+                card.paidCost = effectiveCost;
+                card.paidUpfront = true;
         for(let i=0; i<card.moments; i++) { state.player.timeline[startMoment + i] = i === card.moments - 1 ? card : 'occupied'; }
         
         playPlaceSound(card.moments); 
@@ -379,7 +452,7 @@ function returnToHand(index) {
     const card = state.player.timeline[index];
     if(!card || card === 'occupied') return;
     
-    state.player.stam += card.cost; 
+    state.player.stam = Math.min(state.player.maxStam, state.player.stam + (card.paidCost ?? card.cost ?? 0)); 
     const startIdx = index - (card.moments - 1);
     for(let i=0; i<card.moments; i++) state.player.timeline[startIdx + i] = null;
     
@@ -390,7 +463,9 @@ function returnToHand(index) {
 
 function addBasicAction(name, cost, moments, dmg, type) {
     if (state.phase !== 'planning' && state.phase !== 'pivot_wait') return;
-    if(state.player.stam < cost) return alert("Not enough stamina!");
+    const actionObj = { name, cost, moments, dmg, type, isBasic: true, uniqueId: 'basic_'+Math.random() };
+    const effectiveCost = getMoveCost('player', actionObj);
+    if(state.player.stam < effectiveCost) return alert("Not enough stamina!");
     
     let slot = -1;
     if (state.phase === 'pivot_wait') {
@@ -414,8 +489,10 @@ function addBasicAction(name, cost, moments, dmg, type) {
         if(slot === -1) return alert("Not enough timeline space!");
     }
 
-    state.player.stam -= cost;
-    let action = { name, cost, moments, dmg, type, isBasic: true, uniqueId: 'basic_'+Math.random() };
+    state.player.stam -= effectiveCost;
+    actionObj.paidCost = effectiveCost;
+    actionObj.paidUpfront = true;
+    let action = actionObj;
     for(let i=0; i<moments; i++) { state.player.timeline[slot+i] = (i === moments - 1) ? action : 'occupied'; }
     
     playPlaceSound(moments);
@@ -444,7 +521,7 @@ function renderPlayerTimeline() {
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
 
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${t.desc}</div>` : ''}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}<div>${icon} ${extraText}</div>`;
             tl.appendChild(div);
         }
     }
@@ -471,7 +548,7 @@ function renderAITimeline() {
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
 
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${t.desc}</div>` : ''}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}<div>${icon} ${extraText}</div>`;
             tl.appendChild(div);
         }
     }
@@ -524,17 +601,17 @@ function planAI() {
         }
         
         // Let the AI consider Ability 1
-        if (ability1 && virtualStam >= ability1.cost && slotsLeft >= ability1.moments && !state.ai.timeline.some(c => c && c.name === ability1.name)) {
+        if (ability1 && virtualStam >= getMoveCost('ai', ability1) && slotsLeft >= ability1.moments && !state.ai.timeline.some(c => c && c.name === ability1.name)) {
             validMoves.push(ability1);
         }
         
         // Let the AI consider Ability 2
-        if (ability2 && virtualStam >= ability2.cost && slotsLeft >= ability2.moments && !state.ai.timeline.some(c => c && c.name === ability2.name)) {
+        if (ability2 && virtualStam >= getMoveCost('ai', ability2) && slotsLeft >= ability2.moments && !state.ai.timeline.some(c => c && c.name === ability2.name)) {
             validMoves.push(ability2);
         }
 
         state.ai.hand.forEach(card => {
-            if (card.cost <= virtualStam && slotsLeft >= card.moments) validMoves.push(card);
+            if (getMoveCost('ai', card) <= virtualStam && slotsLeft >= card.moments) validMoves.push(card);
         });
 
         let chosenMove = null;
@@ -556,7 +633,7 @@ function planAI() {
         
         if (!chosenMove) chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
 
-        virtualStam -= chosenMove.cost; 
+        virtualStam -= getMoveCost('ai', chosenMove); 
         
         for(let j=0; j < chosenMove.moments - 1; j++) state.ai.timeline[i+j] = 'occupied';
         state.ai.timeline[i + (chosenMove.moments - 1)] = chosenMove; 
@@ -623,7 +700,7 @@ function generateCardHTML(card) {
         <div class="card" style="width: 100%; height: 100%; margin: 0; box-sizing: border-box; cursor: default;">
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
             <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${card.cost}</span></div>
-            <div class="card-desc">${card.desc ? card.desc : ''}</div>
+            <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         </div>
     `;
@@ -747,7 +824,7 @@ function pivot() {
         momentsFreed = pData.card.moments;
         // -------------------------------------------
 
-        state.player.stam = Math.min(state.player.maxStam, state.player.stam + (pData.card.cost || 0)); 
+        state.player.stam = Math.min(state.player.maxStam, state.player.stam + (pData.card.paidCost ?? pData.card.cost ?? 0)); 
         if (!pData.card.isBasic) state.player.hand.push(pData.card);
         for(let i=0; i<momentsFreed; i++) state.player.timeline[startIndex + i] = null; 
     } else {
@@ -812,7 +889,7 @@ function handleAIReaction() {
         if (aiCard) {
             pivotStartIndex = aiData.startIndex;
             momentsFreed = aiCard.moments;
-            state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + (aiCard.cost || 0)); 
+            state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + (aiCard.paidCost ?? getMoveCost('ai', aiCard) ?? aiCard.cost ?? 0)); 
             if (!aiCard.isBasic) state.ai.hand.push(aiCard); 
             for(let i=0; i<momentsFreed; i++) state.ai.timeline[pivotStartIndex + i] = null; 
         } else {
@@ -830,7 +907,7 @@ function handleAIReaction() {
             if (virtualStam >= 1) validMoves.push({ name: 'Parry', type: 'parry', cost: 1, moments: 1, dmg: 0, isBasic: true });
             
             state.ai.hand.forEach(c => {
-                if (c.cost <= virtualStam && c.moments <= slotsLeftToFill) validMoves.push(c);
+                if (getMoveCost('ai', c) <= virtualStam && c.moments <= slotsLeftToFill) validMoves.push(c);
             });
 
             let chosenMove = null;
@@ -847,7 +924,7 @@ function handleAIReaction() {
 
             if (!chosenMove) chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
 
-            virtualStam -= chosenMove.cost;
+            virtualStam -= getMoveCost('ai', chosenMove);
             state.ai.stam -= chosenMove.cost;
             
             for(let j=0; j < chosenMove.moments; j++) {
@@ -949,7 +1026,11 @@ function resolveMoment() {
     if (pActive && pActive.type === 'block') pBlock = true;
 
     if(aiAction && aiAction !== 'occupied') {
-        state.ai.stam = Math.max(0, state.ai.stam - (aiAction.cost || 0)); 
+        {
+        const costToPay = (!aiAction.paidUpfront) ? getMoveCost('ai', aiAction) : 0;
+        if (!aiAction.paidUpfront) aiAction.paidCost = costToPay;
+        state.ai.stam = Math.max(0, state.ai.stam - costToPay);
+    } 
         if(aiAction.type === 'attack') { 
             let roguePenalty = state.ai.statuses.rogueDebuff || 0;
             aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod - roguePenalty; 
@@ -1014,8 +1095,8 @@ if (pGrab) {
       }
     }
 
-    if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; }
-    if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = 1; }
+    if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; if (state.player.class === 'Ice Djinn') applyFreezeCounters('player', 'ai', 2); }
+    if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = 1; if (state.ai.class === 'Ice Djinn') applyFreezeCounters('ai', 'player', 2); }
 
     // --- FIXED ARMOR LOGIC: Now safely catches ALL active blocks properly ---
     if(pBlock && aiDmg > 0 && !aiGrab) { 
@@ -1024,8 +1105,14 @@ if (pGrab) {
             let blocked = Math.min(aiDmg, pActive.currentBlock);
             aiDmg -= blocked; pActive.currentBlock -= blocked;
             log(`Player's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('player', 'CAGE', 'float-block'); playSound('block');
+        } else if (pActive.name === 'Ice Wall') {
+            if(pActive.currentBlock === undefined) pActive.currentBlock = 8;
+            let blocked = Math.min(aiDmg, pActive.currentBlock);
+            aiDmg -= blocked; pActive.currentBlock -= blocked;
+            log(`Player's Ice Wall absorbs ${blocked} DMG!`); spawnFloatingText('player', 'ICE WALL', 'float-block'); playSound('block');
+            if (blocked > 0) applyFreezeCounters('player', 'ai', 1);
         } else { 
-            let effectiveArmor = Math.max(0, state.player.armor - (state.player.statuses.armorDebuff || 0));
+            let effectiveArmor = getEffectiveArmor('player');
             aiDmg = Math.max(0, aiDmg - effectiveArmor); 
             log(`Player blocks!`); spawnFloatingText('player', 'BLOCK', 'float-block'); playSound('block'); 
             if(state.player.class === 'Paladin' && pAction && pAction.type === 'block') { state.player.statuses.nextAtkMod += 1; log("Player Paladin Passive: +1 DMG next attack!"); }
@@ -1040,8 +1127,14 @@ if (pGrab) {
             let blocked = Math.min(pDmg, aiActive.currentBlock);
             pDmg -= blocked; aiActive.currentBlock -= blocked;
             log(`AI's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('ai', 'CAGE', 'float-block'); playSound('block');
+        } else if (aiActive.name === 'Ice Wall') {
+            if(aiActive.currentBlock === undefined) aiActive.currentBlock = 8;
+            let blocked = Math.min(pDmg, aiActive.currentBlock);
+            pDmg -= blocked; aiActive.currentBlock -= blocked;
+            log(`AI's Ice Wall absorbs ${blocked} DMG!`); spawnFloatingText('ai', 'ICE WALL', 'float-block'); playSound('block');
+            if (blocked > 0) applyFreezeCounters('ai', 'player', 1);
         } else {
-            let effectiveArmor = Math.max(0, state.ai.armor - (state.ai.statuses.armorDebuff || 0));
+            let effectiveArmor = getEffectiveArmor('ai');
             pDmg = Math.max(0, pDmg - effectiveArmor); 
             log(`AI blocks!`); spawnFloatingText('ai', 'BLOCK', 'float-block'); playSound('block'); 
             if(state.ai.class === 'Paladin' && aiAction && aiAction.type === 'block') { state.ai.statuses.nextAtkMod += 1; log("AI Paladin Passive: +1 DMG next attack!"); }
@@ -1154,7 +1247,7 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             else { log(`AI repositions and prepares...`); } break;
         case 'pierce':
             if(context.targetBlocked) { 
-                let effectiveArmor = Math.max(0, target.armor - target.statuses.armorDebuff);
+                let effectiveArmor = Math.max(0, (target.armor || 0) + (target.statuses.bonusArmor || 0) - (target.statuses.armorDebuff || 0));
                 context.dmgOut += effectiveArmor; 
                 log(`${sourceKey} PIERCES right through the armor!`); 
             } break;
@@ -1181,7 +1274,32 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             }
             break;
         case 'chiller':
-            if(context.hitLanded) { target.statuses.stamPenalty += 1; log(`${targetKey} is CHILLED! Stamina recovery heavily reduced.`); source.roundData.appliedStatus = true; } break;
+            if(context.hitLanded) { target.statuses.stamPenalty += 1; log(`${targetKey} is CHILLED! Stamina recovery heavily reduced.`); source.roundData.appliedStatus = true; }
+            break;
+        case 'freeze_1_on_hit':
+            if(context.hitLanded) { applyFreezeCounters(sourceKey, targetKey, 1); }
+            break;
+        case 'cold_wind':
+            applyFreezeCounters(sourceKey, targetKey, 1);
+            drawCards(1, sourceKey);
+            break;
+        case 'break_the_ice':
+            if(context.grabHit) {
+                const stacks = target.statuses.freeze || 0;
+                if (stacks > 0) {
+                    target.statuses.freeze = 0;
+                    target.hp -= stacks;
+                    target.roundData.lostLife = true;
+                    spawnFloatingText(targetKey, `-${stacks}`, 'float-dmg');
+                    log(`Break the Ice detonates ${stacks} FREEZE for ${stacks} extra DMG!`);
+                    playSound('heavy_impact');
+                }
+            }
+            break;
+        case 'spirit_form':
+            source.statuses.armorNextTurn = (source.statuses.armorNextTurn || 0) + 2;
+            log(`${sourceKey} will gain +2 Armor next turn.`);
+            break;
     }
 }
 
@@ -1205,6 +1323,20 @@ function nextTurn(isFirstTurn = false) {
         // Reset statuses
         state.player.statuses.dmgReduction = 0; state.player.statuses.forceBlock = false; state.player.statuses.drawOnBlock = false; state.player.statuses.stamOnBlock = false; state.player.statuses.armorDebuff = 0; state.player.statuses.stamPenalty = 0; state.player.statuses.rogueDebuff = 0;
         state.ai.statuses.dmgReduction = 0; state.ai.statuses.forceBlock = false; state.ai.statuses.drawOnBlock = false; state.ai.statuses.stamOnBlock = false; state.ai.statuses.armorDebuff = 0; state.ai.statuses.stamPenalty = 0; state.ai.statuses.rogueDebuff = 0;
+
+        // Clear last turn's temporary armor and apply queued armor gains
+        state.player.statuses.bonusArmor = 0;
+        state.ai.statuses.bonusArmor = 0;
+        if ((state.player.statuses.armorNextTurn || 0) > 0) {
+            state.player.statuses.bonusArmor += state.player.statuses.armorNextTurn;
+            log(`Player gains +${state.player.statuses.armorNextTurn} Armor this turn.`);
+            state.player.statuses.armorNextTurn = 0;
+        }
+        if ((state.ai.statuses.armorNextTurn || 0) > 0) {
+            state.ai.statuses.bonusArmor += state.ai.statuses.armorNextTurn;
+            log(`AI gains +${state.ai.statuses.armorNextTurn} Armor this turn.`);
+            state.ai.statuses.armorNextTurn = 0;
+        }
     }
     
     state.player.roundData = { lostLife: false, appliedStatus: false };

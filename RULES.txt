@@ -39,6 +39,12 @@ Combat is built around predicting your opponent's exact sequence.
 
 ---
 
+### **2.5 Statuses & Keywords**
+
+* **FREEZE ❄️:** A **stackable debuff** that is **not removed at end of turn**. When a fighter reaches **10+ FREEZE**, all of their **Attacks** cost **+1 Stamina** until their FREEZE is reduced (for example by effects like *Break the Ice*).
+
+---
+
 ### **3. Turn Phases**
 
 Every round follows a strict sequence of events:

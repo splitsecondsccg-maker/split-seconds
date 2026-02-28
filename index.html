@@ -35,6 +35,10 @@
                         <span>Necromancer</span>
                         <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
                     </button>
+                    <button class="char-btn" style="background-image: url('ice_djinn.png');" onclick="selectChar('player', 'Ice Djinn')">
+                        <span>Ice Djinn</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Ice Djinn</b><hr style="border-color:#555;margin:4px 0;">A slow-burn control spirit. Stalls early with FREEZE and defensive magic, then bursts for huge damage later.</div>
+                    </button>
                 </div>
             </div>
             <div style="text-align: center;">
@@ -59,6 +63,10 @@
                     <button class="char-btn" style="background-image: url('necromancer.png');" onclick="selectChar('ai', 'Necromancer')">
                         <span>Necromancer</span>
                         <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
+                    </button>
+                    <button class="char-btn" style="background-image: url('ice_djinn.png');" onclick="selectChar('ai', 'Ice Djinn')">
+                        <span>Ice Djinn</span>
+                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Ice Djinn</b><hr style="border-color:#555;margin:4px 0;">A slow-burn control spirit. Stalls early with FREEZE and defensive magic, then bursts for huge damage later.</div>
                     </button>
                 </div>
             </div>
@@ -144,8 +152,7 @@
                     </button>
                     <button class="btn-danger basic-action-btn" onclick="backToMenu()">
                         <span style="font-size: 18px;">🚪</span><br><b>Menu</b>
-                    </button>
-                </div>
+                    </button>                </div>
             </div>
             <div class="hand" id="player-hand" style="margin-top: 0; margin-bottom: 5px;"></div>
         </div>
@@ -170,7 +177,7 @@
                 <div style="display: flex; gap: 20px; justify-content: center;">
                     <button id="btn-lock" class="submit-btn" onclick="lockIn()">🔒 LOCK IN (0 ⚡)</button>
                     
-                    <button id="btn-pivot" class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>
+                    <button id="btn-pivot" class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>                    
                 </div>
             </div>
         </div>

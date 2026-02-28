@@ -60,7 +60,7 @@ function selectChar(target, charName) {
 
 function startGame() {
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
-    document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'grid';
+    document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
     
     // RESTORED: This builds the decks and stats!
     const pData = classData[selectedPlayer];
@@ -357,7 +357,7 @@ function returnToHand(index) {
     const startIdx = index - (card.moments - 1);
     for(let i=0; i<card.moments; i++) state.player.timeline[startIdx + i] = null;
     
-    if(card.id || card.uniqueId) state.player.hand.push(card);
+    if(card.id) state.player.hand.push(card);
     
     renderPlayerTimeline(); updateUI();
 }
@@ -856,7 +856,7 @@ function resolveMoment() {
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
         if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Brute' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Brute gained 1 Stam (Passive)."); }
-        setTimeout(() => nextTurn(), 1500); return; 
+        setTimeout(() => nextTurn(), 1000); return; 
     }
     
     // 1. Clear all previous glows from both slots AND cards
@@ -864,29 +864,32 @@ function resolveMoment() {
         el.style.boxShadow = 'none';
         el.style.filter = 'none'; // Clear any brightness filters
     });
+    document.querySelectorAll('.resolving').forEach(el => el.classList.remove('resolving'));
+
 
     // 2. Identify the current slots
-    // Highlight the resolving slots/cards (Balatro-style guidance)
-    const pSlots = Array.from(document.querySelectorAll('#player-timeline .slot'));
-    const aiSlots = Array.from(document.querySelectorAll('#ai-timeline .slot'));
-    const clearResolveGlow = (slots) => {
-        slots.forEach(slot => {
-            slot.classList.remove('resolving-slot');
-            slot.style.boxShadow = '';
-            const card = slot.querySelector('.card');
-            if (card) {
-                card.style.filter = '';
-                card.style.zIndex = '';
-            }
-        });
+    const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${state.currentMoment+1})`);
+    const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${state.currentMoment+1})`);
+    
+    // 3. Helper function to make the 'top-most' element glow
+    const applyGlow = (slot) => {
+        if (!slot) return;
+        
+        // Check if there is a card inside this slot
+        const card = slot.querySelector('.card');
+        const target = card || slot; // Glow the card if it exists, otherwise the slot
+        
+        target.style.boxShadow = '0 0 20px 8px rgba(255, 255, 255, 0.7)';
+        
+        // If it's a card, let's also make it slightly brighter so it "pops"
+        if (card) {
+            card.style.filter = 'brightness(1.2)';
+            card.style.zIndex = '10'; // Ensure it sits above neighboring cards
+        }
     };
-    clearResolveGlow(pSlots);
-    clearResolveGlow(aiSlots);
 
-    const pSlot = pSlots[state.currentMoment];
-    const aiSlot = aiSlots[state.currentMoment];
-    if (pSlot) pSlot.classList.add('resolving-slot');
-    if (aiSlot) aiSlot.classList.add('resolving-slot');
+    applyGlow(pSlot);
+    applyGlow(aiSlot);
     let pAction = state.player.timeline[state.currentMoment];
     let aiAction = state.ai.timeline[state.currentMoment];
 
@@ -927,17 +930,57 @@ function resolveMoment() {
 
     if (aiActive && aiActive.type === 'block') aiBlock = true;
 
-    let pGrabHit = false; let aiGrabHit = false;
+    let pGrabHit = false; 
+let aiGrabHit = false;
 
-    if(pGrab) {
-        if(aiBlock || aiParry) { pGrabHit = true; log(`Player ${pAction.name} GRABS!`); }
-        else if(aiAction && aiAction.type === 'attack') { pDmg = 0; log("Player Grab interrupted!"); }
-        else { pDmg = 0; log("Player Grab misses."); }
+// NEW: track interruption so we can cancel the grabbed action's effect
+let pActionInterrupted = false;
+let aiActionInterrupted = false;
+
+if (pGrab) {
+  const aiIsBuffLike = aiAction && (aiAction.type === 'buff' || aiAction.type === 'utility');
+
+  if (aiBlock || aiParry) {
+    pGrabHit = true;
+    log(`Player ${pAction.name} GRABS!`);
+  }
+  // NEW: grab also works on buffs/utilities (and interrupts them)
+  else if (aiIsBuffLike) {
+    pGrabHit = true;
+    aiActionInterrupted = true;
+    log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiAction.name}!`);
+  }
+  else if (aiAction && aiAction.type === 'attack') {
+    pDmg = 0;
+    log("Player Grab interrupted!");
+  }
+  else {
+    pDmg = 0;
+    log("Player Grab misses.");
+  }
     }
-    if(aiGrab) {
-        if(pBlock || pParry) { aiGrabHit = true; log(`AI ${aiAction.name} GRABS!`); }
-        else if(pAction && pAction.type === 'attack') { aiDmg = 0; log("AI Grab interrupted!"); }
-        else { aiDmg = 0; log("AI Grab misses."); }
+
+    if (aiGrab) {
+      const pIsBuffLike = pAction && (pAction.type === 'buff' || pAction.type === 'utility');
+
+      if (pBlock || pParry) {
+        aiGrabHit = true;
+        log(`AI ${aiAction.name} GRABS!`);
+      }
+      // NEW: grab also works on buffs/utilities (and interrupts them)
+      else if (pIsBuffLike) {
+        aiGrabHit = true;
+        pActionInterrupted = true;
+        log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pAction.name}!`);
+      }
+      else if (pAction && pAction.type === 'attack') {
+        aiDmg = 0;
+        log("AI Grab interrupted!");
+      }
+      else {
+        aiDmg = 0;
+        log("AI Grab misses.");
+      }
     }
 
     if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; }
@@ -1001,9 +1044,12 @@ function resolveMoment() {
     }
 
     // 4. Trigger Effects
-    if(pAction && pAction.effect) applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
-    if(aiAction && aiAction.effect) applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiDmg > 0, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
-
+    if (pAction && pAction.effect && !pActionInterrupted) {
+    applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
+    }
+    if (aiAction && aiAction.effect && !aiActionInterrupted) {
+      applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiDmg > 0, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
+    }
     updateUI();
     if(state.player.hp <= 0 || state.ai.hp <= 0) {
         setTimeout(() => alert(state.player.hp <= 0 ? "You Lose!" : "You Win!"), 500);
@@ -1011,7 +1057,7 @@ function resolveMoment() {
     }
 
     state.currentMoment++;
-    setTimeout(resolveMoment, 1200);
+    setTimeout(resolveMoment, 800);
 }
 
 function applyEffect(sourceKey, targetKey, effectString, context = {}) {
@@ -1037,6 +1083,9 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                 spawnFloatingText(targetKey, '-1', 'float-dmg');
             }
             break;
+        case 'heal_2': 
+            source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); 
+            spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); break;
         case 'heal_3': 
             source.hp = Math.min(source.maxHp, source.hp + 3); log(`${sourceKey} heals 3!`); 
             spawnFloatingText(sourceKey, '+3', 'float-heal'); playSound('heal'); break;

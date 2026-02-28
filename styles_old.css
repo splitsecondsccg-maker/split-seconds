@@ -8,40 +8,60 @@ body {
 }
 
 #char-select-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: rgba(17, 17, 17, 0.85); z-index: 100; backdrop-filter: blur(5px); }
-#game-screen {
-    display: none;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 14px;
-    box-sizing: border-box;
-    gap: 14px;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-rows: auto 1fr auto;
+#game-screen { display: none; flex-direction: column; justify-content: space-between; height: 100vh; background: rgba(0, 0, 0, 0.6); padding: 20px; box-sizing: border-box; }
+
+/* === Responsive centering + log-safe layout (patch) === */
+#game-screen{
+  position: relative;
+  /* Reserve space for the battle log on the right so the core board can sit centered */
+  padding-right: 290px;
 }
 
-.top-bar { grid-column: 1; grid-row: 1; }
-
-.center-area {
-    grid-column: 1;
-    grid-row: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 30px;
-    margin: 10px 0;
-    min-width: 0;
+/* Timelines + LOCK should stay on one row (LOCK to the RIGHT of the timelines) */
+#timeline-and-lock{
+  flex-wrap: nowrap;
+}
+.timeline-stack{
+  flex: 0 1 auto;
+}
+#btn-start-resolution{
+  flex: 0 0 auto;
 }
 
-.bottom-bar {
-    grid-column: 1;
-    grid-row: 3;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-    min-width: 0;
+/* Center the timelines within the playable area and make them responsive */
+.timeline{
+  width: min(600px, 100%);
+  margin-left: auto;
+  margin-right: auto;
 }
+
+/* Ensure timeline rows are centered even if wrappers are plain divs */
+#ai-timeline, #player-timeline{
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* On smaller screens, stack the log below and remove the right padding */
+@media (max-width: 980px){
+  #game-screen{ padding-right: 20px; }
+  #timeline-and-lock{ flex-direction: column; gap: 14px; }
+  .log{
+    position: static;
+    width: auto;
+    height: 200px;
+    margin-top: 12px;
+  }
+}
+
+/* Keep the top/bottom stat rows from pushing the board around on medium screens */
+.stats-area{
+  flex-wrap: wrap;
+  align-items: center;
+}
+#ai-ability-container, #player-ability-container{
+  max-width: min(520px, 100%);
+}
+
 
 .select-container { display: flex; gap: 40px; margin-bottom: 30px; }
 .roster { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 400px; }
@@ -122,23 +142,7 @@ body {
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.3); } }
 .dmg-text { color: #ff4757; } .heal-text { color: #2ed573; } .block-text { color: #7bed9f; } .status-text { color: #feca57; font-size: 22px; }
 
-.log {
-  grid-column: 2;
-  grid-row: 1 / span 3;
-  position: static;
-  width: auto;
-  height: 100%;
-  background: rgba(20, 20, 25, 0.9);
-  padding: 15px;
-  border-radius: 12px;
-  font-family: monospace;
-  overflow-y: auto;
-  border: 2px solid #555;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-  color: #ecf0f1;
-  font-size: 14px;
-  line-height: 1.4;
-}
+.log { position: absolute; right: 20px; top: 20px; bottom: 20px; width: 250px; background: rgba(20, 20, 25, 0.9); padding: 15px; border-radius: 12px; font-family: monospace; overflow-y: auto; border: 2px solid #555; box-shadow: 0 4px 8px rgba(0,0,0,0.6); color: #ecf0f1; font-size: 14px; line-height: 1.4; z-index: 10; }
 .log div { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
 
 .submit-btn { background: linear-gradient(135deg, #27ae60, #2ecc71); border: 3px solid #fff; color: white; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 12px rgba(0,0,0,0.6); transition: 0.2s; height: 100px; }
@@ -221,36 +225,4 @@ body {
     0% { opacity: 0.6; }
     50% { opacity: 1; }
     100% { opacity: 0.6; }
-}
-
-/* --- RESPONSIVE LAYOUT --- */
-@media (max-width: 980px) {
-  #game-screen {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto auto;
-  }
-  .log {
-    grid-column: 1;
-    grid-row: 4;
-    height: 200px;
-  }
-}
-
-/* --- TIMELINE RESOLUTION RUMBLE --- */
-@keyframes resolveRumble {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    25% { transform: translate(-2px, 2px) rotate(-1deg); }
-    50% { transform: translate(2px, -2px) rotate(1deg); }
-    75% { transform: translate(-2px, -1px) rotate(-1deg); }
-    100% { transform: translate(0, 0) rotate(0deg); }
-}
-
-.timeline-card.resolving {
-    animation: resolveRumble 0.22s infinite;
-}
-
-/* Subtle slot emphasis while resolving (left-to-right sweep cue) */
-#player-timeline .slot.resolving-slot,
-#ai-timeline .slot.resolving-slot {
-    box-shadow: 0 0 18px 6px rgba(255, 255, 255, 0.35);
 }

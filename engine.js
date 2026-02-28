@@ -7,6 +7,13 @@ const sounds = {
     place1: new Audio('place1.mp3'), place2: new Audio('place2.mp3'), 
     place3: new Audio('place3.mp3'), lock: new Audio('lock.mp3') 
 };
+// ===== Balatro-snappy resolve pacing =====
+const SPEED_MULT = 0.65; // lower = faster
+const RESOLVE_DELAY = Math.round(650 * SPEED_MULT);        // empty moments
+const LIGHT_IMPACT_DELAY = Math.round(700 * SPEED_MULT);  // small/medium hit
+const HEAVY_IMPACT_DELAY = Math.round(1200 * SPEED_MULT); // big hit
+const END_ROUND_DELAY = Math.round(800 * SPEED_MULT);
+
 Object.values(sounds).forEach(sound => sound.volume = 0.6);
 const music = { select: new Audio('select.mp3'), battle: new Audio('battle.mp3') };
 music.select.loop = true; music.select.volume = 0.5; music.battle.loop = true; music.battle.volume = 0.4;
@@ -18,13 +25,32 @@ function playPlaceSound(moments) {
     else playSound('place3');
 }
 
-function triggerShake() {
-    const screen = document.body; 
-    screen.classList.remove('shake'); 
-    void screen.offsetWidth; 
-    screen.classList.add('shake');
-    setTimeout(() => screen.classList.remove('shake'), 300);
+function triggerShake(power = 1) {
+    const screen = document.body;
+    screen.classList.remove('shake', 'shake-heavy');
+    void screen.offsetWidth;
+
+    if (power >= 2) {
+        screen.classList.add('shake-heavy');
+        setTimeout(() => screen.classList.remove('shake-heavy'), 260);
+    } else if (power >= 1) {
+        screen.classList.add('shake');
+        setTimeout(() => screen.classList.remove('shake'), 180);
+    }
 }
+
+function punchPortrait(targetKey, power = 1) {
+    const selector = targetKey === 'player' ? '#player-stats .portrait' : '#ai-stats .portrait';
+    const el = document.querySelector(selector);
+    if (!el) return;
+
+    el.classList.remove('portrait-punch', 'portrait-punch-heavy');
+    void el.offsetWidth;
+
+    if (power >= 2) el.classList.add('portrait-punch-heavy');
+    else el.classList.add('portrait-punch');
+}
+
 
 function getIcon(type) {
     if(type === 'attack') return '⚔️';
@@ -856,7 +882,7 @@ function resolveMoment() {
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
         if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Brute' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Brute gained 1 Stam (Passive)."); }
-        setTimeout(() => nextTurn(), 1000); return; 
+        setTimeout(() => nextTurn(), END_ROUND_DELAY); return; 
     }
     
     // 1. Clear all previous glows from both slots AND cards
@@ -865,6 +891,11 @@ function resolveMoment() {
         el.style.filter = 'none'; // Clear any brightness filters
     });
     document.querySelectorAll('.resolving').forEach(el => el.classList.remove('resolving'));
+
+    // Track HP changes for consistent feedback (works with multi-moment cards)
+    const pHpBefore = state.player.hp;
+    const aiHpBefore = state.ai.hp;
+
 
 
     // 2. Identify the current slots
@@ -1026,7 +1057,7 @@ if (pGrab) {
     if(pDmg > 0) { 
         state.ai.hp -= pDmg; state.ai.roundData.lostLife = true;
         log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg'); 
-        if(pAction && pAction.moments >= 3) { playSound('heavy_impact'); triggerShake(); } else playSound('hit');
+        if(pActive && pActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
         
         // Passives - FIXED ROGUE LOGIC
         if(state.player.class === 'Vampiress') { state.player.statuses.nextAtkMod += 1; log("Player Vampiress Passive: +1 DMG next attack!"); }
@@ -1036,13 +1067,29 @@ if (pGrab) {
     if(aiDmg > 0) { 
         state.player.hp -= aiDmg; state.player.roundData.lostLife = true;
         log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg'); 
-        if(aiAction && aiAction.moments >= 3) { playSound('heavy_impact'); triggerShake(); } else playSound('hit');
+        if(aiActive && aiActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // Passives - FIXED ROGUE LOGIC
         if(state.ai.class === 'Vampiress') { state.ai.statuses.nextAtkMod += 1; log("AI Vampiress Passive: +1 DMG next attack!"); }
         if(state.ai.class === 'Rogue') { state.player.statuses.rogueDebuff = (state.player.statuses.rogueDebuff || 0) + 1; log("AI Rogue Passive: Player next attack -1 DMG!"); }
     }
 
+
+    // 3.5 Feedback (Balatro-snappy): shake based on ACTUAL HP loss this moment
+    const pHpLoss = Math.max(0, pHpBefore - state.player.hp);
+    const aiHpLoss = Math.max(0, aiHpBefore - state.ai.hp);
+    const momentImpact = Math.max(pHpLoss, aiHpLoss);
+
+    if (momentImpact >= 5) {
+        triggerShake(2);
+        punchPortrait(pHpLoss > 0 ? 'player' : 'ai', 2);
+    } else if (momentImpact >= 3) {
+        triggerShake(1);
+        punchPortrait(pHpLoss > 0 ? 'player' : 'ai', 1);
+    } else if (momentImpact >= 1) {
+        // small hits: portrait punch only (no screen shake)
+        punchPortrait(pHpLoss > 0 ? 'player' : 'ai', 1);
+    }
     // 4. Trigger Effects
     if (pAction && pAction.effect && !pActionInterrupted) {
     applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
@@ -1057,7 +1104,7 @@ if (pGrab) {
     }
 
     state.currentMoment++;
-    setTimeout(resolveMoment, 800);
+    setTimeout(resolveMoment, (typeof momentImpact !== 'undefined' && momentImpact >= 5) ? HEAVY_IMPACT_DELAY : (typeof momentImpact !== 'undefined' && momentImpact >= 1) ? LIGHT_IMPACT_DELAY : RESOLVE_DELAY);
 }
 
 function applyEffect(sourceKey, targetKey, effectString, context = {}) {

@@ -163,6 +163,34 @@ body {
 
 @keyframes cameraShake { 0% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-6px, 6px) rotate(-1deg); } 40% { transform: translate(6px, -6px) rotate(1deg); } 60% { transform: translate(-6px, -6px) rotate(-1deg); } 80% { transform: translate(6px, 6px) rotate(1deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
 .shake { animation: cameraShake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Heavier hit shake */
+@keyframes cameraShakeHeavy {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-10px, 10px) rotate(-2deg); }
+  40% { transform: translate(10px, -10px) rotate(2deg); }
+  60% { transform: translate(-10px, -10px) rotate(-2deg); }
+  80% { transform: translate(10px, 10px) rotate(2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.shake-heavy { animation: cameraShakeHeavy 0.28s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Timeline resolving rumble (Balatro-ish) */
+@keyframes resolveShake {
+  0% { transform: translateX(0px); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0px); }
+}
+.timeline-card.resolving { animation: resolveShake 0.18s infinite; }
+
+/* Portrait punch */
+@keyframes portraitPunch { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes portraitPunchHeavy { 0% { transform: scale(1); } 40% { transform: scale(1.10); } 100% { transform: scale(1); } }
+.portrait-punch { animation: portraitPunch 0.20s ease-out; }
+.portrait-punch-heavy { animation: portraitPunchHeavy 0.22s ease-out; }
+
 /* --- PORTRAIT TOOLTIPS --- */
 .portrait-tooltip {
     visibility: hidden; width: 240px; background-color: rgba(20,20,25,0.95); color: #f1c40f;

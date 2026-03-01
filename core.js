@@ -76,16 +76,20 @@ const getBaseStatuses = () => ({
     mustBlock: 0,
     stamPenalty: 0,
     rogueDebuff: 0,
-    freeze: 0           // persistent counters (NOT cleared end of turn)
+    freeze: 0,          // persistent counters (NOT cleared end of turn)
+    bleed: 0,           // persistent counters (NOT cleared end of turn)
+    poison: 0           // persistent counters (NOT cleared end of turn)
 });
 
 const KEYWORD_DEFS = {
-    FREEZE: 'Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.'
+    FREEZE: 'Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.',
+    BLEED: 'Persistent counter. When you are HIT by an ATTACK: take damage equal to BLEED, then BLEED resets to 0.',
+    POISON: 'Persistent counter. At TURN END: lose floor(POISON/2) life and remove that many POISON counters.'
 };
 
 function formatKeywords(text = '') {
     if (!text) return '';
-    return text.replace(/\b(FREEZE)\b/g, (m) => {
+    return text.replace(/\b(FREEZE|BLEED|POISON)\b/g, (m) => {
         const tip = KEYWORD_DEFS[m] || '';
         return `<span class="keyword" data-tip="${tip}">${m}</span>`;
     });
@@ -117,6 +121,47 @@ function applyFreezeCounters(sourceKey, targetKey, amount) {
 
     spawnFloatingText(targetKey, `+${amount}❄`, 'float-freeze');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} FREEZE (${target.statuses.freeze}).`);
+}
+
+
+function applyBleedCounters(sourceKey, targetKey, amount) {
+    const source = state?.[sourceKey];
+    const target = state?.[targetKey];
+    if (!target || amount <= 0) return;
+
+    target.statuses.bleed = (target.statuses.bleed || 0) + amount;
+    if (source) source.roundData.appliedStatus = true;
+
+    spawnFloatingText(targetKey, `+${amount}🩸`, 'float-bleed');
+    log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} BLEED (${target.statuses.bleed}).`);
+}
+
+function applyPoisonCounters(sourceKey, targetKey, amount) {
+    const source = state?.[sourceKey];
+    const target = state?.[targetKey];
+    if (!target || amount <= 0) return;
+
+    target.statuses.poison = (target.statuses.poison || 0) + amount;
+    if (source) source.roundData.appliedStatus = true;
+
+    spawnFloatingText(targetKey, `+${amount}☠`, 'float-poison');
+    log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} POISON (${target.statuses.poison}).`);
+}
+
+function tickPoisonAtTurnEnd(charKey) {
+    const c = state?.[charKey];
+    if (!c) return;
+    const stacks = c.statuses.poison || 0;
+    const tick = Math.floor(stacks / 2);
+    if (tick <= 0) return;
+
+    c.statuses.poison = stacks - tick;
+    c.hp -= tick;
+    c.roundData.lostLife = true;
+
+    spawnFloatingText(charKey, `-${tick}`, 'float-dmg');
+    log(`${charKey === 'player' ? 'Player' : 'AI'} suffers ${tick} POISON damage (${c.statuses.poison} left).`);
+    playSound('hit');
 }
 
 let state = {
@@ -567,12 +612,23 @@ function renderStatuses(target) {
     if(statuses.mustBlock > 0) { html += `<div class="status-badge status-debuff">Scared (${statuses.mustBlock}x Block Req)</div>`; count++; }
     if(statuses.stamPenalty > 0) { html += `<div class="status-badge status-debuff">Chilled (-${statuses.stamPenalty} Stam Recov)</div>`; count++; }
     if((statuses.bonusArmor || 0) > 0) { html += `<div class="status-badge status-buff">+${statuses.bonusArmor} Armor (this turn)</div>`; count++; }
-    if((statuses.freeze || 0) > 0) {
-        const fr = statuses.freeze;
-        const taxed = fr >= 10;
-        html += `<div class="status-badge status-debuff">${taxed ? 'FROZEN' : 'Freeze'} (${fr})${taxed ? ' · Attacks +1⚡' : ''}</div>`;
-        count++;
-    }
+    
+if((statuses.freeze || 0) > 0) {
+    const fr = statuses.freeze;
+    const taxed = fr >= 10;
+    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' · Attacks +1⚡' : ''}</div>`;
+    count++;
+}
+if((statuses.bleed || 0) > 0) {
+    const bl = statuses.bleed;
+    html += `<div class="status-badge status-debuff">${formatKeywords('BLEED')} (${bl})</div>`;
+    count++;
+}
+if((statuses.poison || 0) > 0) {
+    const ps = statuses.poison;
+    html += `<div class="status-badge status-debuff">${formatKeywords('POISON')} (${ps})</div>`;
+    count++;
+}
     if(statuses.drawOnBlock) { html += `<div class="status-badge status-buff">Draw on Block</div>`; count++; }
     if(statuses.stamOnBlock) { html += `<div class="status-badge status-buff">Stamina on Block</div>`; count++; }
     

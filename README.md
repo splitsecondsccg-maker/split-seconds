@@ -29,6 +29,13 @@ Examples:
 - `styles.css` — main UI styling
 - `tutorial.css` — tutorial-specific styling
 
+### Character Select Views
+The character selection screen supports two layouts:
+- **Fighting View** *(default)*: large player/opponent portraits with a centered roster. You pick your character, **Lock In**, then pick the opponent.
+- **TCG View**: the original roster layout.
+
+Both layouts write to the same underlying selection values (`state.selectedClass`, `state.aiClass`).
+
 ### Game content (data)
 - `data.js`
   - `classData`: all characters + their deck blueprints
@@ -151,20 +158,51 @@ Fields:
 - `cost` *(int)*: stamina cost
 - `moments` *(1..5)*: how many timeline slots the card occupies
 - `dmg` *(int, optional)*: damage dealt (defaults to 0)
-- `desc` *(string)*: UI text
-- `effect` *(string, optional)*: effect key handled by `applyEffect()`
+- `desc` *(string)*: UI text. Keyword tokens like `FREEZE`, `BLEED`, `POISON` are automatically wrapped in hover tooltips.
+- `effect` *(string, optional, legacy)*: single effect key handled by the legacy `applyEffect()` pipeline
+- `effects` *(array, optional, preferred)*: triggered effects for scalable abilities/keywords
 
 Optional fields used by certain cards:
 - `currentBlock` *(int)*: remaining shield for multi-moment blocks (e.g. `Ice Wall`)
+
+### Preferred: triggered effects (`card.effects`)
+
+To scale cleanly, cards can define **triggered effects** as an array on the card. Each entry says **when** it fires (`trigger`) and **what** to do (`type`, handled by `effects_registry.js`).
+
+```js
+{
+  id: 'toxic_cut',
+  copies: 2,
+  name: 'Toxic Cut',
+  type: 'attack',
+  cost: 2,
+  moments: 1,
+  dmg: 3,
+  desc: 'Deal 3. Apply POISON 2 on hit.',
+  effects: [
+    { trigger: 'on_hit', type: 'poison', amount: 2 }
+  ]
+}
+```
+
+Common triggers used in this prototype:
+- `on_play` — when a card is placed/played
+- `on_hit` — when an attack/grab connects
+- `on_resolve` — when the moment resolves
+- `on_turn_end` — end-of-turn effects
+
+Both systems can coexist during migration:
+- New content should prefer `effects: [...]`.
+- Older cards can keep `effect: 'some_key'` until converted.
 
 ### Adding a new card effect
 
 Effects are being migrated from a big switch to a scalable registry.
 
-**Preferred (new):** add to `effects_registry.js`:
+**Preferred (new):** add an effect **type** to `effects_registry.js`:
 ```js
 // effects_registry.js
-EffectsRegistry.my_new_effect = ({ state, sourceKey, targetKey, context, api }) => {
+EffectTypeRegistry.my_new_type = ({ state, sourceKey, targetKey, context, api, params }) => {
   // mutate state (for now) + use api.log/api.float/api.sound for UX
 };
 ```
@@ -172,9 +210,10 @@ EffectsRegistry.my_new_effect = ({ state, sourceKey, targetKey, context, api }) 
 **Legacy (fallback):** `resolution.js` still contains the old `switch(effectKey)` until migration is complete.
 
 Steps:
-1. Pick a new `effect` key (e.g. `'poison_2'`).
-2. Prefer adding it in `effects_registry.js`.
-3. Add any new status fields to `getBaseStatuses()` (in `core.js`) if needed.
+1. Pick a new effect `type` (e.g. `'poison'`).
+2. Implement it in `effects_registry.js` under `EffectTypeRegistry`.
+3. Reference it from a card via `effects: [{ trigger: '...', type: '...', ...params }]`.
+4. If the effect introduces a new status/counter, add it to `getBaseStatuses()` (in `core.js`).
 
 ---
 
@@ -186,9 +225,25 @@ In `data.js`:
    - `maxStam`
    - `armor`
    - `passiveDesc`
+   - `premise` *(recommended)*: short “character premise” shown in hover tooltips (used by both TCG and Fighting views)
    - `deck: [...]`
 2. Add a portrait entry to `charImages`.
 3. If the character has abilities, add them to `getAbilityCard(className, index)` (see `core.js`).
+
+---
+
+## Status keywords: FREEZE, BLEED, POISON
+
+These are implemented as counters under `state.<side>.statuses` (e.g. `state.player.statuses.poison`).
+
+- **FREEZE**: existing freeze behavior (counters/limits) and UI badge.
+- **BLEED**: stored as `statuses.bleed`. When the character is hit by an **ATTACK**, bleed detonates for extra damage (then is reduced/cleared according to the effect rules).
+- **POISON**: stored as `statuses.poison`. Ticks at **turn end** dealing damage, then decreases.
+
+If you add new status keywords, ensure:
+1) they exist in `getBaseStatuses()`
+2) you define how/when they tick in `resolution.js`
+3) you include them in `formatKeywords()` so tooltips work
 
 ---
 

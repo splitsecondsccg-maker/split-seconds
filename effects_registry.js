@@ -37,7 +37,34 @@
     },
   };
 
-  function tryRunRegisteredEffect(effectKey, args) {
+// New (decoupled) effect-type registry:
+// Used by card.effects = [{ trigger, type, value }]
+const EffectTypeRegistry = {
+  bleed: ({ sourceKey, targetKey, value }) => {
+    if (typeof window.applyBleedCounters === "function") {
+      window.applyBleedCounters(sourceKey, targetKey, value);
+    }
+  },
+  poison: ({ sourceKey, targetKey, value }) => {
+    if (typeof window.applyPoisonCounters === "function") {
+      window.applyPoisonCounters(sourceKey, targetKey, value);
+    }
+  },
+  freeze: ({ sourceKey, targetKey, value }) => {
+    if (typeof window.applyFreezeCounters === "function") {
+      window.applyFreezeCounters(sourceKey, targetKey, value);
+    }
+  },
+};
+
+function tryRunEffectType(typeKey, args) {
+  const fn = EffectTypeRegistry[typeKey];
+  if (!fn) return false;
+  fn(args);
+  return true;
+}
+
+function tryRunRegisteredEffect(effectKey, args) {
     const fn = EffectsRegistry[effectKey];
     if (!fn) return false;
     fn(args);
@@ -46,4 +73,6 @@
 
   window.EffectsRegistry = EffectsRegistry;
   window.tryRunRegisteredEffect = tryRunRegisteredEffect;
+  window.EffectTypeRegistry = EffectTypeRegistry;
+  window.tryRunEffectType = tryRunEffectType;
 })();

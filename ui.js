@@ -102,7 +102,10 @@ function renderPlayerTimeline() {
 }
 
 function renderAITimeline() {
-    const isHidden = state.phase === 'planning';
+    // Fog of war: AI timeline must stay hidden while the player is still planning,
+    // including the post-PIVOT adjustment window (pivot_wait). Otherwise the player
+    // can gain information before pressing LOCK.
+    const isHidden = (state.phase === 'planning' || state.phase === 'pivot_wait');
     const tl = document.getElementById('ai-timeline');
     document.querySelectorAll('.ai-placed').forEach(e => e.remove());
     
@@ -128,3 +131,86 @@ function renderAITimeline() {
     }
 }
 
+
+
+/* -------------------------------
+   Keyword tooltip manager (global)
+   Fixes:
+   - Tooltip is never clipped/covered by neighboring cards (rendered in body)
+   - Works in Active Effects box too (event delegation on .keyword)
+---------------------------------*/
+(function initKeywordTooltips() {
+    if (window.__ssKeywordTooltipInstalled) return;
+    window.__ssKeywordTooltipInstalled = true;
+
+    const tipEl = document.createElement('div');
+    tipEl.className = 'ss-keyword-tooltip';
+    document.body.appendChild(tipEl);
+
+    let activeKeyword = null;
+
+    function position(e) {
+        const pad = 12;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        // Default: to the right & slightly below cursor
+        let x = e.clientX + pad;
+        let y = e.clientY + pad;
+
+        // Measure
+        tipEl.style.left = '0px';
+        tipEl.style.top = '0px';
+        const rect = tipEl.getBoundingClientRect();
+
+        // Clamp within viewport
+        if (x + rect.width + pad > vw) x = Math.max(pad, e.clientX - rect.width - pad);
+        if (y + rect.height + pad > vh) y = Math.max(pad, e.clientY - rect.height - pad);
+
+        tipEl.style.left = `${x}px`;
+        tipEl.style.top = `${y}px`;
+    }
+
+    function show(el, e) {
+        const tip = el.getAttribute('data-tip') || '';
+        if (!tip.trim()) return;
+        activeKeyword = el;
+        tipEl.textContent = tip;
+        tipEl.classList.add('is-visible');
+        position(e);
+    }
+
+    function hide() {
+        activeKeyword = null;
+        tipEl.classList.remove('is-visible');
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (!activeKeyword) return;
+        position(e);
+    });
+
+    // Event delegation: works anywhere in the UI.
+    document.addEventListener('mouseover', (e) => {
+        const el = e.target && e.target.closest ? e.target.closest('.keyword') : null;
+        if (!el) return;
+        show(el, e);
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (!activeKeyword) return;
+        // If moving within the same keyword span, ignore.
+        const toEl = e.relatedTarget;
+        if (toEl && activeKeyword.contains(toEl)) return;
+        // If moving to another keyword, the next mouseover will handle it.
+        const nextKeyword = toEl && toEl.closest ? toEl.closest('.keyword') : null;
+        if (nextKeyword) return;
+        hide();
+    });
+
+    window.addEventListener('scroll', () => {
+        if (!activeKeyword) return;
+        // On scroll, just hide to avoid “stale” position.
+        hide();
+    }, true);
+})();

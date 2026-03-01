@@ -1,5 +1,10 @@
 function resolveMoment() {
     if (state.currentMoment > 4) { 
+        // Persistent status ticks
+        if (typeof window.tickPoisonAtTurnEnd === 'function') {
+            window.tickPoisonAtTurnEnd('player');
+            window.tickPoisonAtTurnEnd('ai');
+        }
         if (state.player.class === 'Necromancer' && state.player.roundData.appliedStatus) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Necromancer gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
         if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
@@ -196,6 +201,11 @@ if (pGrab) {
         state.ai.hp -= pDmg; state.ai.roundData.lostLife = true;
         log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg'); 
         if(pActive && pActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
+
+        // BLEED detonation: on being hit by an ATTACK
+        if (pAction && pAction.type === 'attack') {
+            detonateBleedOnAttackHit('player', 'ai');
+        }
         
         // Passives - FIXED ROGUE LOGIC
         if(state.player.class === 'Vampiress') { state.player.statuses.nextAtkMod += 1; log("Player Vampiress Passive: +1 DMG next attack!"); }
@@ -206,6 +216,11 @@ if (pGrab) {
         state.player.hp -= aiDmg; state.player.roundData.lostLife = true;
         log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg'); 
         if(aiActive && aiActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
+
+        // BLEED detonation: on being hit by an ATTACK
+        if (aiAction && aiAction.type === 'attack') {
+            detonateBleedOnAttackHit('ai', 'player');
+        }
 
         // Passives - FIXED ROGUE LOGIC
         if(state.ai.class === 'Vampiress') { state.ai.statuses.nextAtkMod += 1; log("AI Vampiress Passive: +1 DMG next attack!"); }
@@ -228,14 +243,51 @@ if (pGrab) {
         // small hits: portrait punch only (no screen shake)
         punchPortrait(pHpLoss > 0 ? 'player' : 'ai', 1);
     }
-    // 4. Trigger Effects
-    if (pAction && pAction.effect && !pActionInterrupted) {
-    applyEffect('player', 'ai', pAction.effect, { hitLanded: pDmg > 0, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
-    }
-    if (aiAction && aiAction.effect && !aiActionInterrupted) {
-      applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiDmg > 0, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
-    }
-    updateUI();
+
+// 4. Trigger Effects (decoupled, data-driven)
+const pAttemptedAttack = !!(pAction && pAction !== 'occupied' && pAction.type === 'attack' && (pAction.dmg || 0) > 0 && !pGrab);
+const aiAttemptedAttack = !!(aiAction && aiAction !== 'occupied' && aiAction.type === 'attack' && (aiAction.dmg || 0) > 0 && !aiGrab);
+
+const pHit = (pAction && pAction !== 'occupied' && pAction.type === 'attack' && pDmg > 0);
+const aiHit = (aiAction && aiAction !== 'occupied' && aiAction.type === 'attack' && aiDmg > 0);
+
+const pContact = pHit || pGrabHit;
+const aiContact = aiHit || aiGrabHit;
+
+// Source card triggers (on_hit / on_blocked / on_parried)
+if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
+    if (pContact) runTriggeredCardEffects(pAction, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: { hitLanded: pHit, grabHit: pGrabHit } });
+    if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
+    if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
+}
+if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
+    if (aiContact) runTriggeredCardEffects(aiAction, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: { hitLanded: aiHit, grabHit: aiGrabHit } });
+    if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
+    if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
+}
+
+// Defender triggers (on_block / on_parry) - attributed to the ACTIVE defense card
+if (pBlock && aiAttemptedAttack && pActive && pActive.type === 'block') {
+    runTriggeredCardEffects(pActive, 'on_block', { sourceKey: 'player', targetKey: 'ai', context: { blocked: true } });
+}
+if (aiBlock && pAttemptedAttack && aiActive && aiActive.type === 'block') {
+    runTriggeredCardEffects(aiActive, 'on_block', { sourceKey: 'ai', targetKey: 'player', context: { blocked: true } });
+}
+if (pParry && aiAttemptedAttack && pAction && pAction.type === 'parry') {
+    runTriggeredCardEffects(pAction, 'on_parry', { sourceKey: 'player', targetKey: 'ai', context: { parried: true } });
+}
+if (aiParry && pAttemptedAttack && aiAction && aiAction.type === 'parry') {
+    runTriggeredCardEffects(aiAction, 'on_parry', { sourceKey: 'ai', targetKey: 'player', context: { parried: true } });
+}
+
+// Legacy string effects (backward compatible)
+if (pAction && pAction.effect && !pActionInterrupted) {
+    applyEffect('player', 'ai', pAction.effect, { hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
+}
+if (aiAction && aiAction.effect && !aiActionInterrupted) {
+    applyEffect('ai', 'player', aiAction.effect, { hitLanded: aiHit, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry, dmgOut: aiDmg });
+}
+updateUI();
     if(state.player.hp <= 0 || state.ai.hp <= 0) {
         setTimeout(() => alert(state.player.hp <= 0 ? "You Lose!" : "You Win!"), 500);
         return;
@@ -243,6 +295,22 @@ if (pGrab) {
 
     state.currentMoment++;
     setTimeout(resolveMoment, (typeof momentImpact !== 'undefined' && momentImpact >= 5) ? HEAVY_IMPACT_DELAY : (typeof momentImpact !== 'undefined' && momentImpact >= 1) ? LIGHT_IMPACT_DELAY : RESOLVE_DELAY);
+}
+
+
+function detonateBleedOnAttackHit(attackerKey, targetKey) {
+    const target = state?.[targetKey];
+    if (!target) return;
+    const stacks = target.statuses?.bleed || 0;
+    if (stacks <= 0) return;
+
+    target.statuses.bleed = 0;
+    target.hp -= stacks;
+    target.roundData.lostLife = true;
+
+    spawnFloatingText(targetKey, `-${stacks}`, 'float-dmg');
+    log(`${targetKey === 'player' ? 'Player' : 'AI'} BLEEDS for ${stacks}!`);
+    playSound('hit');
 }
 
 function applyEffect(sourceKey, targetKey, effectString, context = {}) {
@@ -469,4 +537,83 @@ document.addEventListener("mouseup", () => isDragging = false);
 function toggleFlashSize() {
     let body = document.getElementById("flash-body");
     body.style.display = body.style.display === "none" ? "block" : "none";
+}
+
+function normalizeTriggerName(t) {
+    if (!t) return '';
+    const s = String(t).trim().toLowerCase();
+    if (s === 'upon hit' || s === 'on hit' || s === 'hit' || s === 'on_hit') return 'on_hit';
+    if (s === 'upon attack hit' || s === 'on_attack_hit') return 'on_attack_hit';
+    if (s === 'upon block' || s === 'on block' || s === 'block' || s === 'on_block') return 'on_block';
+    if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
+    if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
+    if (s === 'on get blocked' || s === 'on_blocked' || s === 'upon being blocked') return 'on_blocked';
+    if (s === 'on get parried' || s === 'on_parried' || s === 'upon being parried') return 'on_parried';
+    return s.replace(/\s+/g, '_');
+}
+
+function normalizeEffectEntry(entry) {
+    // Supported shapes:
+    // 1) { trigger, type, value }
+    // 2) { trigger, effect: ['bleed', 1] }  or { trigger, effect: { type, value } }
+    // 3) ['upon hit', ['bleed', 1]]  or ['on_hit', 'bleed', 1]
+    if (!entry) return null;
+
+    if (Array.isArray(entry)) {
+        const [tr, a, b] = entry;
+        const trigger = normalizeTriggerName(tr);
+        if (Array.isArray(a)) {
+            const [type, value] = a;
+            return { trigger, type: String(type).toLowerCase(), value: Number(value) || 0 };
+        }
+        if (typeof a === 'string') {
+            return { trigger, type: a.toLowerCase(), value: Number(b) || 0 };
+        }
+        return null;
+    }
+
+    if (typeof entry === 'object') {
+        const trigger = normalizeTriggerName(entry.trigger);
+        if (entry.type) return { trigger, type: String(entry.type).toLowerCase(), value: Number(entry.value) || 0 };
+        if (entry.effect) {
+            if (Array.isArray(entry.effect)) {
+                const [type, value] = entry.effect;
+                return { trigger, type: String(type).toLowerCase(), value: Number(value) || 0 };
+            }
+            if (typeof entry.effect === 'object' && entry.effect.type) {
+                return { trigger, type: String(entry.effect.type).toLowerCase(), value: Number(entry.effect.value) || 0 };
+            }
+        }
+    }
+
+    return null;
+}
+
+function runTriggeredCardEffects(card, triggerName, args) {
+    if (!card || !card.effects || !Array.isArray(card.effects)) return;
+
+    const trigger = normalizeTriggerName(triggerName);
+    for (const raw of card.effects) {
+        const e = normalizeEffectEntry(raw);
+        if (!e) continue;
+        if (e.trigger !== trigger) continue;
+        if ((e.value || 0) <= 0) continue;
+
+        // Effect-type registry (preferred)
+        if (typeof window.tryRunEffectType === 'function') {
+            const handled = window.tryRunEffectType(e.type, {
+                sourceKey: args.sourceKey,
+                targetKey: args.targetKey,
+                value: e.value,
+                context: args.context || {},
+                card
+            });
+            if (handled) continue;
+        }
+
+        // Fallback: allow legacy applyEffect keys as type names
+        if (typeof applyEffect === 'function') {
+            applyEffect(args.sourceKey, args.targetKey, e.type, args.context || {});
+        }
+    }
 }

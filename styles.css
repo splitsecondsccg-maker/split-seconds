@@ -274,37 +274,44 @@ body {
     cursor: help;
 }
 
-.keyword:hover::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: 50%;
-    bottom: 125%;
-    transform: translateX(-50%);
-    width: 240px;
-    background: rgba(10, 10, 14, 0.95);
-    color: #fff;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(79, 172, 254, 0.6);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-    font-weight: normal;
-    font-size: 12px;
-    line-height: 1.25;
-    z-index: 3000;
-    pointer-events: none;
+
+/* --- Keyword tooltip (global, rendered in body) --- */
+.ss-keyword-tooltip{
+  position: fixed;
+  left: 0;
+  top: 0;
+  max-width: 260px;
+  background: rgba(10, 10, 14, 0.95);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(79, 172, 254, 0.6);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  font-weight: normal;
+  font-size: 12px;
+  line-height: 1.25;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+.ss-keyword-tooltip.is-visible{
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.keyword:hover::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 115%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: rgba(79, 172, 254, 0.6);
-    z-index: 3000;
-    pointer-events: none;
+/* Floating text for BLEED / POISON */
+.float-bleed{
+  color: #ff6b81;
+  text-shadow: 0 0 10px rgba(255, 107, 129, 0.8);
 }
+.float-poison{
+  color: #7bed9f;
+  text-shadow: 0 0 10px rgba(123, 237, 159, 0.8);
+}
+
+
 
 /* Floating text for FREEZE */
 .float-freeze {

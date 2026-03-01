@@ -132,18 +132,277 @@ let state = {
 // Expose for engine_runtime.js (which intentionally uses window.state).
 window.state = state;
 
-let selectedPlayer = 'Rogue'; let selectedAI = 'Brute';
+let selectedPlayer = 'Rogue';
+let selectedAI = 'Brute';
 
-function selectChar(target, charName) {
-    if(music.select.paused) music.select.play().catch(e=>console.log("BGM blocked"));
-    const roster = document.getElementById(`${target}-roster`).children;
-    for(let btn of roster) btn.classList.remove(target === 'player' ? 'selected' : 'ai-selected');
-    event.currentTarget.classList.add(target === 'player' ? 'selected' : 'ai-selected');
-    if(target === 'player') selectedPlayer = charName;
-    if(target === 'ai') selectedAI = charName;
+// Fighting-view selection flow
+let __fightPhase = 'player';        // 'player' | 'ai'
+let __fightPlayerLocked = false;
+let __fightAiChosen = false;
+// We intentionally do NOT animate/random-preview the opponent.
+// If the player enters combat without choosing an opponent, we randomize in startGame().
+
+function getAllCharacters(){
+    return Object.keys(classData || {});
 }
 
+function pickRandomOpponent(excludeName){
+    const chars = getAllCharacters().filter(c => c !== excludeName);
+    if(chars.length === 0) return excludeName || (getAllCharacters()[0] || '');
+    return chars[Math.floor(Math.random() * chars.length)];
+}
+
+// (Random opponent preview ticker intentionally removed)
+
+function computeFightRosterCols(n){
+    if(n <= 8) return 4;
+    if(n <= 12) return 5;
+    if(n <= 18) return 6;
+    if(n <= 24) return 7;
+    return 8;
+}
+
+function buildFightRoster(){
+    const el = document.getElementById('fight-roster');
+    if(!el) return;
+
+    el.innerHTML = '';
+    const chars = getAllCharacters();
+    const cols = computeFightRosterCols(chars.length);
+    el.style.setProperty('--roster-cols', String(cols));
+
+    chars.forEach((name, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'char-btn';
+        btn.style.backgroundImage = `url('${charImages[name]}')`;
+        btn.onclick = () => selectFightChar(name, btn);
+
+        const row = Math.floor(i / cols);
+        btn.dataset.row = String(row);
+        btn.dataset.stagger = (row % 2 === 1) ? '1' : '0';
+
+        const span = document.createElement('span');
+        span.innerText = name;
+        btn.appendChild(span);
+
+        // Same tooltip behavior as TCG view (hover reveals premise).
+        const t = document.createElement('div');
+        t.className = 'pitch-tooltip';
+        const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
+        t.innerHTML = `<b style="color: #f1c40f;">The ${name}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+        btn.appendChild(t);
+
+        el.appendChild(btn);
+    });
+}
+
+function selectChar(target, charName, rosterId = null, btnEl = null) {
+    if(music.select.paused) music.select.play().catch(e=>console.log("BGM blocked"));
+
+    const rosterEl = document.getElementById(rosterId || `${target}-roster`);
+    if(!rosterEl) { console.warn("Roster not found for", target, rosterId); return; }
+
+    const selectedClass = (target === 'player') ? 'selected' : 'ai-selected';
+    const rosterButtons = rosterEl.children;
+
+    for(let btn of rosterButtons) btn.classList.remove(selectedClass);
+
+    const clicked = btnEl || (typeof event !== 'undefined' ? event.currentTarget : null);
+    if(clicked) clicked.classList.add(selectedClass);
+
+    if(target === 'player') selectedPlayer = charName;
+    if(target === 'ai') selectedAI = charName;
+
+    // Keep both views in sync (TCG roster and Fighting roster)
+    syncSelectionAcrossViews();
+
+    // Update portraits in Fighting view if it's active
+    if(getCharSelectView() === 'fight') updateFightingPortraits();
+}
+
+
+
+let __charSelectView = 'tcg';
+
+function getCharSelectView(){
+    return __charSelectView;
+}
+
+function setCharSelectView(mode){
+    __charSelectView = (mode === 'fight') ? 'fight' : 'tcg';
+
+    const tcg = document.getElementById('char-select-tcg');
+    const fight = document.getElementById('char-select-fight');
+    if(tcg) tcg.style.display = (__charSelectView === 'tcg') ? 'block' : 'none';
+    if(fight) fight.style.display = (__charSelectView === 'fight') ? 'block' : 'none';
+
+    const bTcg = document.getElementById('view-btn-tcg');
+    const bFight = document.getElementById('view-btn-fight');
+    if(bTcg) bTcg.classList.toggle('active', __charSelectView === 'tcg');
+    if(bFight) bFight.classList.toggle('active', __charSelectView === 'fight');
+
+    syncSelectionAcrossViews();
+    if(__charSelectView === 'fight'){
+        buildFightRoster();
+
+        // In Fighting View we pick PLAYER first, then pick AI after lock-in.
+        __fightPhase = 'player';
+        __fightPlayerLocked = false;
+        __fightAiChosen = false;
+        updateFightPrompt();
+        updateFightingPortraits();
+    }else{
+    }
+}
+
+function syncSelectionAcrossViews(){
+    // Mark the correct selection for both rosters (if present)
+    markRosterSelection('player-roster', 'selected', selectedPlayer);
+    markRosterSelection('ai-roster', 'ai-selected', selectedAI);
+
+    // Fighting View uses a single roster that can show both selections.
+    markFightRosterSelections();
+}
+
+function markFightRosterSelections(){
+    const el = document.getElementById('fight-roster');
+    if(!el) return;
+    for(const btn of el.children){
+        btn.classList.remove('selected','ai-selected','locked-player');
+        const label = btn.querySelector('span')?.innerText?.trim();
+        if(label === selectedPlayer){
+            btn.classList.add('selected');
+            if(__fightPlayerLocked) btn.classList.add('locked-player');
+        }
+        if(__fightAiChosen && label === selectedAI){
+            btn.classList.add('ai-selected');
+        }
+    }
+}
+
+function markRosterSelection(rosterId, selectedClass, charName){
+    const el = document.getElementById(rosterId);
+    if(!el) return;
+    for(const btn of el.children){
+        btn.classList.remove(selectedClass);
+        const label = btn.querySelector('span')?.innerText?.trim();
+        if(label === charName) btn.classList.add(selectedClass);
+    }
+}
+
+function updateFightingPortraits(){
+    const pData = classData[selectedPlayer];
+    const aData = __fightAiChosen ? classData[selectedAI] : null;
+
+    const pPortrait = document.getElementById('fight-player-portrait');
+    const aPortrait = document.getElementById('fight-ai-portrait');
+    if(pPortrait) pPortrait.style.backgroundImage = `url('${charImages[selectedPlayer]}')`;
+    if(aPortrait){
+        if(__fightAiChosen){
+            aPortrait.style.backgroundImage = `url('${charImages[selectedAI]}')`;
+            aPortrait.style.opacity = '1';
+        }else{
+            aPortrait.style.backgroundImage = 'none';
+            aPortrait.style.opacity = '0.35';
+        }
+    }
+
+    const pName = document.getElementById('fight-player-name');
+    const aName = document.getElementById('fight-ai-name');
+    if(pName) pName.innerText = selectedPlayer;
+    if(aName) aName.innerText = __fightAiChosen ? selectedAI : '???';
+
+    // Fighting View uses the same "pitch" tooltip style as TCG View.
+    // We show the character premise on hover over the big portrait.
+    const pTip = document.getElementById('fight-player-tooltip');
+    const aTip = document.getElementById('fight-ai-tooltip');
+    if(pTip){
+        const premise = pData?.premise || pData?.passiveDesc || '';
+        pTip.innerHTML = `<b style="color: #f1c40f;">The ${selectedPlayer}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+    }
+    if(aTip){
+        if(__fightAiChosen && aData){
+            const premise = aData?.premise || aData?.passiveDesc || '';
+            aTip.innerHTML = `<b style="color: #f1c40f;">The ${selectedAI}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+        }else{
+            aTip.innerHTML = '';
+        }
+    }
+}
+
+function updateFightPrompt(){
+    const prompt = document.getElementById('fight-prompt');
+    const lockBtn = document.getElementById('fight-lock-btn');
+
+    if(__fightPhase === 'player'){
+        if(prompt) prompt.innerText = 'Choose your fighter';
+        if(lockBtn){
+            lockBtn.style.display = 'inline-block';
+            lockBtn.classList.remove('locked');
+            lockBtn.disabled = false;
+            lockBtn.innerText = 'LOCK IN';
+        }
+    }else{
+        if(prompt) prompt.innerText = 'Choose opponent';
+        if(lockBtn){
+            lockBtn.style.display = 'inline-block';
+            lockBtn.classList.add('locked');
+            lockBtn.disabled = true;
+            lockBtn.innerText = 'LOCKED';
+        }
+    }
+}
+
+function fightLockIn(){
+    if(__fightPhase !== 'player') return;
+    __fightPlayerLocked = true;
+    __fightPhase = 'ai';
+    __fightAiChosen = false;
+    updateFightPrompt();
+    syncSelectionAcrossViews();
+    updateFightingPortraits();
+}
+
+function selectFightChar(charName, btnEl){
+    if(music.select.paused) music.select.play().catch(e=>console.log('BGM blocked'));
+
+    // During player phase: set player selection.
+    if(__fightPhase === 'player'){
+        selectedPlayer = charName;
+    }else{
+        selectedAI = charName;
+        __fightAiChosen = true;
+    }
+
+    // Keep TCG rosters synced, then re-mark the single fighting roster.
+    syncSelectionAcrossViews();
+    updateFightingPortraits();
+}
+
+// Expose for inline onclick handlers
+window.selectFightChar = selectFightChar;
+window.fightLockIn = fightLockIn;
+
+// Make sure the toggle is available for inline onclick handlers
+window.setCharSelectView = setCharSelectView;
+
+// Default character select view: Fighting View
+window.addEventListener('load', () => {
+    try { setCharSelectView('fight'); } catch(e) { /* ignore */ }
+});
+
 function startGame() {
+    // Fighting View convenience:
+    // - If player didn't press LOCK IN, we treat their current pick as locked.
+    // - If opponent wasn't chosen yet, we randomize it from remaining characters.
+    if(getCharSelectView() === 'fight'){
+        if(!__fightPlayerLocked) __fightPlayerLocked = true;
+        if(!__fightAiChosen){
+            selectedAI = pickRandomOpponent(selectedPlayer);
+            __fightAiChosen = true;
+        }
+    }
+
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
     

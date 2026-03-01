@@ -11,6 +11,12 @@
 
     <div id="char-select-screen">
         <h1 style="text-shadow: 0 4px 6px rgba(0,0,0,0.8); font-size: 3.5em; margin-bottom: 10px; color: #f1c40f;">SPLIT SECONDS</h1>
+        <div id="char-select-view-toggle" style="margin: 10px 0 18px; display:flex; gap:10px; align-items:center; justify-content:center;">
+            <button id="view-btn-tcg" class="view-toggle-btn" onclick="setCharSelectView('tcg')">TCG View</button>
+            <button id="view-btn-fight" class="view-toggle-btn" onclick="setCharSelectView('fight')">Fighting View</button>
+        </div>
+
+        <div id="char-select-tcg">
         <div class="select-container">
             <div style="text-align: center;">
                 <h3 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Select Player</h3>
@@ -70,8 +76,40 @@
                     </button>
                 </div>
             </div>
+        
         </div>
-        <div style="margin-bottom: 20px;">
+</div>
+        
+        <div id="char-select-fight" style="display:none; width: min(1280px, 96vw);">
+            <div class="fight-stage fight-stage-centered">
+                <div class="fight-side fight-player">
+                    <div class="fight-portrait-wrap">
+                        <div class="fight-portrait" id="fight-player-portrait"></div>
+                        <div class="pitch-tooltip" id="fight-player-tooltip"></div>
+                    </div>
+                    <div class="fight-name" id="fight-player-name">Rogue</div>
+                </div>
+
+                <div class="fight-center">
+                    <div class="fight-vs">VS</div>
+                    <div class="fight-prompt" id="fight-prompt">Choose your fighter</div>
+                    <button id="fight-lock-btn" class="fight-lock" onclick="fightLockIn()">LOCK IN</button>
+
+                    <!-- Populated dynamically from classData in core.js -->
+                    <div class="fight-roster" id="fight-roster"></div>
+                </div>
+
+                <div class="fight-side fight-ai">
+                    <div class="fight-portrait-wrap">
+                        <div class="fight-portrait" id="fight-ai-portrait"></div>
+                        <div class="pitch-tooltip" id="fight-ai-tooltip"></div>
+                    </div>
+                    <div class="fight-name" id="fight-ai-name">Brute</div>
+                </div>
+            </div>
+        </div>
+
+<div style="margin-bottom: 20px;">
         <a href="rules.html" target="_blank" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 8px 20px; border-radius: 5px; background: rgba(241, 196, 15, 0.1);">
             📖 HOW TO PLAY (RULES)
         </a>

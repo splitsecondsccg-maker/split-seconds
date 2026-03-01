@@ -12,6 +12,7 @@ const classData = {
     'Rogue': {
         maxStam: 7, armor: 2, 
         passiveDesc: 'Upon hit, opponent next attack has -1 DMG.',
+        premise: 'Fly like a butterfly, sting like a bee. Fast attacks, low costs, and sudden damage spikes.',
         deck: [
             { id: 'r1', copies: 3, name: 'Quick Jab', type: 'attack', cost: 0, moments: 1, dmg: 2, desc: 'A fast, free strike.' },
             { id: 'r2', copies: 3, name: 'Flurry', type: 'attack', cost: 1, moments: 1, dmg: 3, desc: 'Standard assassin strike.' },
@@ -24,6 +25,7 @@ const classData = {
     'Brute': {
         maxStam: 5, armor: 2, 
         passiveDesc: 'End of turn: If you lost life this turn, gain 1 Stamina.',
+        premise: 'The king of raw damage. Slow, devastating attacks that crush through defenses.',
         deck: [
             { id: 'b1', copies: 3, name: 'Heavy Strike', type: 'attack', cost: 2, moments: 1, dmg: 3, desc: 'Drains stamina, hits hard.' },
             { id: 'b2', copies: 3, name: 'Cleave', type: 'attack', cost: 2, moments: 2, dmg: 5, desc: 'Wide, heavy swing.' },
@@ -36,6 +38,7 @@ const classData = {
     'Paladin': {
         maxStam: 6, armor: 4, 
         passiveDesc: 'Upon blocking an attack, your next attack gains +1 DMG.',
+        premise: 'The defensive powerhouse. High armor, strong sustain, and punishing blocks.',
         deck: [
             { id: 'p1', copies: 4, name: 'Standard Strike', type: 'attack', cost: 1, moments: 1, dmg: 2, desc: 'Reliable weapon swing.' },
             { id: 'p2', copies: 4, name: 'Shield Bash', type: 'grab', cost: 2, moments: 1, dmg: 4, desc: 'High burst against defenders.' },
@@ -48,6 +51,7 @@ const classData = {
     'Vampiress': {
         maxStam: 7, armor: 3, 
         passiveDesc: 'Upon hit, your next attack gains +1 DMG this turn.',
+        premise: 'The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.',
         deck: [
             { id: 'v1', copies: 4, name: 'Claw Swipe', type: 'attack', cost: 0, moments: 1, dmg: 2, desc: 'A fast, free scratch.' },
             { id: 'v2', copies: 4, name: 'Siphon Strike', type: 'attack', cost: 1, moments: 1, dmg: 2, desc: 'Deals 2 DMG, Heals 1 HP if succeeded.', effect: 'heal_1_on_hit' },
@@ -60,6 +64,7 @@ const classData = {
     'Necromancer': {
         maxStam: 7, armor: 2, 
         passiveDesc: 'End of turn: Gain 1 Stamina if you applied a status effect this turn.',
+        premise: 'The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.',
         deck: [
             { id: 'n1', copies: 3, name: 'Scare', type: 'buff', cost: 0, moments: 1, desc: 'Draw 1. Opponent MUST block next turn.', effect: 'scare' },
             { id: 'n2', copies: 2, name: 'Siphon Soul', type: 'grab', cost: 1, moments: 2, dmg: 3, desc: 'Upon hit: Next attack gains +3 DMG.', effect: 'siphon_soul' },
@@ -73,6 +78,7 @@ const classData = {
     'Ice Djinn': {
         maxHp: 37, maxStam: 7, armor: 3,
         passiveDesc: 'Upon successful Parry: apply FREEZE 2 to the enemy.',
+        premise: 'A slow-burn control spirit. Stalls early with FREEZE and defensive magic, then bursts for huge damage later.',
         deck: [
             { id: 'i1', copies: 6, name: 'Cold Wind', type: 'buff', cost: 0, moments: 1, desc: 'Apply FREEZE 1. Draw 1.', effect: 'cold_wind' },
             { id: 'i2', copies: 4, name: 'Ice Spear', type: 'attack', cost: 2, moments: 2, dmg: 5, desc: '5 DMG. On hit: FREEZE 1.', effect: 'freeze_1_on_hit' },

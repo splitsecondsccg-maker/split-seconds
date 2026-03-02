@@ -444,8 +444,42 @@ function startTutorial() {
     isTutorialMode = true;
     currentStep = 0;
 
-    selectChar('player', 'Rogue');
-    selectChar('ai', 'Paladin');
+    // Force tutorial matchup deterministically.
+    // Do NOT call selectChar() here because it relies on event.currentTarget
+    // (which doesn't exist when the tutorial starts programmatically).
+    try {
+        selectedPlayer = 'Rogue';
+        selectedAI = 'Paladin';
+
+        // Force default decks too (multi-deck system)
+        if (typeof getDefaultDeckIdForCharacter === 'function') {
+            selectedPlayerDeckId = getDefaultDeckIdForCharacter(selectedPlayer);
+            selectedAIDeckId = getDefaultDeckIdForCharacter(selectedAI);
+        }
+
+        // Align Fighting View flow flags so nothing can randomize the opponent.
+        if (typeof __fightPhase !== 'undefined') __fightPhase = 'ai';
+        if (typeof __fightPlayerLocked !== 'undefined') __fightPlayerLocked = true;
+        if (typeof __fightAiChosen !== 'undefined') __fightAiChosen = true;
+    } catch (e) {
+        console.warn('Tutorial could not force matchup:', e);
+    }
+
+    // Best-effort: update selection highlights in the character select screen.
+    try {
+        const pRoster = document.getElementById('player-roster');
+        const aRoster = document.getElementById('ai-roster');
+        if (pRoster) {
+            [...pRoster.children].forEach(btn => btn.classList.remove('selected'));
+            const btn = [...pRoster.children].find(b => (b.textContent||'').trim().toLowerCase() === 'rogue');
+            if (btn) btn.classList.add('selected');
+        }
+        if (aRoster) {
+            [...aRoster.children].forEach(btn => btn.classList.remove('ai-selected'));
+            const btn = [...aRoster.children].find(b => (b.textContent||'').trim().toLowerCase() === 'paladin');
+            if (btn) btn.classList.add('ai-selected');
+        }
+    } catch (e) {}
 
     startGame();
 

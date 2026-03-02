@@ -180,6 +180,18 @@ window.state = state;
 let selectedPlayer = 'Rogue';
 let selectedAI = 'Brute';
 
+// Selected deck per side (each character can have multiple decks)
+let selectedPlayerDeckId = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedPlayer) : null;
+let selectedAIDeckId = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedAI) : null;
+
+
+// Small public selectors for UI helpers (deck builder etc.)
+window.getSelectedChar = (target) => (target === 'ai' ? selectedAI : selectedPlayer);
+window.getSelectedDeckId = (target) => (target === 'ai' ? selectedAIDeckId : selectedPlayerDeckId);
+
+// Remember last chosen deck per character (so switching away/back doesn't reset)
+const __deckChoiceMemory = { player: {}, ai: {} };
+
 // Fighting-view selection flow
 let __fightPhase = 'player';        // 'player' | 'ai'
 let __fightPlayerLocked = false;
@@ -188,6 +200,7 @@ let __fightAiChosen = false;
 // If the player enters combat without choosing an opponent, we randomize in startGame().
 
 function getAllCharacters(){
+    if(typeof getCharacterList === 'function') return getCharacterList();
     return Object.keys(classData || {});
 }
 
@@ -196,6 +209,148 @@ function pickRandomOpponent(excludeName){
     if(chars.length === 0) return excludeName || (getAllCharacters()[0] || '');
     return chars[Math.floor(Math.random() * chars.length)];
 }
+
+
+// ------------------------
+// Deck selection helpers
+// ------------------------
+
+function getDeckDefsForChar(charName){
+    if(typeof getDecksForCharacter === 'function'){
+        return getDecksForCharacter(charName) || [];
+    }
+    const c = classData?.[charName];
+    const ids = c?.deckIds || [];
+    return ids.map(id => (window.DecksDB ? window.DecksDB[id] : null)).filter(Boolean);
+}
+
+function getDeckIdsForChar(charName){
+    return getDeckDefsForChar(charName).map(d => d.id);
+}
+
+function getDeckName(deckId){
+    const def = (typeof getDeckDef === 'function') ? getDeckDef(deckId) : (window.DecksDB ? window.DecksDB[deckId] : null);
+    return def?.name || deckId;
+}
+
+function getDeckDescription(deckId){
+    const def = (typeof getDeckDef === 'function') ? getDeckDef(deckId) : (window.DecksDB ? window.DecksDB[deckId] : null);
+    return def?.description || '';
+}
+
+function isDeckLocked(target){
+    // In Fighting View, once the player LOCKS IN, their character+deck should not change.
+    if(getCharSelectView && getCharSelectView() === 'fight' && target === 'player' && __fightPlayerLocked) return true;
+    return false;
+}
+
+function ensureValidDeckSelection(target){
+    const charName = (target === 'player') ? selectedPlayer : selectedAI;
+    const ids = getDeckIdsForChar(charName);
+    if(ids.length === 0) return;
+
+    let cur = (target === 'player') ? selectedPlayerDeckId : selectedAIDeckId;
+    if(!cur || !ids.includes(cur)){
+        const mem = __deckChoiceMemory[target]?.[charName];
+        if(mem && ids.includes(mem)){
+            cur = mem;
+        }else{
+            cur = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(charName) : ids[0];
+        }
+    }
+
+    if(target === 'player') selectedPlayerDeckId = cur;
+    else selectedAIDeckId = cur;
+}
+
+function selectDeck(target, deckId){
+    if(isDeckLocked(target)) return;
+    if(target === 'player') selectedPlayerDeckId = deckId;
+    if(target === 'ai') selectedAIDeckId = deckId;
+
+    const charName = (target === 'player') ? selectedPlayer : selectedAI;
+    __deckChoiceMemory[target][charName] = deckId;
+    renderDeckPickers();
+}
+
+window.selectDeck = selectDeck;
+
+function renderDeckPickerInto(containerId, target){
+    const el = document.getElementById(containerId);
+    if(!el) return;
+
+    const charName = (target === 'player') ? selectedPlayer : selectedAI;
+
+    // In Fighting View, hide the opponent deck picker until the opponent is actually chosen.
+    if(getCharSelectView && getCharSelectView() === 'fight' && target === 'ai' && !__fightAiChosen){
+        el.innerHTML = '';
+        el.style.display = 'none';
+        return;
+    }
+
+    el.style.display = 'flex';
+
+    const deckIds = getDeckIdsForChar(charName);
+    if(deckIds.length <= 1){
+        // If there's only one deck, keep the picker hidden (cleaner UX).
+        el.innerHTML = '';
+        el.style.display = 'none';
+        ensureValidDeckSelection(target);
+        return;
+    }
+
+    ensureValidDeckSelection(target);
+
+    const selected = (target === 'player') ? selectedPlayerDeckId : selectedAIDeckId;
+    const locked = isDeckLocked(target);
+
+    el.innerHTML = '';
+
+    const title = document.createElement('div');
+    title.className = 'deck-picker-title';
+    title.innerText = 'Deck';
+    el.appendChild(title);
+
+    for(const id of deckIds){
+        const btn = document.createElement('button');
+        btn.className = 'deck-btn';
+        if(id === selected) btn.classList.add('selected');
+        if(locked) btn.classList.add('locked');
+        btn.disabled = locked;
+
+        btn.innerText = getDeckName(id).replace(/^.*—\s*/,''); // keep it short
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            selectDeck(target, id);
+        };
+
+        // Tooltip (same style as pitch-tooltip)
+        const tip = document.createElement('div');
+        tip.className = 'pitch-tooltip';
+        const desc = getDeckDescription(id);
+        tip.innerHTML = `<b style="color: #f1c40f;">${getDeckName(id)}</b><hr style="border-color:#555;margin:4px 0;">${desc || ''}`;
+        btn.appendChild(tip);
+
+        el.appendChild(btn);
+    }
+}
+
+function renderDeckPickers(){
+    // Validate current selections (custom decks may have been added/removed)
+    ensureValidDeckSelection('player');
+    ensureValidDeckSelection('ai');
+
+    // TCG view containers
+    renderDeckPickerInto('player-deck-picker', 'player');
+    renderDeckPickerInto('ai-deck-picker', 'ai');
+
+    // Fighting view containers
+    renderDeckPickerInto('fight-player-deck-picker', 'player');
+    renderDeckPickerInto('fight-ai-deck-picker', 'ai');
+}
+
+window.renderDeckPickers = renderDeckPickers;
+
 
 // (Random opponent preview ticker intentionally removed)
 
@@ -241,8 +396,68 @@ function buildFightRoster(){
     });
 }
 
+
+
+// ------------------------
+// Dynamic TCG rosters (player + opponent)
+// ------------------------
+
+function createTcgCharButton(target, name, rosterId){
+    const btn = document.createElement('button');
+    btn.className = 'char-btn';
+    btn.style.backgroundImage = `url('${charImages[name]}')`;
+    btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectChar(target, name, rosterId, btn);
+    };
+
+    const span = document.createElement('span');
+    span.innerText = name;
+    btn.appendChild(span);
+
+    const t = document.createElement('div');
+    t.className = 'pitch-tooltip';
+    const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
+    t.innerHTML = `<b style="color: #f1c40f;">The ${name}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+    btn.appendChild(t);
+
+    return btn;
+}
+
+function buildTCGRosters(){
+    const p = document.getElementById('player-roster');
+    const a = document.getElementById('ai-roster');
+    if(!p || !a) return;
+
+    const chars = getAllCharacters();
+
+    p.innerHTML = '';
+    a.innerHTML = '';
+
+    for(const name of chars){
+        const btnP = createTcgCharButton('player', name, 'player-roster');
+        if(name === selectedPlayer) btnP.classList.add('selected');
+        p.appendChild(btnP);
+
+        const btnA = createTcgCharButton('ai', name, 'ai-roster');
+        if(name === selectedAI) btnA.classList.add('ai-selected');
+        a.appendChild(btnA);
+    }
+
+    // Keep deck pickers consistent with current selections.
+    ensureValidDeckSelection('player');
+    ensureValidDeckSelection('ai');
+    renderDeckPickers();
+}
+
+window.buildTCGRosters = buildTCGRosters;
 function selectChar(target, charName, rosterId = null, btnEl = null) {
     if(music.select.paused) music.select.play().catch(e=>console.log("BGM blocked"));
+
+
+    // If the player LOCKED IN in Fighting View, don't allow changing the player pick from the TCG roster.
+    if(target === 'player' && __fightPlayerLocked) return;
 
     const rosterEl = document.getElementById(rosterId || `${target}-roster`);
     if(!rosterEl) { console.warn("Roster not found for", target, rosterId); return; }
@@ -257,6 +472,11 @@ function selectChar(target, charName, rosterId = null, btnEl = null) {
 
     if(target === 'player') selectedPlayer = charName;
     if(target === 'ai') selectedAI = charName;
+
+
+    // Keep deck selection valid for the newly chosen character
+    ensureValidDeckSelection(target);
+    renderDeckPickers();
 
     // Keep both views in sync (TCG roster and Fighting roster)
     syncSelectionAcrossViews();
@@ -296,7 +516,9 @@ function setCharSelectView(mode){
         __fightAiChosen = false;
         updateFightPrompt();
         updateFightingPortraits();
+        renderDeckPickers();
     }else{
+        renderDeckPickers();
     }
 }
 
@@ -307,6 +529,9 @@ function syncSelectionAcrossViews(){
 
     // Fighting View uses a single roster that can show both selections.
     markFightRosterSelections();
+
+    // Deck selection UI (both views)
+    renderDeckPickers();
 }
 
 function markFightRosterSelections(){
@@ -419,6 +644,11 @@ function selectFightChar(charName, btnEl){
         __fightAiChosen = true;
     }
 
+
+    // Keep deck selection valid for the chosen character
+    ensureValidDeckSelection(__fightPhase === 'player' ? 'player' : 'ai');
+    renderDeckPickers();
+
     // Keep TCG rosters synced, then re-mark the single fighting roster.
     syncSelectionAcrossViews();
     updateFightingPortraits();
@@ -433,7 +663,18 @@ window.setCharSelectView = setCharSelectView;
 
 // Default character select view: Fighting View
 window.addEventListener('load', () => {
+    /* Hard-reset initial screen visibility to prevent battle UI showing under menu */
+    const cs = document.getElementById('char-select-screen');
+    const gs = document.getElementById('game-screen');
+    if (gs) gs.style.display = 'none';
+    if (cs) cs.style.display = 'flex';
+
+    try { buildTCGRosters(); } catch(e) { /* ignore */ }
     try { setCharSelectView('fight'); } catch(e) { /* ignore */ }
+
+    /* Deck pickers depend on roster + selections */
+    try { ensureValidDeckSelection('player'); ensureValidDeckSelection('ai'); } catch(e) {}
+    try { renderDeckPickers(); } catch(e) {}
 });
 
 function startGame() {
@@ -445,18 +686,54 @@ function startGame() {
         if(!__fightAiChosen){
             selectedAI = pickRandomOpponent(selectedPlayer);
             __fightAiChosen = true;
+
+            // If we randomize the opponent, also pick a deck for them.
+            if(typeof pickRandomDeckIdForCharacter === 'function'){
+                selectedAIDeckId = pickRandomDeckIdForCharacter(selectedAI);
+            }else{
+                selectedAIDeckId = null;
+            }
         }
     }
 
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
     
-    // RESTORED: This builds the decks and stats!
+    // Build the decks and stats from registries (cards / decks / characters)
+    ensureValidDeckSelection('player');
+    ensureValidDeckSelection('ai');
+
     const pData = classData[selectedPlayer];
-    state.player = { class: selectedPlayer, hp: pData.maxHp || 40, maxHp: pData.maxHp || 40, stam: pData.maxStam, maxStam: pData.maxStam, armor: pData.armor, timeline: [null, null, null, null, null], hand: [], deck: buildDeck(pData.deck), statuses: getBaseStatuses(), roundData: { lostLife: false, appliedStatus: false } };
-    
+    const pDeckId = selectedPlayerDeckId || (typeof getDefaultDeckIdForCharacter === 'function' ? getDefaultDeckIdForCharacter(selectedPlayer) : null);
+    state.player = { 
+        class: selectedPlayer, 
+        hp: pData.maxHp || 40, 
+        maxHp: pData.maxHp || 40, 
+        stam: pData.maxStam, 
+        maxStam: pData.maxStam, 
+        armor: pData.armor, 
+        timeline: [null, null, null, null, null], 
+        hand: [], 
+        deck: (typeof buildDeckFromDeckId === 'function' && pDeckId) ? buildDeckFromDeckId(pDeckId) : (typeof buildDeck === 'function' ? buildDeck(pData.deck) : []),
+        statuses: getBaseStatuses(), 
+        roundData: { lostLife: false, appliedStatus: false } 
+    };
+
     const aiData = classData[selectedAI];
-    state.ai = { class: selectedAI, hp: aiData.maxHp || 40, maxHp: aiData.maxHp || 40, stam: aiData.maxStam, maxStam: aiData.maxStam, armor: aiData.armor, timeline: [null, null, null, null, null], hand: [], deck: buildDeck(aiData.deck), statuses: getBaseStatuses(), roundData: { lostLife: false, appliedStatus: false } };
+    const aiDeckId = selectedAIDeckId || (typeof getDefaultDeckIdForCharacter === 'function' ? getDefaultDeckIdForCharacter(selectedAI) : null);
+    state.ai = { 
+        class: selectedAI, 
+        hp: aiData.maxHp || 40, 
+        maxHp: aiData.maxHp || 40, 
+        stam: aiData.maxStam, 
+        maxStam: aiData.maxStam, 
+        armor: aiData.armor, 
+        timeline: [null, null, null, null, null], 
+        hand: [], 
+        deck: (typeof buildDeckFromDeckId === 'function' && aiDeckId) ? buildDeckFromDeckId(aiDeckId) : (typeof buildDeck === 'function' ? buildDeck(aiData.deck) : []),
+        statuses: getBaseStatuses(), 
+        roundData: { lostLife: false, appliedStatus: false } 
+    };
 
     document.getElementById('p-class-name').innerText = selectedPlayer; document.getElementById('p-armor').innerText = pData.armor;
     document.getElementById('ai-class-name').innerText = selectedAI; document.getElementById('ai-armor').innerText = aiData.armor;
@@ -484,31 +761,15 @@ function log(msg) {
 }
 
 function getAbilityCard(className, index) {
-    if(className === 'Rogue') {
-        if(index === 1) return { name: 'Quick Step', type: 'utility', cost: 0, moments: 1, dmg: 0, desc: 'Gain 1 Stamina', effect: 'gain_stam_1', isBasic: true };
-        if(index === 2) return { name: 'Poison Dagger', type: 'attack', cost: 0, moments: 1, dmg: 1, desc: 'Upon hit: Deal 1 extra Poison DMG', effect: 'poison_dagger', isBasic: true };
+    try {
+        const id = (typeof getAbilityIdForCharacter === 'function') ? getAbilityIdForCharacter(className, index) : null;
+        if(!id) return null;
+        if(!window.CardsDB || !window.CardsDB[id]) return null;
+        return { ...window.CardsDB[id] };
+    } catch(e){
+        console.warn('getAbilityCard failed', e);
+        return null;
     }
-    if(className === 'Brute') {
-        if(index === 1) return { name: 'Enrage', type: 'utility', cost: 0, moments: 2, dmg: 0, desc: 'Gain 2 Stamina', effect: 'gain_stam_2', isBasic: true };
-        if(index === 2) return { name: 'Heavy Blow', type: 'attack', cost: 0, moments: 3, dmg: 4, desc: 'Massive free strike', isBasic: true };
-    }
-    if(className === 'Paladin') {
-        if(index === 1) return { name: 'Holy Light', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: 'Heal 2 HP', effect: 'heal_2', isBasic: true };
-        if(index === 2) return { name: 'Holy Strike', type: 'attack', cost: 0, moments: 2, dmg: 3, desc: 'Standard free strike', isBasic: true };
-    }
-    if(className === 'Vampiress') {
-        if(index === 1) return { name: 'Blood Frenzy', type: 'utility', cost: 0, moments: 1, dmg: 0, desc: 'Draw 1 Card', effect: 'draw_1', isBasic: true };
-        if(index === 2) return { name: 'Draw Blood', type: 'attack', cost: 0, moments: 1, dmg: 1, desc: 'Upon hit: Next Atk +1', effect: 'draw_blood', isBasic: true };
-    }
-    if(className === 'Necromancer') {
-        if(index === 1) return { name: 'Meditate', type: 'utility', cost: 0, moments: 2, dmg: 0, desc: 'Draw 1, Gain 2 Stamina', effect: 'meditate', isBasic: true };
-        if(index === 2) return { name: 'Death Touch', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Cheap, deadly magic', isBasic: true };
-    }
-    if(className === 'Ice Djinn') {
-        if(index === 1) return { name: 'Spirit Form', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: 'Next turn: +2 Armor', effect: 'spirit_form', isBasic: true };
-        if(index === 2) return { name: 'Ice Blast', type: 'attack', cost: 3, moments: 3, dmg: 7, desc: '7 DMG. On hit: FREEZE 1', effect: 'freeze_1_on_hit', isBasic: true };
-    }
-    return null;
 }
 
 function useAbility(index) {

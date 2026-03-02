@@ -34,13 +34,25 @@ The character selection screen supports two layouts:
 - **Fighting View** *(default)*: large player/opponent portraits with a centered roster. You pick your character, **Lock In**, then pick the opponent.
 - **TCG View**: the original roster layout.
 
-Both layouts write to the same underlying selection values (`state.selectedClass`, `state.aiClass`).
+Both layouts write to the same underlying selection values (`selectedPlayer`, `selectedAI`) and chosen decks (`selectedPlayerDeckId`, `selectedAIDeckId`).
 
-### Game content (data)
+**Roster is fully data-driven:** both views build their roster buttons from `CharactersDB`, so adding characters does **not** require editing `index.html`.
+
+### Deck Builder (custom decks)
+The character select screen has a **Deck Builder** button. It lets you create custom decks for a character and saves them in your browser’s **localStorage**.
+Custom decks automatically show up in the deck picker for that character (they are marked as “(Custom)”).
+
+
+### Game content data
+
+See **`ADDING_CHARACTERS.md`** for a step-by-step guide on adding new characters, cards, and decks.
+
 - `data.js`
-  - `classData`: all characters + their deck blueprints
-  - `buildDeck(blueprint)`: expands `{ copies: N }` into a full deck list
+  - `CardsDB`: canonical card definitions
+  - `DecksDB`: decks (cardId + copies) — multiple decks can point at the same cards
+  - `CharactersDB` (also exported as `classData`): character stats + `deckIds` + `defaultDeckId`
   - `charImages`: portrait mapping
+  - `buildDeckFromDeckId(deckId)`: expands a deck into a full deck list
 
 ### Engine (split from the original monolith)
 The original `engine.js` has been preserved as **`engine_legacy.js`** for reference.
@@ -141,61 +153,102 @@ state.rngSeed = 123; // any uint32
 
 ---
 
-## Card data format (how to add cards)
+## Game content data: Cards, Decks, Characters
 
-Cards are defined in `data.js` in a class’s `deck` list.
+Split Seconds now separates **cards**, **decks**, and **characters** so content can scale cleanly:
 
-Minimal card schema:
+- **`CardsDB`** (in `data.js`): canonical card definitions, keyed by a unique `id`.
+- **`DecksDB`** (in `data.js`): deck definitions, keyed by `deckId`. Each deck references cards by `cardId` + `copies`.
+- **`CharactersDB`** (in `data.js`, also exported as `classData` for compatibility): character stats + which `deckIds` that character can use.
+
+When a character has more than one deck, the character select screen shows a small **Deck** picker.
+
+---
+
+## How to add cards / decks
+
+### 1) Add (or reuse) a card in `CardsDB`
+
+Minimal card schema (canonical definition):
 ```js
-{ id: 'x1', copies: 3, name: 'My Card', type: 'attack', cost: 2, moments: 2, dmg: 5, desc: '...' }
+my_new_card: {
+  id: "my_new_card",
+  name: "My New Card",
+  type: "attack",     // attack | grab | block | buff
+  cost: 2,            // stamina cost
+  moments: 2,         // how many timeline slots it occupies
+  dmg: 5,             // optional (defaults to 0)
+  desc: "UI text. Keywords like POISON / BLEED / FREEZE get tooltips automatically."
+}
 ```
 
-Fields:
-- `id` *(string)*: identifier used by `buildDeck`
-- `copies` *(int)*: how many copies in the deck
-- `name` *(string)*: shown in UI
-- `type` *(string)*: one of `attack`, `grab`, `block`, `buff` (engine logic keys off this)
-- `cost` *(int)*: stamina cost
-- `moments` *(1..5)*: how many timeline slots the card occupies
-- `dmg` *(int, optional)*: damage dealt (defaults to 0)
-- `desc` *(string)*: UI text. Keyword tokens like `FREEZE`, `BLEED`, `POISON` are automatically wrapped in hover tooltips.
-- `effect` *(string, optional, legacy)*: single effect key handled by the legacy `applyEffect()` pipeline
-- `effects` *(array, optional, preferred)*: triggered effects for scalable abilities/keywords
+Optional fields:
+- `effect` *(string, legacy)*: a single effect key handled by the legacy `applyEffect()` pipeline in `resolution.js`
+- `effects` *(array, preferred)*: triggered effects handled by `effects_registry.js`
+- `currentBlock` *(int)*: for multi-moment blocks (e.g. `Ice Wall`)
 
-Optional fields used by certain cards:
-- `currentBlock` *(int)*: remaining shield for multi-moment blocks (e.g. `Ice Wall`)
+### 2) Put cards into a deck in `DecksDB`
 
-### Preferred: triggered effects (`card.effects`)
+Decks reference cards by `cardId`:
+
+```js
+my_character_deck: {
+  id: "my_character_deck",
+  name: "My Character — Variant",
+  character: "My Character",
+  description: "Shown as a tooltip on the deck button.",
+  cards: [
+    { cardId: "my_new_card", copies: 3 },
+    { cardId: "some_existing_card", copies: 2 }
+  ]
+}
+```
+
+### 3) Give a character access to that deck in `CharactersDB`
+
+```js
+"My Character": {
+  maxStam: 7,
+  armor: 2,
+  passiveDesc: "...",
+  premise: "...",
+  deckIds: ["my_character_deck", "my_character_other_deck"],
+  defaultDeckId: "my_character_deck"
+}
+```
+
+---
+
+## Triggered effects (`card.effects`) — preferred for new content
 
 To scale cleanly, cards can define **triggered effects** as an array on the card. Each entry says **when** it fires (`trigger`) and **what** to do (`type`, handled by `effects_registry.js`).
 
 ```js
 {
-  id: 'toxic_cut',
-  copies: 2,
-  name: 'Toxic Cut',
-  type: 'attack',
+  id: "toxic_cut",
+  name: "Toxic Cut",
+  type: "attack",
   cost: 2,
   moments: 1,
   dmg: 3,
-  desc: 'Deal 3. Apply POISON 2 on hit.',
+  desc: "Deal 3. Apply POISON 2 on hit.",
   effects: [
-    { trigger: 'on_hit', type: 'poison', amount: 2 }
+    { trigger: "on_hit", type: "poison", value: 2 }
   ]
 }
 ```
 
-Common triggers used in this prototype:
-- `on_play` — when a card is placed/played
+Triggers currently used by the resolution pipeline:
 - `on_hit` — when an attack/grab connects
-- `on_resolve` — when the moment resolves
-- `on_turn_end` — end-of-turn effects
+- `on_blocked` — when an attack is blocked
+- `on_parry` — when an attack is parried
+- `on_grab_resist` — when a grab is resisted
+- `on_successful_grab` — when a grab succeeds
+- `on_fail_grab` — when a grab fails
 
-Both systems can coexist during migration:
-- New content should prefer `effects: [...]`.
-- Older cards can keep `effect: 'some_key'` until converted.
+(You can extend triggers later by calling `runTriggeredCardEffects(...)` at new points in `resolution.js`.)
 
-### Adding a new card effect
+### Adding a new effect type
 
 Effects are being migrated from a big switch to a scalable registry.
 
@@ -212,23 +265,27 @@ EffectTypeRegistry.my_new_type = ({ state, sourceKey, targetKey, context, api, p
 Steps:
 1. Pick a new effect `type` (e.g. `'poison'`).
 2. Implement it in `effects_registry.js` under `EffectTypeRegistry`.
-3. Reference it from a card via `effects: [{ trigger: '...', type: '...', ...params }]`.
+3. Reference it from a card via `effects: [{ trigger: '...', type: '...', value: 2 }]`.
 4. If the effect introduces a new status/counter, add it to `getBaseStatuses()` (in `core.js`).
 
----
 
 ## Adding a new character
 
 In `data.js`:
-1. Add a new entry to `classData`:
-   - `maxHp` (optional; defaults to 40)
+1. Add the character stats + metadata in **`CharactersDB`** (exported as `classData` too):
+   - `maxHp` *(optional; defaults to 40)*
    - `maxStam`
    - `armor`
    - `passiveDesc`
    - `premise` *(recommended)*: short “character premise” shown in hover tooltips (used by both TCG and Fighting views)
-   - `deck: [...]`
-2. Add a portrait entry to `charImages`.
-3. If the character has abilities, add them to `getAbilityCard(className, index)` (see `core.js`).
+   - `deckIds` *(array of deckIds from `DecksDB`)*
+   - `defaultDeckId`
+
+2. Add the character’s deck(s) in **`DecksDB`** (or reuse existing cards from `CardsDB`).
+
+3. Add a portrait entry to `charImages`.
+
+4. If the character has abilities, add them to `getAbilityCard(className, index)` (see `core.js`).
 
 ---
 

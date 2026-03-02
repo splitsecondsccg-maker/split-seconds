@@ -20,61 +20,13 @@
         <div class="select-container">
             <div style="text-align: center;">
                 <h3 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Select Player</h3>
-                <div class="roster" id="player-roster">
-                    <button class="char-btn selected" style="background-image: url('rogue.png');" onclick="selectChar('player', 'Rogue')">
-                        <span>Rogue</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Rogue</b><hr style="border-color:#555;margin:4px 0;">Fly like a butterfly, sting like a bee. Fast attacks, low costs, and sudden damage spikes.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('brute.png');" onclick="selectChar('player', 'Brute')">
-                        <span>Brute</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Brute</b><hr style="border-color:#555;margin:4px 0;">The king of raw damage. Slow, devastating attacks that crush through defenses.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('paladin.png');" onclick="selectChar('player', 'Paladin')">
-                        <span>Paladin</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Paladin</b><hr style="border-color:#555;margin:4px 0;">The defensive powerhouse. High armor, strong sustain, and punishing blocks.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('vampiress.png');" onclick="selectChar('player', 'Vampiress')">
-                        <span>Vampiress</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Vampiress</b><hr style="border-color:#555;margin:4px 0;">The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('necromancer.png');" onclick="selectChar('player', 'Necromancer')">
-                        <span>Necromancer</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('ice_djinn.png');" onclick="selectChar('player', 'Ice Djinn')">
-                        <span>Ice Djinn</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Ice Djinn</b><hr style="border-color:#555;margin:4px 0;">A slow-burn control spirit. Stalls early with FREEZE and defensive magic, then bursts for huge damage later.</div>
-                    </button>
-                </div>
+                <div class="roster" id="player-roster"></div>
+                <div class="deck-picker" id="player-deck-picker"></div>
             </div>
             <div style="text-align: center;">
                 <h3 style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Select Opponent</h3>
-                <div class="roster" id="ai-roster">
-                    <button class="char-btn ai-selected" style="background-image: url('brute.png');" onclick="selectChar('ai', 'Brute')">
-                        <span>Brute</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Brute</b><hr style="border-color:#555;margin:4px 0;">The king of raw damage. Slow, devastating attacks that crush through defenses.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('rogue.png');" onclick="selectChar('ai', 'Rogue')">
-                        <span>Rogue</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Rogue</b><hr style="border-color:#555;margin:4px 0;">Fly like a butterfly, sting like a bee. Fast attacks, low costs, and sudden damage spikes.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('paladin.png');" onclick="selectChar('ai', 'Paladin')">
-                        <span>Paladin</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Paladin</b><hr style="border-color:#555;margin:4px 0;">The defensive powerhouse. High armor, strong sustain, and punishing blocks.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('vampiress.png');" onclick="selectChar('ai', 'Vampiress')">
-                        <span>Vampiress</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Vampiress</b><hr style="border-color:#555;margin:4px 0;">The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('necromancer.png');" onclick="selectChar('ai', 'Necromancer')">
-                        <span>Necromancer</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Necromancer</b><hr style="border-color:#555;margin:4px 0;">The stamina-hungry joker. Feeds on status effects to fuel massive, delayed nukes.</div>
-                    </button>
-                    <button class="char-btn" style="background-image: url('ice_djinn.png');" onclick="selectChar('ai', 'Ice Djinn')">
-                        <span>Ice Djinn</span>
-                        <div class="pitch-tooltip"><b style="color: #f1c40f;">The Ice Djinn</b><hr style="border-color:#555;margin:4px 0;">A slow-burn control spirit. Stalls early with FREEZE and defensive magic, then bursts for huge damage later.</div>
-                    </button>
-                </div>
+                <div class="roster" id="ai-roster"></div>
+                <div class="deck-picker" id="ai-deck-picker"></div>
             </div>
         
         </div>
@@ -88,6 +40,7 @@
                         <div class="pitch-tooltip" id="fight-player-tooltip"></div>
                     </div>
                     <div class="fight-name" id="fight-player-name">Rogue</div>
+                <div class="deck-picker deck-picker-fight" id="fight-player-deck-picker"></div>
                 </div>
 
                 <div class="fight-center">
@@ -105,6 +58,7 @@
                         <div class="pitch-tooltip" id="fight-ai-tooltip"></div>
                     </div>
                     <div class="fight-name" id="fight-ai-name">Brute</div>
+                <div class="deck-picker deck-picker-fight" id="fight-ai-deck-picker"></div>
                 </div>
             </div>
         </div>
@@ -114,6 +68,7 @@
             📖 HOW TO PLAY (RULES)
         </a>
         <button onclick="startTutorial()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em; background-color: #f1c40f; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">PLAY TUTORIAL</button>
+        <button onclick="openDeckBuilder()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(79,172,254,0.15); color: #4facfe; font-weight: bold; border: 1px solid #4facfe; border-radius: 8px; cursor: pointer; margin-left: 10px;">🎴 DECK BUILDER</button>
     </div>
         <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
     </div>
@@ -221,6 +176,77 @@
         </div>
     </div>
 
+
+
+    <!-- Deck Builder Overlay -->
+    <div id="deck-builder-overlay" style="display:none;">
+        <div id="deck-builder-modal">
+            <div class="db-header">
+                <div class="db-title">🎴 Deck Builder</div>
+                <button class="db-close" onclick="closeDeckBuilder()">✕</button>
+            </div>
+
+            <div class="db-body">
+                <div class="db-left">
+                    <div class="db-row">
+                        <label>Character</label>
+                        <select id="db-character"></select>
+                    </div>
+
+                    <div class="db-row">
+                        <label>Load deck</label>
+                        <select id="db-load-deck"></select>
+                    </div>
+
+                    <div class="db-row">
+                        <label>Deck name</label>
+                        <input id="db-deck-name" type="text" placeholder="My new deck" />
+                    </div>
+
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;">
+                            <label>Search cards</label>
+                            <input id="db-search" type="text" placeholder="Search by name, type, keyword…" />
+                        </div>
+                        <div style="width:160px;">
+                            <label>Type</label>
+                            <select id="db-type-filter">
+                                <option value="">All</option>
+                                <option value="attack">Attack</option>
+                                <option value="grab">Grab</option>
+                                <option value="block">Block</option>
+                                <option value="buff">Buff</option>
+                                <option value="utility">Utility</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="db-card-list" id="db-card-list"></div>
+                </div>
+
+                <div class="db-right">
+                    <div class="db-summary">
+                        <div class="db-summary-title">Current Deck</div>
+                        <div class="db-summary-sub" id="db-summary-meta"></div>
+                        <div class="db-total" id="db-total"></div>
+                    </div>
+
+                    <div class="db-deck-list" id="db-deck-list"></div>
+
+                    <div class="db-actions">
+                        <button class="db-btn" id="db-save">Save</button>
+                        <button class="db-btn db-btn-danger" id="db-delete">Delete</button>
+                        <button class="db-btn" id="db-duplicate">Duplicate</button>
+                    </div>
+
+                    <div class="db-hint">
+                        Tip: Base decks can’t be overwritten. Use <b>Duplicate</b> to create a custom deck, then Save.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tutorial overlay lives at the end of body so it can sit above everything -->
     <div id="tutorial-overlay">
         <div id="tutorial-dialogue">
@@ -234,6 +260,7 @@
     <script src="data.js"></script>
     <script src="engine_runtime.js"></script>
     <script src="core.js"></script>
+    <script src="deck_builder.js"></script>
     <script src="ui.js"></script>
     <script src="game.js"></script>
     <script src="effects_registry.js"></script>

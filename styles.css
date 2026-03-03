@@ -861,10 +861,10 @@ body {
   margin-right: auto !important;
 }
 
-.card{ width: 120px !important; height: 170px !important; }
+.card{ width: 130px !important; height: 170px !important; }
 .card-header{ font-size: 15px !important; padding-bottom: 6px !important; margin-bottom: 6px !important; }
 .card-stats{ font-size: 13px !important; }
-.card-desc{ font-size: 12px !important; font-style: normal !important; line-height: 1.25 !important; }
+/*.card-desc{ font-size: 12px !important; font-style: normal !important; line-height: 1.25 !important; }*/
 
 @media (max-width: 980px){
   .fight-stage{
@@ -883,3 +883,19 @@ body {
 
 .log.collapsed{ max-height: 44px; overflow: hidden; }
 .log.collapsed .log-body{ display:none; }
+
+/* =========================================================
+   Card text readability patch (minimal)
+   - Does NOT change card size
+   - Increases description readability slightly
+   - Prevents overflow by wrapping/breaking long text
+   ========================================================= */
+
+.card-desc{
+  font-size: clamp(12px, 1.15vw, 14px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+

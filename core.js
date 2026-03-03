@@ -178,7 +178,7 @@ let state = {
 window.state = state;
 
 let selectedPlayer = 'Rogue';
-let selectedAI = 'Mauja';
+let selectedAI = 'Brute';
 
 // Selected deck per side (each character can have multiple decks)
 let selectedPlayerDeckId = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedPlayer) : null;
@@ -677,6 +677,35 @@ window.addEventListener('load', () => {
     try { renderDeckPickers(); } catch(e) {}
 });
 
+
+
+// ===== Battle Log: collapsible header =====
+function ensureBattleLogUI(){
+    const el = document.getElementById('battle-log');
+    if(!el) return;
+    if(el.querySelector('.log-header')) return;
+
+    el.innerHTML = `
+      <div class="log-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+        <strong>Battle Log</strong>
+        <button id="battle-log-toggle" title="Minimize" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:4px 10px; cursor:pointer;">–</button>
+      </div>
+      <div class="log-body"></div>
+    `;
+    const btn = document.getElementById('battle-log-toggle');
+    btn.onclick = () => {
+        const collapsed = el.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '+' : '–';
+        btn.title = collapsed ? 'Expand' : 'Minimize';
+    };
+}
+
+function clearBattleLog(){
+    ensureBattleLogUI();
+    const body = document.querySelector('#battle-log .log-body');
+    if(body) body.innerHTML = '';
+}
+
 function startGame() {
     // Fighting View convenience:
     // - If player didn't press LOCK IN, we treat their current pick as locked.
@@ -744,7 +773,7 @@ function startGame() {
     document.getElementById('p-portrait-tooltip').innerText = pData.passiveDesc || 'No passive ability.';
     document.getElementById('ai-portrait-tooltip').innerText = aiData.passiveDesc || 'No passive ability.';
 
-    document.getElementById('battle-log').innerHTML = '<strong>Battle Log</strong>';
+    clearBattleLog();
     drawCards(3, 'player'); drawCards(3, 'ai'); 
     nextTurn(true);
 }
@@ -754,10 +783,16 @@ function backToMenu() {
     document.getElementById('game-screen').style.display = 'none'; document.getElementById('char-select-screen').style.display = 'flex';
 }
 
-function log(msg) { 
-    const el = document.getElementById('battle-log'); 
-    el.innerHTML += `<div>${msg}</div>`; 
-    el.scrollTop = el.scrollHeight; 
+function log(msg) {
+    ensureBattleLogUI();
+    const el = document.getElementById('battle-log');
+    const body = el.querySelector('.log-body');
+    const line = document.createElement('div');
+    line.textContent = msg;
+    body.appendChild(line);
+    if(!el.classList.contains('collapsed')){
+        el.scrollTop = el.scrollHeight;
+    }
 }
 
 function getAbilityCard(className, index) {

@@ -3,11 +3,13 @@
 }
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+    color: var(--text); margin: 0; display: flex; flex-direction: column; height: calc(var(--vh, 1vh) * 100);
+    min-height: 100vh;
+    overflow: hidden;
     background: url('bg.png') no-repeat center center fixed; background-size: cover;
 }
 
-#char-select-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: rgba(17, 17, 17, 0.85); z-index: 100; backdrop-filter: blur(5px); }
+#char-select-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(var(--vh, 1vh) * 100); background: rgba(17, 17, 17, 0.85); z-index: 100; backdrop-filter: blur(5px); }
 
 /*
   IMPORTANT:
@@ -18,7 +20,7 @@ body {
   Keep #game-screen hidden by default so it does not show under character select
   if any init logic changes or errors.
 */
-#game-screen { display: none; flex-direction: column; justify-content: space-between; height: 100vh; background: rgba(0, 0, 0, 0.6); padding: 20px; box-sizing: border-box; }
+#game-screen { display: none; flex-direction: column; justify-content: space-between; height: calc(var(--vh, 1vh) * 100); background: rgba(0, 0, 0, 0.6); padding: 20px; box-sizing: border-box; }
 
 /* === Responsive centering + log-safe layout (patch) === */
 #game-screen{
@@ -899,3 +901,24 @@ body {
   hyphens: auto;
 }
 
+
+
+/* === VIEWPORT_VH_PATCH === */
+/* Generated 2026-03-03 15:58:58Z
+   iPad/iOS Safari fix: avoid 100vh "cropped window" by using a JS-driven --vh.
+   Keep overflow hidden to preserve the game feel (no page scroll during battle).
+*/
+:root {
+  --vh: 1vh;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* iOS Safari + fixed backgrounds can jitter and exacerbate viewport issues */
+  body {
+    background-attachment: scroll;
+  }
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}

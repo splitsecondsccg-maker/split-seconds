@@ -951,3 +951,20 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
     window.__splitSecondsHandlersInstalled = true;
 }
 
+
+
+/* === SET_VH_PATCH === */
+/* Generated 2026-03-03 15:58:58Z
+   Keep CSS in sync with real viewport height on iPad/iOS Safari.
+*/
+(function setAppVhVar(){
+  function apply(){
+    try {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    } catch(e){}
+  }
+  apply();
+  window.addEventListener('resize', apply, { passive: true });
+  window.addEventListener('orientationchange', apply, { passive: true });
+})();

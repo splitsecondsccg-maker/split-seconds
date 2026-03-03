@@ -125,7 +125,7 @@ const state = {
     phase: 'planning', currentMoment: 0
 };
 
-let selectedPlayer = 'Rogue'; let selectedAI = 'Mauja';
+let selectedPlayer = 'Rogue'; let selectedAI = 'Brute';
 
 function selectChar(target, charName) {
     if(music.select.paused) music.select.play().catch(e=>console.log("BGM blocked"));
@@ -177,7 +177,7 @@ function getAbilityCard(className, index) {
         if(index === 1) return { name: 'Quick Step', type: 'utility', cost: 0, moments: 1, dmg: 0, desc: 'Gain 1 Stamina', effect: 'gain_stam_1', isBasic: true };
         if(index === 2) return { name: 'Poison Dagger', type: 'attack', cost: 0, moments: 1, dmg: 1, desc: 'Upon hit: Deal 1 extra Poison DMG', effect: 'poison_dagger', isBasic: true };
     }
-    if(className === 'Mauja') {
+    if(className === 'Brute') {
         if(index === 1) return { name: 'Enrage', type: 'utility', cost: 0, moments: 2, dmg: 0, desc: 'Gain 2 Stamina', effect: 'gain_stam_2', isBasic: true };
         if(index === 2) return { name: 'Heavy Blow', type: 'attack', cost: 0, moments: 3, dmg: 4, desc: 'Massive free strike', isBasic: true };
     }
@@ -621,7 +621,7 @@ function planAI() {
             if (defensiveMoves.length > 0 && Math.random() < 0.75) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
         }
 
-        if (!chosenMove && virtualStam >= 2 && (aiClass === 'Mauja' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
+        if (!chosenMove && virtualStam >= 2 && (aiClass === 'Brute' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
             let heavyMoves = validMoves.filter(m => m.cost >= 2);
             if (heavyMoves.length > 0 && Math.random() < 0.6) chosenMove = heavyMoves[Math.floor(Math.random() * heavyMoves.length)];
         }
@@ -957,8 +957,8 @@ function resolveMoment() {
     if (state.currentMoment > 4) { 
         if (state.player.class === 'Necromancer' && state.player.roundData.appliedStatus) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Necromancer gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
-        if (state.player.class === 'Mauja' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Mauja gained 1 Stam (Passive)."); }
-        if (state.ai.class === 'Mauja' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Mauja gained 1 Stam (Passive)."); }
+        if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
+        if (state.ai.class === 'Brute' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Brute gained 1 Stam (Passive)."); }
         setTimeout(() => nextTurn(), END_ROUND_DELAY); return; 
     }
     

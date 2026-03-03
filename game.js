@@ -65,7 +65,7 @@ function planAI() {
             if (defensiveMoves.length > 0 && Math.random() < 0.75) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
         }
 
-        if (!chosenMove && virtualStam >= 2 && (aiClass === 'Brute' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
+        if (!chosenMove && virtualStam >= 2 && (aiClass === 'Mauja' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
             let heavyMoves = validMoves.filter(m => m.cost >= 2);
             if (heavyMoves.length > 0 && Math.random() < 0.6) chosenMove = heavyMoves[Math.floor(Math.random() * heavyMoves.length)];
         }

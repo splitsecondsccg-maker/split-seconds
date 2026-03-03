@@ -266,6 +266,100 @@
       left.appendChild(meta);
       left.appendChild(desc);
 
+      // Requirement chips (proficiencies)
+      const reqWrap = document.createElement('div');
+      reqWrap.className = 'db-req-chips';
+
+      const icons = window.ProficiencyIcons || window.PROFICIENCY_ICONS || {};
+      const req = c.requirements || null;
+
+      function addChip(text, icon, state){
+        const chip = document.createElement('span');
+        chip.className = 'db-chip' + (state ? (' ' + state) : '');
+        chip.textContent = (icon ? (icon + ' ') : '') + text;
+        reqWrap.appendChild(chip);
+        return chip;
+      }
+
+      // Compute legality + missing proficiencies
+      const char = window.CharactersDB?.[st.charName] || window.classData?.[st.charName] || null;
+      const have = new Set();
+      if(char){
+        if(char.class) have.add(String(char.class).toLowerCase());
+        if(Array.isArray(char.talents)) for(const t of char.talents) have.add(String(t).toLowerCase());
+      }
+
+      function fmtAll(arr){
+        return (arr||[]).map(x => String(x).toLowerCase());
+      }
+
+      let isLegal = true;
+      let tooltip = '';
+      let missing = new Set();
+
+      if(req){
+        const all = req.all ? fmtAll(req.all) : null;
+        const any = Array.isArray(req.any) ? req.any : null;
+
+        if(all){
+          for(const p of all){ if(!have.has(p)) missing.add(p); }
+          isLegal = missing.size === 0;
+          tooltip = 'ALL: ' + all.join(' + ');
+        } else if(any){
+          // any is list of {all:[...]}
+          let anyOk = false;
+          const groups = any.map(g => fmtAll(g?.all||[]));
+          for(const g of groups){
+            const missG = g.filter(p => !have.has(p));
+            if(missG.length === 0){ anyOk = true; break; }
+          }
+          isLegal = anyOk;
+          tooltip = 'ANY: ' + groups.map(g => '(' + g.join(' + ') + ')').join(' OR ');
+          if(!anyOk){
+            // union missing from all groups (best-effort)
+            for(const g of groups){ for(const p of g){ if(!have.has(p)) missing.add(p); } }
+          }
+        }
+
+        // Render chips
+        if(all){
+          for(const p of all){
+            const icon = icons[p] || '';
+            addChip(p, icon, have.has(p) ? 'ok' : 'missing');
+          }
+        } else if(any){
+          const groups = any.map(g => fmtAll(g?.all||[]));
+          // show as chips: ice + (wizard OR sorcerer) etc.
+          // We'll just render each group separated by OR.
+          groups.forEach((g, gi) => {
+            g.forEach((p, pi) => {
+              const icon = icons[p] || '';
+              addChip(p, icon, have.has(p) ? 'ok' : 'missing');
+              if(pi < g.length-1){
+                const plusTxt = document.createElement('span');
+                plusTxt.className = 'db-chip-sep';
+                plusTxt.textContent = '+';
+                reqWrap.appendChild(plusTxt);
+              }
+            });
+            if(gi < groups.length-1){
+              const orTxt = document.createElement('span');
+              orTxt.className = 'db-chip-sep';
+              orTxt.textContent = 'OR';
+              reqWrap.appendChild(orTxt);
+            }
+          });
+        }
+
+        if(reqWrap.childNodes.length){
+          reqWrap.title = tooltip + (missing.size ? ('\nMissing: ' + Array.from(missing).join(', ')) : '');
+        }
+      }
+
+      if(reqWrap.childNodes.length){
+        left.appendChild(reqWrap);
+      }
+
       const controls = document.createElement('div');
       controls.className = 'db-card-controls';
 
@@ -291,6 +385,14 @@
         st.cardCounts[c.id] = cur + 1;
         renderAll();
       };
+
+      // legality enforcement
+      if(req && !isLegal){
+        row.classList.add('db-illegal');
+        plus.disabled = true;
+        plus.title = (reqWrap?.title || 'Illegal');
+      }
+
 
       controls.appendChild(minus);
       controls.appendChild(count);

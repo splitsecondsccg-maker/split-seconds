@@ -178,7 +178,7 @@ let state = {
 window.state = state;
 
 let selectedPlayer = 'Rogue';
-let selectedAI = 'Brute';
+let selectedAI = 'Mauja';
 
 // Selected deck per side (each character can have multiple decks)
 let selectedPlayerDeckId = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedPlayer) : null;

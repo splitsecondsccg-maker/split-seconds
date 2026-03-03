@@ -24,47 +24,47 @@
     // Rogue
     rogue_quick_jab:        { id: "rogue_quick_jab", name: "Quick Jab", type: "attack", cost: 0, moments: 1, dmg: 2, desc: "A fast, free strike." },
     rogue_flurry:           { id: "rogue_flurry", name: "Flurry", type: "attack", cost: 1, moments: 1, dmg: 3, desc: "Standard assassin strike." },
-    rogue_lunging_dagger:   { id: "rogue_lunging_dagger", name: "Lunging Dagger", type: "attack", cost: 1, moments: 2, dmg: 4, desc: "Sacrifices time for reach." },
-    rogue_cutthroat:        { id: "rogue_cutthroat", name: "Cutthroat", type: "attack", cost: 4, moments: 1, dmg: 6, desc: "Never trust a rogue..." },
-    rogue_kidney_strike:    { id: "rogue_kidney_strike", name: "Kidney Strike", type: "grab", cost: 1, moments: 1, dmg: 3, desc: "Destroys 1 enemy Stamina on hit.", effect: "exhaust_1" },
+    rogue_lunging_dagger:   { id: "rogue_lunging_dagger", name: "Lunging Dagger", type: "attack", cost: 1, moments: 2, dmg: 4, desc: "Sacrifices time for reach." , requirements: {'all': ['assassin']}},
+    rogue_cutthroat:        { id: "rogue_cutthroat", name: "Cutthroat", type: "attack", cost: 4, moments: 1, dmg: 6, desc: "Never trust a rogue..." , requirements: {'all': ['assassin']}},
+    rogue_kidney_strike:    { id: "rogue_kidney_strike", name: "Kidney Strike", type: "grab", cost: 1, moments: 1, dmg: 3, desc: "Destroys 1 enemy Stamina on hit.", effect: "exhaust_1" , requirements: {'all': ['assassin']}},
     rogue_sharpen:          { id: "rogue_sharpen", name: "Sharpen", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "+3 DMG to next Attack.", effect: "buff_next_atk_3" },
 
     // Brute
-    brute_heavy_strike:     { id: "brute_heavy_strike", name: "Heavy Strike", type: "attack", cost: 2, moments: 1, dmg: 3, desc: "Drains stamina, hits hard." },
-    brute_cleave:           { id: "brute_cleave", name: "Cleave", type: "attack", cost: 2, moments: 2, dmg: 5, desc: "Wide, heavy swing." },
-    brute_dev_blow:         { id: "brute_dev_blow", name: "Devastating Blow", type: "attack", cost: 3, moments: 3, dmg: 9, desc: "Massive, slow attack." },
-    brute_suplex:           { id: "brute_suplex", name: "Suplex", type: "grab", cost: 2, moments: 2, dmg: 6, desc: "Massive punish for blocking." },
+    brute_heavy_strike:     { id: "brute_heavy_strike", name: "Heavy Strike", type: "attack", cost: 2, moments: 1, dmg: 3, desc: "Drains stamina, hits hard." , requirements: {'all': ['brute']}},
+    brute_cleave:           { id: "brute_cleave", name: "Cleave", type: "attack", cost: 2, moments: 2, dmg: 5, desc: "Wide, heavy swing." , requirements: {'all': ['brute']}},
+    brute_dev_blow:         { id: "brute_dev_blow", name: "Devastating Blow", type: "attack", cost: 3, moments: 3, dmg: 9, desc: "Massive, slow attack." , requirements: {'all': ['brute']}},
+    brute_suplex:           { id: "brute_suplex", name: "Suplex", type: "grab", cost: 2, moments: 2, dmg: 6, desc: "Massive punish for blocking." , requirements: {'all': ['brute']}},
     brute_sunder:           { id: "brute_sunder", name: "Sunder", type: "attack", cost: 2, moments: 1, dmg: 2, desc: "Enemy loses 2 Armor this turn.", effect: "sunder" },
-    brute_warcry:           { id: "brute_warcry", name: "Warcry", type: "buff", cost: 2, moments: 2, dmg: 0, desc: "+5 DMG to next Attack.", effect: "buff_next_atk_5" },
+    brute_warcry:           { id: "brute_warcry", name: "Warcry", type: "buff", cost: 2, moments: 2, dmg: 0, desc: "+5 DMG to next Attack.", effect: "buff_next_atk_5" , requirements: {'all': ['brute']}},
 
     // Paladin
     paladin_standard_strike:{ id: "paladin_standard_strike", name: "Standard Strike", type: "attack", cost: 1, moments: 1, dmg: 2, desc: "Reliable weapon swing." },
-    paladin_shield_bash:    { id: "paladin_shield_bash", name: "Shield Bash", type: "grab", cost: 2, moments: 1, dmg: 4, desc: "High burst against defenders." },
-    paladin_pummel:         { id: "paladin_pummel", name: "Pummel", type: "attack", cost: 2, moments: 2, dmg: 4, desc: "Heavy swing." },
-    paladin_medic_light:    { id: "paladin_medic_light", name: "Medic Light", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Heals 3 HP.", effect: "heal_3" },
-    paladin_bless:          { id: "paladin_bless", name: "Bless", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "+3 DMG to next Attack.", effect: "buff_next_atk_3" },
-    paladin_holy_smite:     { id: "paladin_holy_smite", name: "Holy Smite", type: "attack", cost: 3, moments: 2, dmg: 7, desc: "By the Holy light." },
+    paladin_shield_bash:    { id: "paladin_shield_bash", name: "Shield Bash", type: "grab", cost: 2, moments: 1, dmg: 4, desc: "High burst against defenders." , requirements: {'all': ['warrior']}},
+    paladin_pummel:         { id: "paladin_pummel", name: "Pummel", type: "attack", cost: 2, moments: 2, dmg: 4, desc: "Heavy swing." , requirements: {'all': ['warrior']}},
+    paladin_medic_light:    { id: "paladin_medic_light", name: "Medic Light", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Heals 3 HP.", effect: "heal_3" , requirements: {'all': ['light']}},
+    paladin_bless:          { id: "paladin_bless", name: "Bless", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "+3 DMG to next Attack.", effect: "buff_next_atk_3" , requirements: {'all': ['light']}},
+    paladin_holy_smite:     { id: "paladin_holy_smite", name: "Holy Smite", type: "attack", cost: 3, moments: 2, dmg: 7, desc: "By the Holy light." , requirements: {'all': ['light']}},
 
     // Vampiress
     vamp_claw_swipe:        { id: "vamp_claw_swipe", name: "Claw Swipe", type: "attack", cost: 0, moments: 1, dmg: 2, desc: "A fast, free scratch." },
-    vamp_siphon_strike:     { id: "vamp_siphon_strike", name: "Siphon Strike", type: "attack", cost: 1, moments: 1, dmg: 2, desc: "Deals 2 DMG, Heals 1 HP if succeeded.", effect: "heal_1_on_hit" },
-    vamp_vampiric_bite:     { id: "vamp_vampiric_bite", name: "Vampiric Bite", type: "grab", cost: 1, moments: 1, dmg: 3, desc: "Deals 3 DMG, Heals 1 HP if succeeded.", effect: "heal_1_on_hit" },
-    vamp_lethal_embrace:    { id: "vamp_lethal_embrace", name: "Lethal Embrace", type: "grab", cost: 2, moments: 2, dmg: 7, desc: "Deals 6 DMG, Heals 2 HP if succeeded.", effect: "heal_2_on_hit" },
-    vamp_hypnotic_gaze:     { id: "vamp_hypnotic_gaze", name: "Hypnotic Gaze", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Steal 1 Stamina from the enemy.", effect: "steal_stam" },
+    vamp_siphon_strike:     { id: "vamp_siphon_strike", name: "Siphon Strike", type: "attack", cost: 1, moments: 1, dmg: 2, desc: "Deals 2 DMG, Heals 1 HP if succeeded.", effect: "heal_1_on_hit" , requirements: {'all': ['bleed']}},
+    vamp_vampiric_bite:     { id: "vamp_vampiric_bite", name: "Vampiric Bite", type: "grab", cost: 1, moments: 1, dmg: 3, desc: "Deals 3 DMG, Heals 1 HP if succeeded.", effect: "heal_1_on_hit" , requirements: {'all': ['vampire']}},
+    vamp_lethal_embrace:    { id: "vamp_lethal_embrace", name: "Lethal Embrace", type: "grab", cost: 2, moments: 2, dmg: 7, desc: "Deals 6 DMG, Heals 2 HP if succeeded.", effect: "heal_2_on_hit" , requirements: {'all': ['vampire']}},
+    vamp_hypnotic_gaze:     { id: "vamp_hypnotic_gaze", name: "Hypnotic Gaze", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Steal 1 Stamina from the enemy.", effect: "steal_stam" , requirements: {'all': ['hypnotic']}},
 
     // Necromancer
-    necro_scare:            { id: "necro_scare", name: "Scare", type: "buff", cost: 0, moments: 1, dmg: 0, desc: "Draw 1. Opponent MUST block next turn.", effect: "scare" },
-    necro_siphon_soul:      { id: "necro_siphon_soul", name: "Siphon Soul", type: "grab", cost: 1, moments: 2, dmg: 3, desc: "Upon hit: Next attack gains +3 DMG.", effect: "siphon_soul" },
-    necro_chiller:          { id: "necro_chiller", name: "Chiller", type: "grab", cost: 1, moments: 1, dmg: 2, desc: "Upon hit: Opponent recovers 1 less Stam next turn.", effect: "chiller" },
-    necro_skull_blast:      { id: "necro_skull_blast", name: "Skull Blast", type: "attack", cost: 2, moments: 1, dmg: 4, desc: "Fast magic projectile." },
-    necro_necro_blast:      { id: "necro_necro_blast", name: "Necro Blast", type: "attack", cost: 4, moments: 2, dmg: 8, desc: "Massive energy blast." },
-    necro_bone_cage:        { id: "necro_bone_cage", name: "Bone Cage", type: "block", cost: 1, moments: 3, dmg: 0, desc: "Blocks up to 6 total DMG over 3 moments.", currentBlock: 6 },
+    necro_scare:            { id: "necro_scare", name: "Scare", type: "buff", cost: 0, moments: 1, dmg: 0, desc: "Draw 1. Opponent MUST block next turn.", effect: "scare" , requirements: {'any': [{'all': ['assassin']}, {'all': ['darkness']}]}},
+    necro_siphon_soul:      { id: "necro_siphon_soul", name: "Siphon Soul", type: "grab", cost: 1, moments: 2, dmg: 3, desc: "Upon hit: Next attack gains +3 DMG.", effect: "siphon_soul" , requirements: {'all': ['wizard', 'darkness']}},
+    necro_chiller:          { id: "necro_chiller", name: "Chiller", type: "grab", cost: 1, moments: 1, dmg: 2, desc: "Upon hit: Opponent recovers 1 less Stam next turn.", effect: "chiller" , requirements: {'all': ['ice']}},
+    necro_skull_blast:      { id: "necro_skull_blast", name: "Skull Blast", type: "attack", cost: 2, moments: 1, dmg: 4, desc: "Fast magic projectile." , requirements: {'all': ['wizard', 'darkness']}},
+    necro_necro_blast:      { id: "necro_necro_blast", name: "Necro Blast", type: "attack", cost: 4, moments: 2, dmg: 8, desc: "Massive energy blast." , requirements: {'all': ['wizard', 'darkness']}},
+    necro_bone_cage:        { id: "necro_bone_cage", name: "Bone Cage", type: "block", cost: 1, moments: 3, dmg: 0, desc: "Blocks up to 6 total DMG over 3 moments.", currentBlock: 6 , requirements: {'all': ['wizard', 'darkness']}},
 
     // Ice Djinn
-    ice_cold_wind:          { id: "ice_cold_wind", name: "Cold Wind", type: "buff", cost: 0, moments: 1, dmg: 0, desc: "Apply FREEZE 1. Draw 1.", effect: "cold_wind" },
-    ice_ice_spear:          { id: "ice_ice_spear", name: "Ice Spear", type: "attack", cost: 2, moments: 2, dmg: 5, desc: "5 DMG. On hit: FREEZE 1.", effect: "freeze_1_on_hit" },
-    ice_break_the_ice:      { id: "ice_break_the_ice", name: "Break the Ice", type: "grab", cost: 2, moments: 1, dmg: 2, desc: "2 DMG. On hit: Remove all FREEZE on opponent. Deal that much DMG.", effect: "break_the_ice" },
-    ice_ice_wall:           { id: "ice_ice_wall", name: "Ice Wall", type: "block", cost: 3, moments: 3, dmg: 0, desc: "Blocks up to 8 total DMG over 3 moments. Each time it blocks an attack: FREEZE 1.", currentBlock: 8 },
+    ice_cold_wind:          { id: "ice_cold_wind", name: "Cold Wind", type: "buff", cost: 0, moments: 1, dmg: 0, desc: "Apply FREEZE 1. Draw 1.", effect: "cold_wind" , requirements: {'all': ['ice']}},
+    ice_ice_spear:          { id: "ice_ice_spear", name: "Ice Spear", type: "attack", cost: 2, moments: 2, dmg: 5, desc: "5 DMG. On hit: FREEZE 1.", effect: "freeze_1_on_hit" , requirements: {'any': [{'all': ['wizard', 'ice']}, {'all': ['sorcerer', 'ice']}]}},
+    ice_break_the_ice:      { id: "ice_break_the_ice", name: "Break the Ice", type: "grab", cost: 2, moments: 1, dmg: 2, desc: "2 DMG. On hit: Remove all FREEZE on opponent. Deal that much DMG.", effect: "break_the_ice" , requirements: {'all': ['ice']}},
+    ice_ice_wall:           { id: "ice_ice_wall", name: "Ice Wall", type: "block", cost: 3, moments: 3, dmg: 0, desc: "Blocks up to 8 total DMG over 3 moments. Each time it blocks an attack: FREEZE 1.", currentBlock: 8 , requirements: {'any': [{'all': ['wizard', 'ice']}, {'all': ['sorcerer', 'ice']}]}},
 
     // ------------------------
     // Keyword cards (POISON / BLEED)
@@ -139,8 +139,8 @@
     // Marked with isAbility so Deck Builder can hide them.
     // ------------------------
 
-    ability_rogue_1: { id: "ability_rogue_1", name: "Quick Step", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Gain 1 Stamina", effect: "gain_stam_1", isBasic: true, isAbility: true },
-    ability_rogue_2: { id: "ability_rogue_2", name: "Poison Dagger", type: "attack", cost: 0, moments: 1, dmg: 1, desc: "Upon hit: Deal 1 extra Poison DMG", effect: "poison_dagger", isBasic: true, isAbility: true },
+    ability_rogue_1: { id: "ability_rogue_1", name: "Quick Step", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Gain 1 Stamina", effect: "gain_stam_1", isBasic: true, isAbility: true , requirements: {'all': ['assassin']}},
+    ability_rogue_2: { id: "ability_rogue_2", name: "Poison Dagger", type: "attack", cost: 0, moments: 1, dmg: 1, desc: "Upon hit: Deal 1 extra Poison DMG", effect: "poison_dagger", isBasic: true, isAbility: true , requirements: {'all': ['poison', 'assassin']}},
 
     ability_brute_1: { id: "ability_brute_1", name: "Enrage", type: "utility", cost: 0, moments: 2, dmg: 0, desc: "Gain 2 Stamina", effect: "gain_stam_2", isBasic: true, isAbility: true },
     ability_brute_2: { id: "ability_brute_2", name: "Heavy Blow", type: "attack", cost: 0, moments: 3, dmg: 4, desc: "Massive free strike", isBasic: true, isAbility: true },
@@ -181,7 +181,7 @@
     brute_base: {
       id: "brute_base",
       name: "Brute — Classic",
-      character: "Brute",
+      character: "Mauja",
       description: "Slow, heavy hits and huge payoffs.",
       cards: [
         { cardId: "brute_heavy_strike", copies: 3 },
@@ -291,6 +291,8 @@
   /** @type {Record<string, any>} */
   const CharactersDB = {
     Rogue: {
+      class: "assassin",
+      talents: ["darkness", "poison"],
       maxStam: 7,
       armor: 2,
       passiveDesc: "Upon hit, opponent next attack has -1 DMG.",
@@ -299,7 +301,9 @@
       defaultDeckId: "rogue_base",
       abilityIds: { 1: "ability_rogue_1", 2: "ability_rogue_2" }
     },
-    Brute: {
+    Mauja: {
+      class: "brute",
+      talents: ["poison"],
       maxStam: 5,
       armor: 2,
       passiveDesc: "End of turn: If you lost life this turn, gain 1 Stamina.",
@@ -309,6 +313,8 @@
       abilityIds: { 1: "ability_brute_1", 2: "ability_brute_2" }
     },
     Paladin: {
+      class: "warrior",
+      talents: ["light"],
       maxStam: 6,
       armor: 4,
       passiveDesc: "Upon blocking an attack, your next attack gains +1 DMG.",
@@ -318,6 +324,8 @@
       abilityIds: { 1: "ability_paladin_1", 2: "ability_paladin_2" }
     },
     Vampiress: {
+      class: "assassin",
+      talents: ["vampire", "bleed"],
       maxStam: 7,
       armor: 3,
       passiveDesc: "Upon hit, your next attack gains +1 DMG this turn.",
@@ -327,6 +335,8 @@
       abilityIds: { 1: "ability_vampiress_1", 2: "ability_vampiress_2" }
     },
     Necromancer: {
+      class: "wizard",
+      talents: ["darkness", "poison", "hypnotic"],
       maxStam: 7,
       armor: 2,
       passiveDesc: "End of turn: Gain 1 Stamina if you applied a status effect this turn.",
@@ -336,6 +346,8 @@
       abilityIds: { 1: "ability_necromancer_1", 2: "ability_necromancer_2" }
     },
     "Ice Djinn": {
+      class: "spirit",
+      talents: ["ice", "sorcerer"],
       maxHp: 37,
       maxStam: 7,
       armor: 3,
@@ -353,7 +365,7 @@
   // Character portraits
   const charImages = {
     Rogue: "rogue.png",
-    Brute: "brute.png",
+    Mauja: "brute.png",
     Paladin: "paladin.png",
     Vampiress: "vampiress.png",
     Necromancer: "necromancer.png",
@@ -457,6 +469,13 @@
       if (!base) {
         console.warn("Card not found:", entry.cardId, "in deck", deckId);
         continue;
+
+// FILTER_ILLEGAL_IN_BUILDDECK: remove illegal cards from built-in decks automatically
+const deckCharName = (def.character || def.characterName || def.charName || null);
+if(deckCharName && typeof isCardLegalForCharacter === 'function' && !isCardLegalForCharacter(base, deckCharName)){
+  console.warn("Illegal card removed from deck:", entry.cardId, "for", deckCharName, "in deck", deckId);
+  continue;
+}
       }
       const copies = Math.max(0, Number(entry.copies) || 0);
       for (let i = 0; i < copies; i++) {
@@ -504,15 +523,68 @@
   }
 
   // ------------------------
-  // 6) Expose globals (explicit)
+  
+// Proficiency icons (Deck Builder chips)
+const ProficiencyIcons = {
+  warrior: "⚔️",
+  light: "✨",
+  brute: "👊",
+  assassin: "🗡️",
+  wizard: "📜",
+  darkness: "🌑",
+  poison: "☠️",
+  vampire: "🧛",
+  bleed: "🩸",
+  hypnotic: "🌀",
+  ice: "❄️",
+  sorcerer: "🪄",
+  spirit: "👻"
+};
+
+
+// ------------------------
+// 5.5) Proficiency legality helpers
+// ------------------------
+function getCharacterProficiencies(charName){
+  const c = CharactersDB?.[charName] || classData?.[charName];
+  if(!c) return new Set();
+  const set = new Set();
+  if(c.class) set.add(String(c.class).toLowerCase());
+  for(const t of (c.talents || [])) set.add(String(t).toLowerCase());
+  return set;
+}
+
+function isRequirementsSatisfied(req, profSet){
+  if(!req) return true;
+  if(req.all){
+    return req.all.every(p => profSet.has(String(p).toLowerCase()));
+  }
+  if(req.any){
+    return req.any.some(group => (group.all || []).every(p => profSet.has(String(p).toLowerCase())));
+  }
+  return true;
+}
+
+function isCardLegalForCharacter(cardOrId, charName){
+  const card = typeof cardOrId === 'string' ? CardsDB?.[cardOrId] : cardOrId;
+  if(!card) return false;
+  const prof = getCharacterProficiencies(charName);
+  return isRequirementsSatisfied(card.requirements, prof);
+}
+
+// 6) Expose globals (explicit)
   // ------------------------
   window.CardsDB = CardsDB;
   window.DecksDB = DecksDB;
   window.CharactersDB = CharactersDB;
   window.classData = classData;
   window.charImages = charImages;
+  window.ProficiencyIcons = ProficiencyIcons;
 
   window.buildDeckFromDeckId = buildDeckFromDeckId;
+  window.isCardLegalForCharacter = isCardLegalForCharacter;
+  window.isRequirementsSatisfied = isRequirementsSatisfied;
+  window.getCharacterProficiencies = getCharacterProficiencies;
   window.getDecksForCharacter = getDecksForCharacter;
   window.getDefaultDeckIdForCharacter = getDefaultDeckIdForCharacter;
   window.pickRandomDeckIdForCharacter = pickRandomDeckIdForCharacter;

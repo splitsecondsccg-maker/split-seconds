@@ -7,8 +7,8 @@ function resolveMoment() {
         }
         if (state.player.class === 'Necromancer' && state.player.roundData.appliedStatus) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Necromancer gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
-        if (state.player.class === 'Brute' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Brute gained 1 Stam (Passive)."); }
-        if (state.ai.class === 'Brute' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Brute gained 1 Stam (Passive)."); }
+        if (state.player.class === 'Mauja' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Mauja gained 1 Stam (Passive)."); }
+        if (state.ai.class === 'Mauja' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Mauja gained 1 Stam (Passive)."); }
         setTimeout(() => nextTurn(), END_ROUND_DELAY); return; 
     }
     

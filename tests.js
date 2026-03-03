@@ -16,7 +16,7 @@
 
   function makeMinimalState() {
     const p = classData["Rogue"];
-    const a = classData["Brute"];
+    const a = classData["Mauja"];
     const s = {
       player: {
         class: "Rogue",
@@ -32,13 +32,13 @@
         roundData: { lostLife: false, appliedStatus: false },
       },
       ai: {
-        class: "Brute",
+        class: "Mauja",
         hp: a.maxHp || 40,
         maxHp: a.maxHp || 40,
         stam: a.maxStam,
         maxStam: a.maxStam,
         armor: a.armor,
-        deck: (typeof buildDeckFromDeckId==='function' ? buildDeckFromDeckId(getDefaultDeckIdForCharacter('Brute')) : buildDeck(a.deck)),
+        deck: (typeof buildDeckFromDeckId==='function' ? buildDeckFromDeckId(getDefaultDeckIdForCharacter('Mauja')) : buildDeck(a.deck)),
         hand: [],
         timeline: [null, null, null, null, null],
         statuses: getBaseStatuses(),

@@ -101,6 +101,16 @@
       desc: "4 DMG. On hit: POISON 4.",
       effects: [{ trigger: "on_hit", type: "poison", value: 4 }]
     },
+    toxic_rain: {
+      id: "toxic_rain",
+      name: "Toxic Rain",
+      type: "buff",
+      cost: 2,
+      moments: 2,
+      dmg: 0,
+      desc: "POISON 6.",
+      effects: [{type: "poison", value: 6 }]
+    },
 
     // Vampiress — Bleed deck cards
     vamp_rending_claw: {
@@ -109,8 +119,8 @@
       type: "attack",
       cost: 1,
       moments: 1,
-      dmg: 2,
-      desc: "2 DMG. On hit: BLEED 3.",
+      dmg: 1,
+      desc: "1 DMG. On hit: BLEED 3.",
       effects: [{ trigger: "on_hit", type: "bleed", value: 3 }]
     },
     vamp_crimson_grapple: {
@@ -125,8 +135,8 @@
     },
     vamp_artery_rip: {
       id: "vamp_artery_rip",
-      name: "Artery Rip",
-      type: "attack",
+      name: "Artery Bite",
+      type: "grab",
       cost: 2,
       moments: 2,
       dmg: 4,
@@ -140,7 +150,7 @@
     // ------------------------
 
     ability_rogue_1: { id: "ability_rogue_1", name: "Quick Step", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Gain 1 Stamina", effect: "gain_stam_1", isBasic: true, isAbility: true , requirements: {'all': ['assassin']}},
-    ability_rogue_2: { id: "ability_rogue_2", name: "Poison Dagger", type: "attack", cost: 0, moments: 1, dmg: 1, desc: "Upon hit: Deal 1 extra Poison DMG", effect: "poison_dagger", isBasic: true, isAbility: true , requirements: {'all': ['poison', 'assassin']}},
+    ability_rogue_2: { id: "ability_rogue_2", name: "Poison Dagger", type: "attack", cost: 0, moments: 1, dmg: 1, desc: "Upon hit: Deal 1 extra Poison DMG", effect: "poison_dagger", isBasic: true, isAbility: true , requirements: {'all': ['assassin']}},
 
     ability_brute_1: { id: "ability_brute_1", name: "Enrage", type: "utility", cost: 0, moments: 2, dmg: 0, desc: "Gain 2 Stamina", effect: "gain_stam_2", isBasic: true, isAbility: true },
     ability_brute_2: { id: "ability_brute_2", name: "Heavy Blow", type: "attack", cost: 0, moments: 3, dmg: 4, desc: "Massive free strike", isBasic: true, isAbility: true },
@@ -292,7 +302,7 @@
   const CharactersDB = {
     Rogue: {
       class: "assassin",
-      talents: ["darkness", "poison"],
+      talents: ["darkness"],
       maxStam: 7,
       armor: 2,
       passiveDesc: "Upon hit, opponent next attack has -1 DMG.",

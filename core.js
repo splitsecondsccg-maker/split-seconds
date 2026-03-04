@@ -168,21 +168,17 @@ window.applyExhaustedStatus = applyExhaustedStatus;
 function tickPoisonAtTurnEnd(charKey) {
     const c = state?.[charKey];
     if (!c) return;
-
     const stacks = c.statuses.poison || 0;
     const remaining = Math.floor(stacks / 2);
     const dmg = stacks - remaining; // ceil(stacks/2)
-
     if (dmg <= 0) return;
 
     c.statuses.poison = remaining;
     c.hp -= dmg;
 
     c.roundData.lostLife = true;
-
     spawnFloatingText(charKey, `-${dmg}`, 'float-dmg');
     log(`${charKey === 'player' ? 'Player' : 'AI'} suffers ${dmg} POISON damage (${c.statuses.poison} left).`);
-
     playSound('hit');
 }
 
@@ -993,4 +989,67 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   apply();
   window.addEventListener('resize', apply, { passive: true });
   window.addEventListener('orientationchange', apply, { passive: true });
+})();
+
+/* === APP_SCALE_PATCH ===
+   Scales the main game UI to fit non-16:9 screens (iPad, ultrawide, etc.) without cropping.
+   Does NOT scale deck builder overlays/modals (they remain full-size for readability).
+*/
+(function appScaleToFit(){
+  const DESIGN_W = 1600; // baseline layout width
+  const DESIGN_H = 900;  // baseline layout height
+
+  function ensureScaleRoot(){
+    // Wrap only the main screens (char select + game) so overlays can stay unscaled.
+    const body = document.body;
+    if(!body) return null;
+    let root = document.getElementById('app-scale-root');
+    if(root) return root;
+
+    const screens = [];
+    const cs = document.getElementById('char-select-screen');
+    const gs = document.getElementById('game-screen');
+    if(cs) screens.push(cs);
+    if(gs) screens.push(gs);
+    if(screens.length === 0) return null;
+
+    root = document.createElement('div');
+    root.id = 'app-scale-root';
+
+    // Insert root before first screen, then move screens into it.
+    body.insertBefore(root, screens[0]);
+    screens.forEach(el => root.appendChild(el));
+    return root;
+  }
+
+  function viewport(){
+    // visualViewport helps on iOS (accounts for browser UI bars)
+    const vv = window.visualViewport;
+    const w = vv?.width || window.innerWidth;
+    const h = vv?.height || window.innerHeight;
+    return { w, h };
+  }
+
+  function apply(){
+    const root = ensureScaleRoot();
+    if(!root) return;
+
+    const { w, h } = viewport();
+    // Leave a bit of breathing room for iOS safe areas
+    const pad = 8;
+    const scale = Math.min((w - pad) / DESIGN_W, (h - pad) / DESIGN_H, 1);
+
+    document.documentElement.style.setProperty('--ui-scale', String(scale));
+    document.documentElement.style.setProperty('--ui-inv-scale', String(scale > 0 ? (1/scale) : 1));
+  }
+
+  // Apply ASAP and on changes
+  apply();
+  window.addEventListener('resize', apply, { passive: true });
+  window.addEventListener('orientationchange', apply, { passive: true });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', apply, { passive: true });
+    window.visualViewport.addEventListener('scroll', apply, { passive: true });
+  }
+  document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();

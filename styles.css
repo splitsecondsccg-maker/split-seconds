@@ -944,3 +944,14 @@ body {
 body {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* === APP_SCALE_ROOT ===
+   Scale main screens to fit viewport (set via --ui-scale).
+   We compensate width/height using inverse scale so layouts don't clip.
+*/
+#app-scale-root{
+  transform-origin: top left;
+  transform: scale(var(--ui-scale, 1));
+  width: calc(100% * var(--ui-inv-scale, 1));
+  height: calc(100% * var(--ui-inv-scale, 1));
+}

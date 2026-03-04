@@ -280,6 +280,15 @@ if (aiParry && pAttemptedAttack && aiAction && aiAction.type === 'parry') {
     runTriggeredCardEffects(aiAction, 'on_parry', { sourceKey: 'ai', targetKey: 'player', context: { parried: true } });
 }
 
+// Play/resolve triggers (on_play) — for buffs/utility that should fire when the card resolves.
+// This allows migrating legacy `card.effect` into the unified `card.effects` array.
+if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
+    runTriggeredCardEffects(pAction, 'on_play', { sourceKey: 'player', targetKey: 'ai', context: { hitLanded: pHit, grabHit: pGrabHit } });
+}
+if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
+    runTriggeredCardEffects(aiAction, 'on_play', { sourceKey: 'ai', targetKey: 'player', context: { hitLanded: aiHit, grabHit: aiGrabHit } });
+}
+
 // Legacy string effects (backward compatible)
 if (pAction && pAction.effect && !pActionInterrupted) {
     applyEffect('player', 'ai', pAction.effect, { hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
@@ -367,6 +376,8 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             source.stam = Math.min(source.maxStam, source.stam + 2); log(`${sourceKey} recovers 2 Stamina!`); break;
         case 'buff_next_atk_3': 
             source.statuses.nextAtkMod += 3; log(`${sourceKey} empowers next attack (+3 DMG)`); break;
+        case 'buff_next_atk_1':
+            source.statuses.nextAtkMod += 1; log(`${sourceKey} empowers next attack (+1 DMG)`); break;
         case 'buff_next_atk_5': 
             source.statuses.nextAtkMod += 5; log(`${sourceKey} unleashes a Warcry! (+5 DMG to next attack)`); break;
         case 'reduce_dmg_3': 

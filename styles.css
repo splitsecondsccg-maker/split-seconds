@@ -721,6 +721,16 @@ body {
   margin-bottom: 10px;
 }
 
+/* Deck Builder: visually de-emphasize cards that fail proficiency legality */
+.db-card-row.db-illegal{
+  opacity: 0.45;
+  filter: grayscale(0.45);
+}
+
+.db-card-row.db-illegal .db-mini:disabled{
+  opacity: 0.35;
+}
+
 .db-card-info{ min-width: 0; }
 
 .db-card-title{

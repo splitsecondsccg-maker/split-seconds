@@ -280,15 +280,6 @@ if (aiParry && pAttemptedAttack && aiAction && aiAction.type === 'parry') {
     runTriggeredCardEffects(aiAction, 'on_parry', { sourceKey: 'ai', targetKey: 'player', context: { parried: true } });
 }
 
-// Play/resolve triggers (on_play) — for buffs/utility that should fire when the card resolves.
-// This allows migrating legacy `card.effect` into the unified `card.effects` array.
-if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
-    runTriggeredCardEffects(pAction, 'on_play', { sourceKey: 'player', targetKey: 'ai', context: { hitLanded: pHit, grabHit: pGrabHit } });
-}
-if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
-    runTriggeredCardEffects(aiAction, 'on_play', { sourceKey: 'ai', targetKey: 'player', context: { hitLanded: aiHit, grabHit: aiGrabHit } });
-}
-
 // Legacy string effects (backward compatible)
 if (pAction && pAction.effect && !pActionInterrupted) {
     applyEffect('player', 'ai', pAction.effect, { hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry, dmgOut: pDmg });
@@ -376,8 +367,6 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             source.stam = Math.min(source.maxStam, source.stam + 2); log(`${sourceKey} recovers 2 Stamina!`); break;
         case 'buff_next_atk_3': 
             source.statuses.nextAtkMod += 3; log(`${sourceKey} empowers next attack (+3 DMG)`); break;
-        case 'buff_next_atk_1':
-            source.statuses.nextAtkMod += 1; log(`${sourceKey} empowers next attack (+1 DMG)`); break;
         case 'buff_next_atk_5': 
             source.statuses.nextAtkMod += 5; log(`${sourceKey} unleashes a Warcry! (+5 DMG to next attack)`); break;
         case 'reduce_dmg_3': 
@@ -454,15 +443,21 @@ function nextTurn(isFirstTurn = false) {
         state.ai.statuses = getBaseStatuses();
     } else {
         // Regen stamina
-        let pStamRec = Math.max(0, 3 - state.player.statuses.stamPenalty);
-        let aiStamRec = Math.max(0, 3 - state.ai.statuses.stamPenalty);
-
+        const pExhaust = (state.player.statuses.exhausted || 0) > 0 ? 1 : 0;
+        const aiExhaust = (state.ai.statuses.exhausted || 0) > 0 ? 1 : 0;
+        let pStamRec = Math.max(0, 3 - state.player.statuses.stamPenalty - pExhaust);
+        let aiStamRec = Math.max(0, 3 - state.ai.statuses.stamPenalty - aiExhaust);
         state.player.stam = Math.min(state.player.maxStam, state.player.stam + pStamRec);
         state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + aiStamRec);
 
+        // EXHAUSTED clears after affecting turn-start stamina regen
+        state.player.statuses.exhausted = 0;
+        state.ai.statuses.exhausted = 0;
+
+
         // Reset statuses
-        state.player.statuses.dmgReduction = 0; state.player.statuses.forceBlock = false; state.player.statuses.drawOnBlock = false; state.player.statuses.stamOnBlock = false; state.player.statuses.armorDebuff = 0; state.player.statuses.stamPenalty = 0; state.player.statuses.rogueDebuff = 0;
-        state.ai.statuses.dmgReduction = 0; state.ai.statuses.forceBlock = false; state.ai.statuses.drawOnBlock = false; state.ai.statuses.stamOnBlock = false; state.ai.statuses.armorDebuff = 0; state.ai.statuses.stamPenalty = 0; state.ai.statuses.rogueDebuff = 0;
+        state.player.statuses.dmgReduction = 0; state.player.statuses.forceBlock = false; state.player.statuses.drawOnBlock = false; state.player.statuses.stamOnBlock = false; state.player.statuses.armorDebuff = 0; state.player.statuses.stamPenalty = 0; state.player.statuses.rogueDebuff = 0; state.player.statuses.exhausted = 0;
+        state.ai.statuses.dmgReduction = 0; state.ai.statuses.forceBlock = false; state.ai.statuses.drawOnBlock = false; state.ai.statuses.stamOnBlock = false; state.ai.statuses.armorDebuff = 0; state.ai.statuses.stamPenalty = 0; state.ai.statuses.rogueDebuff = 0; state.ai.statuses.exhausted = 0;
 
         // Clear last turn's temporary armor and apply queued armor gains
         state.player.statuses.bonusArmor = 0;

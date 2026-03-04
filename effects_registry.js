@@ -55,6 +55,13 @@ const EffectTypeRegistry = {
       window.applyFreezeCounters(sourceKey, targetKey, value);
     }
   },
+  exhausted: ({ sourceKey, targetKey, context }) => {
+    // Non-stackable. Intended to be applied on hit or on block (NOT on parry).
+    if (context && context.parried) return;
+    if (typeof window.applyExhaustedStatus === 'function') {
+      window.applyExhaustedStatus(sourceKey, targetKey);
+    }
+  },
 };
 
 function tryRunEffectType(typeKey, args) {

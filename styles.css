@@ -388,6 +388,13 @@ body {
   text-shadow: 0 0 10px rgba(123, 237, 159, 0.8);
 }
 
+/* Floating text for EXHAUSTED */
+.float-exhausted{
+  color: #ffd36b;
+  text-shadow: 0 0 10px rgba(255, 211, 107, 0.8);
+}
+
+
 
 
 /* Floating text for FREEZE */
@@ -721,15 +728,20 @@ body {
   margin-bottom: 10px;
 }
 
-/* Deck Builder: visually de-emphasize cards that fail proficiency legality */
+/* Deckbuilder: visibly mark cards that fail proficiency legality */
 .db-card-row.db-illegal{
-  opacity: 0.45;
-  filter: grayscale(0.45);
+  opacity: 0.42;
+  filter: grayscale(0.9);
+}
+.db-card-row.db-illegal .db-mini{
+  opacity: 0.6;
+}
+.db-card-row.db-illegal .db-card-title,
+.db-card-row.db-illegal .db-card-meta,
+.db-card-row.db-illegal .db-card-desc{
+  opacity: 0.8;
 }
 
-.db-card-row.db-illegal .db-mini:disabled{
-  opacity: 0.35;
-}
 
 .db-card-info{ min-width: 0; }
 

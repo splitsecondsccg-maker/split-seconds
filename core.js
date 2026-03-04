@@ -78,18 +78,20 @@ const getBaseStatuses = () => ({
     rogueDebuff: 0,
     freeze: 0,          // persistent counters (NOT cleared end of turn)
     bleed: 0,           // persistent counters (NOT cleared end of turn)
-    poison: 0           // persistent counters (NOT cleared end of turn)
+    poison: 0,          // persistent counters (NOT cleared end of turn)
+    exhausted: 0       // NOT stackable; cleared at start of turn; reduces stamina regen by 1
 });
 
 const KEYWORD_DEFS = {
-    FREEZE: 'Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.',
-    BLEED: 'Persistent counter. When you are HIT by an ATTACK: take damage equal to BLEED, then BLEED resets to 0.',
-    POISON: 'Persistent counter. At TURN END: lose floor(POISON/2) life and remove that many POISON counters.'
+    EXHAUSTED: "Non-stackable debuff. At TURN START: you regenerate 1 less stamina, then EXHAUSTED is cleared.",
+    FREEZE: "Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.",
+    BLEED: "Persistent counter. When you are HIT by an ATTACK: take damage equal to BLEED, then BLEED resets to 0.",
+    POISON: "Persistent counter. At TURN END: take damage equal to ceil(POISON/2), then POISON halves (rounded down)."
 };
 
 function formatKeywords(text = '') {
     if (!text) return '';
-    return text.replace(/\b(FREEZE|BLEED|POISON)\b/g, (m) => {
+    return text.replace(/\b(EXHAUSTED|FREEZE|BLEED|POISON)\b/g, (m) => {
         const tip = KEYWORD_DEFS[m] || '';
         return `<span class="keyword" data-tip="${tip}">${m}</span>`;
     });
@@ -148,19 +150,39 @@ function applyPoisonCounters(sourceKey, targetKey, amount) {
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} POISON (${target.statuses.poison}).`);
 }
 
+function applyExhaustedStatus(sourceKey, targetKey) {
+    const source = state?.[sourceKey];
+    const target = state?.[targetKey];
+    if (!target) return;
+    if ((target.statuses.exhausted || 0) > 0) return; // non-stackable
+    target.statuses.exhausted = 1;
+    if (source) source.roundData.appliedStatus = true;
+    if (typeof spawnFloatingText === 'function') spawnFloatingText(targetKey, `EXHAUSTED`, 'float-exhausted');
+    if (typeof log === 'function') log(`${targetKey === 'player' ? 'Player' : 'AI'} becomes EXHAUSTED.`);
+}
+
+// Expose for EffectTypeRegistry (effects_registry.js)
+window.applyExhaustedStatus = applyExhaustedStatus;
+
+
 function tickPoisonAtTurnEnd(charKey) {
     const c = state?.[charKey];
     if (!c) return;
-    const stacks = c.statuses.poison || 0;
-    const tick = Math.floor(stacks / 2);
-    if (tick <= 0) return;
 
-    c.statuses.poison = stacks - tick;
-    c.hp -= tick;
+    const stacks = c.statuses.poison || 0;
+    const remaining = Math.floor(stacks / 2);
+    const dmg = stacks - remaining; // ceil(stacks/2)
+
+    if (dmg <= 0) return;
+
+    c.statuses.poison = remaining;
+    c.hp -= dmg;
+
     c.roundData.lostLife = true;
 
-    spawnFloatingText(charKey, `-${tick}`, 'float-dmg');
-    log(`${charKey === 'player' ? 'Player' : 'AI'} suffers ${tick} POISON damage (${c.statuses.poison} left).`);
+    spawnFloatingText(charKey, `-${dmg}`, 'float-dmg');
+    log(`${charKey === 'player' ? 'Player' : 'AI'} suffers ${dmg} POISON damage (${c.statuses.poison} left).`);
+
     playSound('hit');
 }
 
@@ -909,6 +931,10 @@ function renderStatuses(target) {
     if(statuses.stamPenalty > 0) { html += `<div class="status-badge status-debuff">Chilled (-${statuses.stamPenalty} Stam Recov)</div>`; count++; }
     if((statuses.bonusArmor || 0) > 0) { html += `<div class="status-badge status-buff">+${statuses.bonusArmor} Armor (this turn)</div>`; count++; }
     
+if((statuses.exhausted || 0) > 0) {
+    html += `<div class="status-badge status-debuff">${formatKeywords('EXHAUSTED')}</div>`;
+    count++;
+}
 if((statuses.freeze || 0) > 0) {
     const fr = statuses.freeze;
     const taxed = fr >= 10;

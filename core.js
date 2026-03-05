@@ -1,5 +1,15 @@
 // engine.js
 
+// INPUT MODE DETECTION
+
+window.INPUT_MODE = (
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0
+) ? 'touch' : 'mouse';
+
+window.isTouch = window.INPUT_MODE === 'touch';
+
+
 // 1. ADDED heavy_impact TO THE SOUNDS DICTIONARY
 const sounds = { 
     draw: new Audio('draw.mp3'), hit: new Audio('hit.mp3'), heavy_impact: new Audio('heavy_impact.mp3'),

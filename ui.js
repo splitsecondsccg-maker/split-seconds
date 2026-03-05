@@ -1,38 +1,239 @@
 function renderHand() {
-    const handEl = document.getElementById('player-hand'); handEl.innerHTML = '';
+
+    const handEl = document.getElementById('player-hand');
+    handEl.innerHTML = '';
+
+    const total = state.player.hand.length;
+    const center = (total - 1) / 2;
+
+    const fanSpread = 16;
+    const fanOffset = 70;
+
     state.player.hand.forEach((card, index) => {
-        let div = document.createElement('div'); 
-        div.className = 'card'; 
-        
-        // Add red glow if selected
+
+        const div = document.createElement('div');
+        div.className = 'card';
+
+        // fan positioning
+        const angle = (index - center) * fanSpread;
+        const x = (index - center) * fanOffset;
+        const y = Math.abs(index - center) * 6;
+
+        div.dataset.handIndex = String(index);
+        div.dataset.baseX = String(x);
+        div.dataset.baseY = String(y);
+
+        div.style.setProperty("--tx", `${x}px`);
+        div.style.setProperty("--ty", `${y}px`);
+        div.style.setProperty("--rot", `${angle}deg`);
+        div.style.setProperty("--scale", `0.88`);
+
         if (card.selectedForExert) {
             div.style.boxShadow = '0 0 12px 4px #ff4757';
             div.style.borderColor = '#ff4757';
-            div.style.transform = 'translateY(-5px)';
         }
 
         if (state.phase === 'planning' || state.phase === 'pivot_wait') {
-            div.draggable = true;
-            // Send only an index instead of the full object (avoids stale copies)
-            div.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({source: 'hand', index}));
+
+            if (!window.isTouch) {
+
+                div.draggable = true;
+
+                div.ondragstart = (e) =>
+                    e.dataTransfer.setData(
+                        'text/plain',
+                        JSON.stringify({ source: 'hand', index })
+                    );
+            } else {
+
+                div.addEventListener("touchstart", (e) => {
+                    startTouchDrag(e, div, index);
+                }, { passive: false });
+
+            }
+
         } else if (state.phase === 'exert') {
-            div.draggable = false;
+
             div.style.cursor = 'pointer';
             div.onclick = () => toggleExertCard(index);
+
         }
-        
+
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
             <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         `;
+
         handEl.appendChild(div);
+
     });
+
+    bindHandHover();
 }
+
+
+
+// HAND HOVER MANAGER (desktop) — avoids hovered card blocking others
+let _handHoverBound = false;
+function bindHandHover(){
+    if(_handHoverBound) return;
+    const handEl = document.getElementById('player-hand');
+    if(!handEl) return;
+    _handHoverBound = true;
+
+    // Hysteresis (no RAF) to prevent flicker when the cursor is between cards.
+    let lastBest = null;
+    let lastBestScore = Infinity;
+
+    function clear(){
+        handEl.querySelectorAll('.card.hovered').forEach(c=>c.classList.remove('hovered'));
+        lastBest = null;
+        lastBestScore = Infinity;
+    }
+
+    function applyHoverFromMouse(clientX, clientY){
+        if(window.isTouch) return;
+        if(state.phase !== 'planning' && state.phase !== 'pivot_wait') { clear(); return; }
+
+        const cards = Array.from(handEl.querySelectorAll('.card'));
+        if(!cards.length) return;
+
+        let best = null;
+        let bestScore = Infinity;
+
+        for(const c of cards){
+            const baseX = Number(c.dataset.baseX || 0);
+            // Cards are arranged horizontally; pick by nearest X to avoid hover flicker when cards scale/lift.
+            const dx = clientX - (handEl.getBoundingClientRect().left + handEl.getBoundingClientRect().width/2 + baseX);
+            const score = dx*dx;
+            if(score < bestScore){ bestScore = score; best = c; }
+        }
+
+        // Stronger hysteresis to avoid edge flicker, but still feels responsive.
+        if(lastBest && best && best !== lastBest){
+            const SWITCH_THRESHOLD = 0.62; // new must be much better to steal hover
+            if(bestScore > lastBestScore * SWITCH_THRESHOLD){
+                best = lastBest;
+                bestScore = lastBestScore;
+            }
+        }
+
+        lastBest = best;
+        lastBestScore = bestScore;
+
+        for(const c of cards){
+            if(c === best) c.classList.add('hovered');
+            else c.classList.remove('hovered');
+        }
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if(window.isTouch) return;
+        const t = e.target;
+        // Keep hover stable even if the hovered card lifts outside the hand box.
+        if(t && (t.closest('#player-hand'))){
+            applyHoverFromMouse(e.clientX, e.clientY);
+        } else {
+            clear();
+        }
+    }, { passive:true });
+}
+
+// TOUCH DRAG SYSTEM
+
+let touchDrag = null;
+
+function startTouchDrag(e, card, index) {
+
+    e.preventDefault();
+
+    const rect = card.getBoundingClientRect();
+
+    touchDrag = {
+        index,
+        offsetX: e.touches[0].clientX - rect.left,
+        offsetY: e.touches[0].clientY - rect.top,
+        card: card.cloneNode(true)
+    };
+
+    touchDrag.card.classList.add("touch-drag-card");
+
+    document.body.appendChild(touchDrag.card);
+
+    moveTouchCard(e.touches[0]);
+
+    document.addEventListener("touchmove", touchMove, { passive: false });
+    document.addEventListener("touchend", touchEnd);
+}
+
+function touchMove(e) {
+    e.preventDefault();
+    moveTouchCard(e.touches[0]);
+}
+
+function moveTouchCard(touch) {
+
+    if (!touchDrag) return;
+
+    const x = touch.clientX - touchDrag.offsetX;
+    const y = touch.clientY - touchDrag.offsetY;
+
+    touchDrag.card.style.left = x + "px";
+    touchDrag.card.style.top = y + "px";
+}
+
+function touchEnd(e) {
+
+    if (!touchDrag) return;
+
+    const touch = e.changedTouches[0];
+
+    const target = document.elementFromPoint(
+        touch.clientX,
+        touch.clientY
+    );
+
+    const slot = target?.closest(".slot");
+
+    if (slot) {
+
+        const startMoment =
+            parseInt(slot.dataset.moment) - 1;
+
+        window.EngineRuntime.dispatch({
+            type: window.EngineRuntime.ActionTypes.PLACE_CARD_FROM_HAND,
+            payload: {
+                handIndex: touchDrag.index,
+                startMoment
+            }
+        });
+
+    }
+
+    touchDrag.card.remove();
+    touchDrag = null;
+
+    document.removeEventListener("touchmove", touchMove);
+    document.removeEventListener("touchend", touchEnd);
+}
+
 
 const pSlots = document.querySelectorAll('#player-timeline .slot');
 pSlots.forEach(slot => {
+    slot.addEventListener("dragenter", () => {
+        slot.classList.add("slot-hover");
+    });
+
+    slot.addEventListener("dragleave", () => {
+        slot.classList.remove("slot-hover");
+    });
+
+    slot.addEventListener("drop", () => {
+        slot.classList.remove("slot-hover");
+    });
+
     slot.addEventListener('dragover', e => e.preventDefault());
     slot.addEventListener('drop', e => {
         e.preventDefault(); 
@@ -130,6 +331,8 @@ function renderAITimeline() {
         }
     }
 }
+
+
 
 
 

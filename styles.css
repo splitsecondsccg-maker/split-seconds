@@ -955,3 +955,115 @@ body {
   width: calc(100% * var(--ui-inv-scale, 1));
   height: calc(100% * var(--ui-inv-scale, 1));
 }
+
+/* ===============================
+   Touch + Hand Fan + Preview Patch
+   =============================== */
+
+#player-hand{
+
+display:flex;
+justify-content:center;
+align-items:flex-end;
+position:relative;
+height: 240px;
+perspective:1000px;
+overflow: visible;
+
+}
+
+#player-hand .card{
+
+position:absolute;
+transform-origin:bottom center;
+
+/* base fan transform pieces (set per-card in JS) */
+--tx: 0px;
+--ty: 0px;
+--rot: 0deg;
+--scale: 1;
+--lift: 0px;
+--hoverScale: 1;
+
+/* keep the card in its own fan slot; hover only lifts/scales */
+transform:
+  translateX(var(--tx))
+  translateY(calc(var(--ty) + var(--lift)))
+  rotate(var(--rot))
+  scale(var(--scale))
+  scale(var(--hoverScale));
+
+transition:
+transform .14s ease,
+box-shadow .18s ease,
+filter .18s ease;
+
+cursor:pointer;
+
+will-change: transform;
+backface-visibility: hidden;
+transform-style: preserve-3d;
+
+}
+
+/* hover lift */
+
+#player-hand .card.hovered{
+
+/* lift & enlarge WITHOUT changing the card's fan position */
+--lift: -46px;
+--hoverScale: 1.35;
+
+z-index:100;
+box-shadow:0 12px 30px rgba(0,0,0,0.7);
+
+}
+
+.slot-hover{
+
+outline:3px solid #4facfe;
+
+box-shadow:0 0 14px rgba(79,172,254,0.8);
+
+}
+
+.card,
+.slot,
+.deck-btn,
+.char-btn{
+
+touch-action:manipulation;
+
+}
+
+.touch-drag-card{
+
+position:fixed;
+
+pointer-events:none;
+
+z-index:9999;
+
+transform:scale(1.15);
+
+opacity:0.95;
+
+transition:none;
+
+}
+
+
+
+/* === Hand fan overrides: remove legacy hand "box" styling behind the fan === */
+#player-hand.hand{
+  /* Keep the same layout footprint as the legacy hand (so nothing shifts),
+     but make it invisible. */
+  background: transparent !important;
+  border: none !important;
+  padding: 10px !important;
+  min-width: 600px !important;
+  min-height: 160px !important;
+  gap: 0 !important;
+  flex-wrap: nowrap !important;
+}
+

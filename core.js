@@ -67,6 +67,7 @@ function getIcon(type) {
     if(type === 'grab') return '🤚';
     if(type === 'block') return '🛡️';
     if(type === 'parry') return '🤺';
+    if(type === 'enhancer') return '[ENH]';
     if(type === 'utility') return '💨';
     return '✨'; // buff
 }
@@ -89,6 +90,7 @@ const getBaseStatuses = () => ({
     freeze: 0,          // persistent counters (NOT cleared end of turn)
     bleed: 0,           // persistent counters (NOT cleared end of turn)
     poison: 0,          // persistent counters (NOT cleared end of turn)
+    hypnotized: 0,      // non-stackable; persists until losing life
     exhausted: 0       // NOT stackable; cleared at start of turn; reduces stamina regen by 1
 });
 
@@ -96,12 +98,13 @@ const KEYWORD_DEFS = {
     EXHAUSTED: "Non-stackable debuff. At TURN START: you regenerate 1 less stamina, then EXHAUSTED is cleared.",
     FREEZE: "Stackable debuff that is NOT removed at end of turn. At 10+ FREEZE, all your ATTACKS cost +1 stamina.",
     BLEED: "Persistent counter. When you are HIT by an ATTACK: take damage equal to BLEED, then BLEED resets to 0.",
-    POISON: "Persistent counter. At TURN END: take damage equal to ceil(POISON/2), then POISON halves (rounded down)."
+    POISON: "Persistent counter. At TURN END: take damage equal to ceil(POISON/2), then POISON halves (rounded down).",
+    HYPNOTIZED: "Non-stackable debuff. Persists through turn start/end. Removed when you lose life."
 };
 
 function formatKeywords(text = '') {
     if (!text) return '';
-    return text.replace(/\b(EXHAUSTED|FREEZE|BLEED|POISON)\b/g, (m) => {
+    return text.replace(/\b(EXHAUSTED|FREEZE|BLEED|POISON|HYPNOTIZED)\b/g, (m) => {
         const tip = KEYWORD_DEFS[m] || '';
         return `<span class="keyword" data-tip="${tip}">${m}</span>`;
     });
@@ -160,6 +163,28 @@ function applyPoisonCounters(sourceKey, targetKey, amount) {
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} POISON (${target.statuses.poison}).`);
 }
 
+function applyHypnotizedStatus(sourceKey, targetKey) {
+    const source = state?.[sourceKey];
+    const target = state?.[targetKey];
+    if (!target) return false;
+    if ((target.statuses.hypnotized || 0) > 0) return false; // non-stackable
+    target.statuses.hypnotized = 1;
+    if (source) source.roundData.appliedStatus = true;
+    if (typeof spawnFloatingText === 'function') spawnFloatingText(targetKey, 'HYPNOTIZED', 'float-hypnotized');
+    if (typeof log === 'function') log(`${targetKey === 'player' ? 'Player' : 'AI'} becomes HYPNOTIZED.`);
+    return true;
+}
+
+function clearHypnotizedOnLifeLoss(targetKey, reason = 'lost life') {
+    const target = state?.[targetKey];
+    if (!target) return false;
+    if ((target.statuses.hypnotized || 0) <= 0) return false;
+    target.statuses.hypnotized = 0;
+    if (typeof spawnFloatingText === 'function') spawnFloatingText(targetKey, `HYPNOTIZED LOST`, 'float-hypnotized');
+    if (typeof log === 'function') log(`${targetKey === 'player' ? 'Player' : 'AI'} loses HYPNOTIZED (${reason}).`);
+    return true;
+}
+
 function applyExhaustedStatus(sourceKey, targetKey) {
     const source = state?.[sourceKey];
     const target = state?.[targetKey];
@@ -173,6 +198,8 @@ function applyExhaustedStatus(sourceKey, targetKey) {
 
 // Expose for EffectTypeRegistry (effects_registry.js)
 window.applyExhaustedStatus = applyExhaustedStatus;
+window.applyHypnotizedStatus = applyHypnotizedStatus;
+window.clearHypnotizedOnLifeLoss = clearHypnotizedOnLifeLoss;
 
 
 function tickPoisonAtTurnEnd(charKey) {
@@ -187,6 +214,7 @@ function tickPoisonAtTurnEnd(charKey) {
     c.hp -= dmg;
 
     c.roundData.lostLife = true;
+    if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(charKey, 'poison damage');
     spawnFloatingText(charKey, `-${dmg}`, 'float-dmg');
     log(`${charKey === 'player' ? 'Player' : 'AI'} suffers ${dmg} POISON damage (${c.statuses.poison} left).`);
     playSound('hit');
@@ -199,7 +227,8 @@ let state = {
     // EngineRuntime can run deterministically for future online play.
     // Keep false for identical single-player randomness.
     useDeterministicRng: false,
-    rngSeed: (Date.now() & 0xffffffff) >>> 0
+    rngSeed: (Date.now() & 0xffffffff) >>> 0,
+    aiDifficulty: 'hard'
 };
 
 // Expose for engine_runtime.js (which intentionally uses window.state).
@@ -207,6 +236,14 @@ window.state = state;
 
 let selectedPlayer = 'Rogue';
 let selectedAI = 'Brute';
+let aiDifficulty = 'hard';
+window.setAIDifficulty = function(level) {
+    const normalized = String(level || 'hard').toLowerCase();
+    if (normalized !== 'normal' && normalized !== 'hard' && normalized !== 'pro') return;
+    aiDifficulty = normalized;
+    if (window.state) window.state.aiDifficulty = normalized;
+};
+window.getAIDifficulty = function() { return aiDifficulty; };
 
 // Selected deck per side (each character can have multiple decks)
 let selectedPlayerDeckId = (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedPlayer) : null;
@@ -703,6 +740,14 @@ window.addEventListener('load', () => {
     /* Deck pickers depend on roster + selections */
     try { ensureValidDeckSelection('player'); ensureValidDeckSelection('ai'); } catch(e) {}
     try { renderDeckPickers(); } catch(e) {}
+
+    const aiDifficultySelect = document.getElementById('ai-difficulty-select');
+    if (aiDifficultySelect) {
+        aiDifficultySelect.value = aiDifficulty;
+        aiDifficultySelect.addEventListener('change', function() {
+            window.setAIDifficulty(aiDifficultySelect.value);
+        });
+    }
 });
 
 
@@ -755,6 +800,7 @@ function startGame() {
 
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
+    state.aiDifficulty = aiDifficulty;
     
     // Build the decks and stats from registries (cards / decks / characters)
     ensureValidDeckSelection('player');
@@ -957,6 +1003,10 @@ if((statuses.poison || 0) > 0) {
     html += `<div class="status-badge status-debuff">${formatKeywords('POISON')} (${ps})</div>`;
     count++;
 }
+if((statuses.hypnotized || 0) > 0) {
+    html += `<div class="status-badge status-hypnotized">${formatKeywords('HYPNOTIZED')}</div>`;
+    count++;
+}
     if(statuses.drawOnBlock) { html += `<div class="status-badge status-buff">Draw on Block</div>`; count++; }
     if(statuses.stamOnBlock) { html += `<div class="status-badge status-buff">Stamina on Block</div>`; count++; }
     
@@ -1063,3 +1113,7 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
+
+
+
+

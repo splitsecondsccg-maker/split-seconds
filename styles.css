@@ -200,6 +200,27 @@ body {
 }
 .card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.8); border-color: #bdc3c7; }
 .card-header { font-weight: bold; font-size: 13px; text-align: center; border-bottom: 1px solid #7f8c8d; padding-bottom: 4px; margin-bottom: 4px; color: #ecf0f1; }
+.card.enhancer-card {
+    background: linear-gradient(135deg, #5b2c6f, #1f1235);
+    border-color: #b084ff;
+    box-shadow: 0 0 12px rgba(176, 132, 255, 0.45), 0 4px 6px rgba(0,0,0,0.6);
+}
+.card.enhancer-card .card-stats { color: #d5b9ff; }
+.card.enhancer-card::before {
+    content: 'ENHANCER';
+    position: absolute;
+    top: -10px;
+    right: -8px;
+    background: linear-gradient(135deg, #b084ff, #7f56d9);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+}
 .card-stats { display: flex; justify-content: space-between; font-size: 12px; color: #f1c40f; font-weight: bold; margin-bottom: 4px; }
 .card-desc { font-size: 10px; flex-grow: 1; color: #bdc3c7; text-align: center; font-style: italic; }
 .card-dmg { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; border: 1px solid #c0392b; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -209,6 +230,43 @@ body {
 .slot { flex: 1; background: rgba(0, 0, 0, 0.5); border: 2px dashed #7f8c8d; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #555; transition: background 0.2s; }
 .timeline-card { position: absolute; height: calc(100% - 30px); top: 15px; background: linear-gradient(135deg, #2980b9, #2c3e50); border: 2px solid #3498db; border-radius: 8px; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; box-shadow: 0 6px 12px rgba(0,0,0,0.7); z-index: 10; font-size: 12px; text-align: center; transition: all 0.3s ease; }
 .card-desc-timeline { font-size: 10px; color: #bdc3c7; font-style: italic; margin-top: 2px; }
+.timeline-card.has-enhancer {
+    border-color: #c09dff;
+    box-shadow: 0 0 16px rgba(176, 132, 255, 0.65), 0 6px 12px rgba(0,0,0,0.7);
+    background-image:
+      linear-gradient(135deg, #2f4374, #263a5f),
+      repeating-linear-gradient(45deg, rgba(176,132,255,0.14), rgba(176,132,255,0.14) 8px, rgba(176,132,255,0.04) 8px, rgba(176,132,255,0.04) 16px);
+    background-blend-mode: screen;
+}
+
+.enhancer-badge {
+    margin-top: 3px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(214, 187, 255, 0.8);
+    background: rgba(79, 50, 120, 0.72);
+    color: #efdfff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.enhancer-chips {
+    margin-top: 3px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.enhancer-chip {
+    border-radius: 6px;
+    padding: 1px 4px;
+    font-size: 9px;
+    background: rgba(176, 132, 255, 0.22);
+    border: 1px solid rgba(176, 132, 255, 0.45);
+    color: #f3e6ff;
+}
 .ai-timeline-card { background: linear-gradient(135deg, #c0392b, #8e44ad); border-color: #e74c3c; }
 
 /* --- BUTTONS & STATUSES --- */
@@ -216,6 +274,7 @@ body {
 .status-badge { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; text-shadow: 1px 1px 1px black; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .status-buff { background: linear-gradient(135deg, #27ae60, #2ecc71); border: 1px solid #2ecc71; }
 .status-debuff { background: linear-gradient(135deg, #c0392b, #e74c3c); border: 1px solid #e74c3c; }
+.status-hypnotized { background: linear-gradient(135deg, #6f42c1, #9b59b6); border: 1px solid #b084ff; }
 
 .floating-text { position: absolute; font-size: 28px; font-weight: bold; text-shadow: 2px 2px 4px black; z-index: 100; pointer-events: none; animation: floatUp 1.2s ease-out forwards; white-space: nowrap; }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.3); } }
@@ -392,6 +451,11 @@ body {
 .float-exhausted{
   color: #ffd36b;
   text-shadow: 0 0 10px rgba(255, 211, 107, 0.8);
+}
+
+.float-hypnotized{
+  color: #caa7ff;
+  text-shadow: 0 0 10px rgba(154, 89, 182, 0.9);
 }
 
 
@@ -1066,4 +1130,5 @@ transition:none;
   gap: 0 !important;
   flex-wrap: nowrap !important;
 }
+
 

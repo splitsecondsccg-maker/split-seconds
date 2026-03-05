@@ -66,6 +66,14 @@
     ice_break_the_ice:      { id: "ice_break_the_ice", name: "Break the Ice", type: "grab", cost: 2, moments: 1, dmg: 2, desc: "2 DMG. On hit: Remove all FREEZE on opponent. Deal that much DMG.", effect: "break_the_ice" , requirements: {'all': ['ice']}},
     ice_ice_wall:           { id: "ice_ice_wall", name: "Ice Wall", type: "block", cost: 3, moments: 3, dmg: 0, desc: "Blocks up to 8 total DMG over 3 moments. Each time it blocks an attack: FREEZE 1.", currentBlock: 8 , requirements: {'any': [{'all': ['wizard', 'ice']}, {'all': ['sorcerer', 'ice']}]}},
 
+    // Palea
+    palea_fae_whisper:      { id: "palea_fae_whisper", name: "Fae Whisper", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Apply HYPNOTIZED.", effect: "hypnotize", requirements: {'all': ['sorcerer', 'fae']} },
+    palea_dont:             { id: "palea_dont", name: "Don't", type: "utility", cost: 1, moments: 1, dmg: 0, desc: "If opponent is HYPNOTIZED: consume it and negate their action in this moment.", effect: "dont", requirements: {'all': ['sorcerer', 'hypnotic']} },
+    palea_snap_fingers:     { id: "palea_snap_fingers", name: "Snap Fingers", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Consume HYPNOTIZED: next attack +2 DMG.", effect: "snap_fingers", requirements: {'all': ['sorcerer', 'hypnotic']} },
+    palea_puppet_strings:   { id: "palea_puppet_strings", name: "Puppet Strings", type: "buff", cost: 2, moments: 2, dmg: 0, desc: "Consume HYPNOTIZED: opponent draws 1 less next turn.", effect: "puppet_strings", requirements: {'all': ['fae', 'hypnotic']} },
+    palea_fae_needle:       { id: "palea_fae_needle", name: "Fae Needle", type: "attack", cost: 1, moments: 1, dmg: 2, desc: "2 DMG. On hit: if HYPNOTIZED, consume and deal +2.", effect: "fae_needle", requirements: {'all': ['fae']} },
+    palea_arcane_amp:       { id: "palea_arcane_amp", name: "Arcane Amp", type: "enhancer", cost: 1, moments: 0, dmg: 0, desc: "Enhancer: attached action gains +2 DMG.", enhance: { dmg: 2 }, requirements: {'all': ['sorcerer']} },
+    palea_fae_edge:         { id: "palea_fae_edge", name: "Fae Edge", type: "enhancer", cost: 0, moments: 0, dmg: 0, desc: "Enhancer: attached action gains +1 DMG.", enhance: { dmg: 1 }, requirements: {'all': ['fae']} },
     // ------------------------
     // Keyword cards (POISON / BLEED)
     // ------------------------
@@ -165,7 +173,10 @@
     ability_necromancer_2: { id: "ability_necromancer_2", name: "Death Touch", type: "attack", cost: 1, moments: 2, dmg: 4, desc: "Cheap, deadly magic", isBasic: true, isAbility: true },
 
     ability_ice_djinn_1: { id: "ability_ice_djinn_1", name: "Spirit Form", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Next turn: +2 Armor", effect: "spirit_form", isBasic: true, isAbility: true },
-    ability_ice_djinn_2: { id: "ability_ice_djinn_2", name: "Ice Blast", type: "attack", cost: 3, moments: 3, dmg: 7, desc: "7 DMG. On hit: FREEZE 1", effect: "freeze_1_on_hit", isBasic: true, isAbility: true }
+    ability_ice_djinn_2: { id: "ability_ice_djinn_2", name: "Ice Blast", type: "attack", cost: 3, moments: 3, dmg: 7, desc: "7 DMG. On hit: FREEZE 1", effect: "freeze_1_on_hit", isBasic: true, isAbility: true },
+
+    ability_palea_1: { id: "ability_palea_1", name: "Mesmer", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Apply HYPNOTIZED.", effect: "hypnotize", isBasic: true, isAbility: true, requirements: {'all': ['sorcerer', 'hypnotic']} },
+    ability_palea_2: { id: "ability_palea_2", name: "Glamour Spike", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Consume HYPNOTIZED: opponent draws 1 less next turn.", effect: "puppet_strings", isBasic: true, isAbility: true, requirements: {'all': ['fae', 'hypnotic']} }
   };
 
   // ------------------------
@@ -281,6 +292,21 @@
       ]
     },
 
+    palea_base: {
+      id: "palea_base",
+      name: "Palea - Hypnotic Bloom",
+      character: "Palea",
+      description: "Apply HYPNOTIZED, negate key moments, and amplify attacks with enhancers.",
+      cards: [
+        { cardId: "palea_fae_whisper", copies: 4 },
+        { cardId: "palea_dont", copies: 3 },
+        { cardId: "palea_snap_fingers", copies: 3 },
+        { cardId: "palea_puppet_strings", copies: 2 },
+        { cardId: "palea_fae_needle", copies: 4 },
+        { cardId: "palea_arcane_amp", copies: 2 },
+        { cardId: "palea_fae_edge", copies: 2 }
+      ]
+    },
     ice_djinn_base: {
       id: "ice_djinn_base",
       name: "Ice Djinn — Classic",
@@ -355,6 +381,18 @@
       defaultDeckId: "necromancer_base",
       abilityIds: { 1: "ability_necromancer_1", 2: "ability_necromancer_2" }
     },
+    Palea: {
+      class: "sorcerer",
+      talents: ["fae", "hypnotic"],
+      maxHp: 38,
+      maxStam: 7,
+      armor: 2,
+      passiveDesc: "When you consume HYPNOTIZED, gain 1 Stamina.",
+      premise: "A fae hypnotizer who marks opponents, cancels their key moment, then amplifies precise strikes.",
+      deckIds: ["palea_base"],
+      defaultDeckId: "palea_base",
+      abilityIds: { 1: "ability_palea_1", 2: "ability_palea_2" }
+    },
     "Ice Djinn": {
       class: "spirit",
       talents: ["ice", "sorcerer"],
@@ -379,7 +417,8 @@
     Paladin: "paladin.png",
     Vampiress: "vampiress.png",
     Necromancer: "necromancer.png",
-    "Ice Djinn": "ice_djinn.png"
+    "Ice Djinn": "ice_djinn.png",
+    Palea: "palea.png"
   };
 
   // ------------------------
@@ -546,6 +585,7 @@ const ProficiencyIcons = {
   vampire: "🧛",
   bleed: "🩸",
   hypnotic: "🌀",
+  fae: "🧚",
   ice: "❄️",
   sorcerer: "🪄",
   spirit: "👻"
@@ -611,3 +651,4 @@ function isCardLegalForCharacter(cardOrId, charName){
   window.getAbilityIdForCharacter = getAbilityIdForCharacter;
 
 })();
+

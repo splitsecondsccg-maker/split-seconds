@@ -13,6 +13,7 @@ function renderHand() {
 
         const div = document.createElement('div');
         div.className = 'card';
+        if (card.type === 'enhancer') div.classList.add('enhancer-card');
 
         // fan positioning
         const angle = (index - center) * fanSpread;
@@ -61,7 +62,7 @@ function renderHand() {
 
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
-            <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
+            <div class="card-stats"><span>${card.type === 'enhancer' ? 'ENH' : `⏱ ${card.moments}`}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         `;
@@ -141,6 +142,30 @@ function bindHandHover(){
     }, { passive:true });
 }
 
+function dispatchPlaceFromHandToMoment(handIndex, startMoment, targetTimelineIndex = null) {
+    if (!window.EngineRuntime) return;
+    const card = state.player.hand?.[handIndex];
+    if (!card) return;
+
+    const payload = { handIndex, startMoment };
+    if (card.type === 'enhancer') {
+        if (Number.isFinite(Number(targetTimelineIndex))) {
+            payload.targetTimelineIndex = Number(targetTimelineIndex);
+        } else {
+            const data = (typeof getCardData === 'function') ? getCardData('player', startMoment) : null;
+            if (!data || !data.card) {
+                if (typeof alert === 'function') alert('Enhancer cards must be dropped on an existing timeline action.');
+                return;
+            }
+            payload.targetTimelineIndex = data.startIndex;
+        }
+    }
+
+    window.EngineRuntime.dispatch({
+        type: window.EngineRuntime.ActionTypes.PLACE_CARD_FROM_HAND,
+        payload
+    });
+}
 // TOUCH DRAG SYSTEM
 
 let touchDrag = null;
@@ -195,21 +220,15 @@ function touchEnd(e) {
         touch.clientY
     );
 
+    const actionCard = target?.closest(".timeline-card.player-placed");
     const slot = target?.closest(".slot");
 
-    if (slot) {
-
-        const startMoment =
-            parseInt(slot.dataset.moment) - 1;
-
-        window.EngineRuntime.dispatch({
-            type: window.EngineRuntime.ActionTypes.PLACE_CARD_FROM_HAND,
-            payload: {
-                handIndex: touchDrag.index,
-                startMoment
-            }
-        });
-
+    if (actionCard) {
+        const targetIndex = Number(actionCard.dataset.timelineIndex);
+        dispatchPlaceFromHandToMoment(touchDrag.index, targetIndex, targetIndex);
+    } else if (slot) {
+        const startMoment = parseInt(slot.dataset.moment) - 1;
+        dispatchPlaceFromHandToMoment(touchDrag.index, startMoment);
     }
 
     touchDrag.card.remove();
@@ -241,15 +260,34 @@ pSlots.forEach(slot => {
         if(data.source !== 'hand') return;
         
         const startMoment = parseInt(slot.dataset.moment) - 1;
-
-        if (!window.EngineRuntime) return;
-        window.EngineRuntime.dispatch({
-            type: window.EngineRuntime.ActionTypes.PLACE_CARD_FROM_HAND,
-            payload: { handIndex: data.index, startMoment },
-        });
+        dispatchPlaceFromHandToMoment(data.index, startMoment);
     });
 });
 
+const playerTimeline = document.getElementById('player-timeline');
+playerTimeline?.addEventListener('dragover', e => {
+    // Must always allow drop on visible timeline card; some browsers block getData during dragover.
+    if (e.target?.closest('.timeline-card.player-placed')) {
+        e.preventDefault();
+    }
+});
+
+playerTimeline?.addEventListener('drop', e => {
+    const actionEl = e.target?.closest('.timeline-card.player-placed');
+    if (!actionEl) return;
+    const dataText = e.dataTransfer?.getData('text/plain');
+    if (!dataText) return;
+    let data;
+    try { data = JSON.parse(dataText); } catch { return; }
+    if (data.source !== 'hand') return;
+    const card = state.player.hand?.[data.index];
+    if (card?.type !== 'enhancer') return;
+
+    e.preventDefault();
+    const targetIdx = Number(actionEl.dataset.timelineIndex);
+    if (!Number.isFinite(targetIdx)) return;
+    dispatchPlaceFromHandToMoment(data.index, targetIdx, targetIdx);
+});
 const handZone = document.getElementById('player-hand');
 handZone.addEventListener('dragover', e => e.preventDefault());
 handZone.addEventListener('drop', e => {
@@ -275,6 +313,22 @@ function addBasicAction(name, cost, moments, dmg, type) {
     });
 }
 
+function getEnhancerUiInfo(card) {
+    const enhancers = Array.isArray(card?.enhancers) ? card.enhancers : [];
+    if (!enhancers.length) return { inline: '', title: '' };
+
+    const names = enhancers.map(e => `${e.name} (+${e?.enhance?.dmg || 0})`).join(', ');
+    const dmg = enhancers.reduce((sum, e) => sum + (e?.enhance?.dmg || 0), 0);
+    const chips = enhancers.map(e => `<span class="enhancer-chip">${e.name} +${e?.enhance?.dmg || 0}</span>`).join('');
+
+    return {
+        inline: `
+            <div class="enhancer-badge">Enhancers: +${dmg} DMG (${enhancers.length})</div>
+            <div class="enhancer-chips">${chips}</div>
+        `,
+        title: `\nEnhancers: ${names}`
+    };
+}
 function renderPlayerTimeline() {
     const tl = document.getElementById('player-timeline'); document.querySelectorAll('.player-placed').forEach(e => e.remove());
     let start = -1;
@@ -283,9 +337,12 @@ function renderPlayerTimeline() {
         if(t !== null && t !== 'occupied' && start === -1) {
             let m = t.moments; let width = (m * 20) + ((m-1)*2); let left = ((i - m + 1) * 20);
             let div = document.createElement('div'); div.className = 'timeline-card player-placed'; div.id = `p-card-mom-${i+1}`;
+            div.dataset.timelineIndex = String(i);
+            if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
             
-            div.draggable = true; div.style.cursor = 'pointer'; div.title = "Click or drag to hand to remove";
+            const enhInfo = getEnhancerUiInfo(t);
+            div.draggable = true; div.style.cursor = 'pointer'; div.title = "Click or drag to hand to remove" + enhInfo.title;
             div.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({source: 'timeline', index: i}));
             div.onclick = () => returnToHand(i);
 
@@ -296,7 +353,7 @@ function renderPlayerTimeline() {
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
 
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
             tl.appendChild(div);
         }
     }
@@ -317,6 +374,8 @@ function renderAITimeline() {
         if(t !== null && t !== 'occupied') {
             let m = t.moments; let width = (m * 20) + ((m-1)*2); let left = ((i - m + 1) * 20);
             let div = document.createElement('div'); div.className = 'timeline-card ai-placed ai-timeline-card'; div.id = `ai-card-mom-${i+1}`;
+            div.dataset.timelineIndex = String(i);
+            if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
 
             let extraText = '';
@@ -325,8 +384,9 @@ function renderAITimeline() {
             else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
 
+            const enhInfo = getEnhancerUiInfo(t);
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
             tl.appendChild(div);
         }
     }
@@ -417,3 +477,4 @@ function renderAITimeline() {
         hide();
     }, true);
 })();
+

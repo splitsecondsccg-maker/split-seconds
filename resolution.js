@@ -1,5 +1,55 @@
+function getEnhancerDamageBonus(action) {
+    if (!action || !Array.isArray(action.enhancers) || action.enhancers.length === 0) return 0;
+    return action.enhancers.reduce((sum, enh) => sum + (enh?.enhance?.dmg || 0), 0);
+}
+
+function removeTimelineAction(side, actionCard) {
+    if (!actionCard) return false;
+    const tl = state?.[side]?.timeline;
+    if (!tl) return false;
+    const endIndex = tl.indexOf(actionCard);
+    if (endIndex < 0) return false;
+    const startIndex = endIndex - ((actionCard.moments || 1) - 1);
+    for (let i = 0; i < (actionCard.moments || 1); i++) {
+        const idx = startIndex + i;
+        if (idx >= 0 && idx < tl.length) tl[idx] = null;
+    }
+    return true;
+}
+
+function consumeHypnotized(targetKey, sourceKey, reason = 'consumed') {
+    const target = state?.[targetKey];
+    if (!target || (target.statuses?.hypnotized || 0) <= 0) return false;
+    target.statuses.hypnotized = 0;
+    log(`${targetKey === 'player' ? 'Player' : 'AI'} loses HYPNOTIZED (${reason}).`);
+    spawnFloatingText(targetKey, 'HYPNOTIZED LOST', 'float-block');
+
+    const source = state?.[sourceKey];
+    if (source && state[sourceKey]?.class === 'Palea') {
+        source.stam = Math.min(source.maxStam, source.stam + 1);
+        log(`${sourceKey === 'player' ? 'Player' : 'AI'} Palea gains 1 Stamina.`);
+    }
+    return true;
+}
+
+function tryResolveDont(sourceKey, targetKey, sourceAction) {
+    if (!sourceAction || sourceAction.type === 'occupied') return false;
+    if (sourceAction.effect !== 'dont') return false;
+    const target = state?.[targetKey];
+    if (!target || (target.statuses?.hypnotized || 0) <= 0) return false;
+    const targetAction = (typeof getActiveCard === 'function')
+        ? getActiveCard(targetKey, state.currentMoment)
+        : state?.[targetKey]?.timeline?.[state.currentMoment];
+    if (!targetAction || targetAction === 'occupied') return false;
+
+    consumeHypnotized(targetKey, sourceKey, "Don't");
+    removeTimelineAction(targetKey, targetAction);
+    log(`${sourceKey === 'player' ? 'Player' : 'AI'} uses Don't and negates ${targetKey === 'player' ? 'Player' : 'AI'} action.`);
+    spawnFloatingText(targetKey, 'NEGATED', 'float-block');
+    return true;
+}
 function resolveMoment() {
-    if (state.currentMoment > 4) { 
+    if (state.currentMoment > 4) {
         // Persistent status ticks
         if (typeof window.tickPoisonAtTurnEnd === 'function') {
             window.tickPoisonAtTurnEnd('player');
@@ -9,9 +59,9 @@ function resolveMoment() {
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
         if (state.player.class === 'Mauja' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Mauja gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Mauja' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Mauja gained 1 Stam (Passive)."); }
-        setTimeout(() => nextTurn(), END_ROUND_DELAY); return; 
+        setTimeout(() => nextTurn(), END_ROUND_DELAY); return;
     }
-    
+
     // 1. Clear all previous glows from both slots AND cards
     document.querySelectorAll('.slot, .card').forEach(el => {
         el.style.boxShadow = 'none';
@@ -28,17 +78,17 @@ function resolveMoment() {
     // 2. Identify the current slots
     const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${state.currentMoment+1})`);
     const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${state.currentMoment+1})`);
-    
+
     // 3. Helper function to make the 'top-most' element glow
     const applyGlow = (slot) => {
         if (!slot) return;
-        
+
         // Check if there is a card inside this slot
         const card = slot.querySelector('.card');
         const target = card || slot; // Glow the card if it exists, otherwise the slot
-        
+
         target.style.boxShadow = '0 0 20px 8px rgba(255, 255, 255, 0.7)';
-        
+
         // If it's a card, let's also make it slightly brighter so it "pops"
         if (card) {
             card.style.filter = 'brightness(1.2)';
@@ -54,6 +104,15 @@ function resolveMoment() {
     let pActive = getActiveCard('player', state.currentMoment);
     let aiActive = getActiveCard('ai', state.currentMoment);
 
+    const pNegated = tryResolveDont('player', 'ai', pAction);
+    const aiNegated = tryResolveDont('ai', 'player', aiAction);
+    if (pNegated || aiNegated) {
+        pAction = state.player.timeline[state.currentMoment];
+        aiAction = state.ai.timeline[state.currentMoment];
+        pActive = getActiveCard('player', state.currentMoment);
+        aiActive = getActiveCard('ai', state.currentMoment);
+    }
+
     if(pAction && pAction !== 'occupied') { document.getElementById(`p-card-mom-${state.currentMoment+1}`)?.classList.add('resolving'); }
     if(aiAction && aiAction !== 'occupied') { document.getElementById(`ai-card-mom-${state.currentMoment+1}`)?.classList.add('resolving'); }
 
@@ -64,15 +123,15 @@ function resolveMoment() {
     if(state.ai.statuses.forceBlock && aiAction && aiAction !== 'occupied') { log("AI is Intimidated! Action fails."); aiAction = null; }
 
     if(pAction && pAction !== 'occupied') {
-        if(pAction.type === 'attack') { 
+        if(pAction.type === 'attack') {
             let roguePenalty = state.player.statuses.rogueDebuff || 0;
-            pDmg = pAction.dmg + state.player.statuses.nextAtkMod - roguePenalty; 
-            state.player.statuses.nextAtkMod = 0; state.player.statuses.rogueDebuff = 0; 
+            pDmg = pAction.dmg + state.player.statuses.nextAtkMod + getEnhancerDamageBonus(pAction) - roguePenalty;
+            state.player.statuses.nextAtkMod = 0; state.player.statuses.rogueDebuff = 0;
         }
         if(pAction.type === 'parry') pParry = true;
-        if(pAction.type === 'grab') { pGrab = true; pDmg = (pAction.dmg || 0) + state.player.statuses.nextGrabMod; state.player.statuses.nextGrabMod = 0; }
+        if(pAction.type === 'grab') { pGrab = true; pDmg = (pAction.dmg || 0) + state.player.statuses.nextGrabMod + getEnhancerDamageBonus(pAction); state.player.statuses.nextGrabMod = 0; }
     }
-    
+
     if (pActive && pActive.type === 'block') pBlock = true;
 
     if(aiAction && aiAction !== 'occupied') {
@@ -80,19 +139,19 @@ function resolveMoment() {
         const costToPay = (!aiAction.paidUpfront) ? getMoveCost('ai', aiAction) : 0;
         if (!aiAction.paidUpfront) aiAction.paidCost = costToPay;
         state.ai.stam = Math.max(0, state.ai.stam - costToPay);
-    } 
-        if(aiAction.type === 'attack') { 
+    }
+        if(aiAction.type === 'attack') {
             let roguePenalty = state.ai.statuses.rogueDebuff || 0;
-            aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod - roguePenalty; 
-            state.ai.statuses.nextAtkMod = 0; state.ai.statuses.rogueDebuff = 0; 
+            aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod + getEnhancerDamageBonus(aiAction) - roguePenalty;
+            state.ai.statuses.nextAtkMod = 0; state.ai.statuses.rogueDebuff = 0;
         }
         if(aiAction.type === 'parry') aiParry = true;
-        if(aiAction.type === 'grab') { aiGrab = true; aiDmg = (aiAction.dmg || 0) + state.ai.statuses.nextGrabMod; state.ai.statuses.nextGrabMod = 0; }
+        if(aiAction.type === 'grab') { aiGrab = true; aiDmg = (aiAction.dmg || 0) + state.ai.statuses.nextGrabMod + getEnhancerDamageBonus(aiAction); state.ai.statuses.nextGrabMod = 0; }
     }
 
     if (aiActive && aiActive.type === 'block') aiBlock = true;
 
-    let pGrabHit = false; 
+    let pGrabHit = false;
 let aiGrabHit = false;
 
 // NEW: track interruption so we can cancel the grabbed action's effect
@@ -149,7 +208,7 @@ if (pGrab) {
     if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = 1; if (state.ai.class === 'Ice Djinn') applyFreezeCounters('ai', 'player', 2); }
 
     // --- FIXED ARMOR LOGIC: Now safely catches ALL active blocks properly ---
-    if(pBlock && aiDmg > 0 && !aiGrab) { 
+    if(pBlock && aiDmg > 0 && !aiGrab) {
         if (pActive.name === 'Bone Cage') {
             if(pActive.currentBlock === undefined) pActive.currentBlock = 6;
             let blocked = Math.min(aiDmg, pActive.currentBlock);
@@ -161,17 +220,17 @@ if (pGrab) {
             aiDmg -= blocked; pActive.currentBlock -= blocked;
             log(`Player's Ice Wall absorbs ${blocked} DMG!`); spawnFloatingText('player', 'ICE WALL', 'float-block'); playSound('block');
             if (blocked > 0) applyFreezeCounters('player', 'ai', 1);
-        } else { 
+        } else {
             let effectiveArmor = getEffectiveArmor('player');
-            aiDmg = Math.max(0, aiDmg - effectiveArmor); 
-            log(`Player blocks!`); spawnFloatingText('player', 'BLOCK', 'float-block'); playSound('block'); 
+            aiDmg = Math.max(0, aiDmg - effectiveArmor);
+            log(`Player blocks!`); spawnFloatingText('player', 'BLOCK', 'float-block'); playSound('block');
             if(state.player.class === 'Paladin' && pAction && pAction.type === 'block') { state.player.statuses.nextAtkMod += 1; log("Player Paladin Passive: +1 DMG next attack!"); }
             if(state.player.statuses.stamOnBlock && pAction && pAction.type === 'block') state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1);
             if(state.player.statuses.drawOnBlock && pAction && pAction.type === 'block') { drawCards(1); state.player.statuses.drawOnBlock = false; }
         }
     }
-    
-    if(aiBlock && pDmg > 0 && !pGrab) { 
+
+    if(aiBlock && pDmg > 0 && !pGrab) {
         if (aiActive.name === 'Bone Cage') {
             if(aiActive.currentBlock === undefined) aiActive.currentBlock = 6;
             let blocked = Math.min(pDmg, aiActive.currentBlock);
@@ -185,8 +244,8 @@ if (pGrab) {
             if (blocked > 0) applyFreezeCounters('ai', 'player', 1);
         } else {
             let effectiveArmor = getEffectiveArmor('ai');
-            pDmg = Math.max(0, pDmg - effectiveArmor); 
-            log(`AI blocks!`); spawnFloatingText('ai', 'BLOCK', 'float-block'); playSound('block'); 
+            pDmg = Math.max(0, pDmg - effectiveArmor);
+            log(`AI blocks!`); spawnFloatingText('ai', 'BLOCK', 'float-block'); playSound('block');
             if(state.ai.class === 'Paladin' && aiAction && aiAction.type === 'block') { state.ai.statuses.nextAtkMod += 1; log("AI Paladin Passive: +1 DMG next attack!"); }
             if(state.ai.statuses.stamOnBlock && aiAction && aiAction.type === 'block') state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1);
         }
@@ -195,26 +254,28 @@ if (pGrab) {
     // 1. Apply Damage Reduction (e.g., Brace)
     if(pDmg > 0) pDmg = Math.max(0, pDmg - (state.ai.statuses.dmgReduction || 0));
     if(aiDmg > 0) aiDmg = Math.max(0, aiDmg - (state.player.statuses.dmgReduction || 0));
-    
+
     // 3. Apply Final Damage ONCE (Attack vs Attack resolves simultaneously here)
-    if(pDmg > 0) { 
+    if(pDmg > 0) {
         state.ai.hp -= pDmg; state.ai.roundData.lostLife = true;
-        log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg'); 
+        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss('ai', 'life loss');
+        log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg');
         if(pActive && pActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
         if (pAction && pAction.type === 'attack') {
             detonateBleedOnAttackHit('player', 'ai');
         }
-        
+
         // Passives - FIXED ROGUE LOGIC
         if(state.player.class === 'Vampiress') { state.player.statuses.nextAtkMod += 1; log("Player Vampiress Passive: +1 DMG next attack!"); }
         if(state.player.class === 'Rogue') { state.ai.statuses.rogueDebuff = (state.ai.statuses.rogueDebuff || 0) + 1; log("Player Rogue Passive: AI next attack -1 DMG!"); }
     }
-    
-    if(aiDmg > 0) { 
+
+    if(aiDmg > 0) {
         state.player.hp -= aiDmg; state.player.roundData.lostLife = true;
-        log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg'); 
+        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss('player', 'life loss');
+        log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg');
         if(aiActive && aiActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
@@ -307,6 +368,7 @@ function detonateBleedOnAttackHit(attackerKey, targetKey) {
     target.statuses.bleed = 0;
     target.hp -= stacks;
     target.roundData.lostLife = true;
+    if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
 
     spawnFloatingText(targetKey, `-${stacks}`, 'float-dmg');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} BLEEDS for ${stacks}!`);
@@ -332,74 +394,104 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         });
         if (handled) return;
     }
-    
+
     switch(effectString) {
-        case 'heal_1_on_hit': 
+        case 'heal_1_on_hit':
             if (context.hitLanded || context.grabHit) {
-                source.hp = Math.min(source.maxHp, source.hp + 1); log(`${sourceKey} heals 1!`); spawnFloatingText(sourceKey, '+1', 'float-heal'); playSound('heal'); 
+                source.hp = Math.min(source.maxHp, source.hp + 1); log(`${sourceKey} heals 1!`); spawnFloatingText(sourceKey, '+1', 'float-heal'); playSound('heal');
             }
             break;
-        case 'heal_2_on_hit': 
+        case 'heal_2_on_hit':
             if (context.hitLanded || context.grabHit) {
-                source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); 
+                source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal');
             }
             break;
         case 'poison_dagger':
             if (context.hitLanded) {
                 target.hp -= 1;
                 target.roundData.lostLife = true;
+                if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
                 log(`${sourceKey}'s Poison Dagger deals 1 extra DMG!`);
                 spawnFloatingText(targetKey, '-1', 'float-dmg');
             }
             break;
-        case 'heal_2': 
-            source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`); 
+        case 'heal_2':
+            source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`);
             spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); break;
-        case 'heal_3': 
-            source.hp = Math.min(source.maxHp, source.hp + 3); log(`${sourceKey} heals 3!`); 
+        case 'heal_3':
+            source.hp = Math.min(source.maxHp, source.hp + 3); log(`${sourceKey} heals 3!`);
             spawnFloatingText(sourceKey, '+3', 'float-heal'); playSound('heal'); break;
-        case 'heal_5': 
-            source.hp = Math.min(source.maxHp, source.hp + 5); log(`${sourceKey} heals 5!`); 
+        case 'heal_5':
+            source.hp = Math.min(source.maxHp, source.hp + 5); log(`${sourceKey} heals 5!`);
             spawnFloatingText(sourceKey, '+5', 'float-heal'); playSound('heal'); break;
-        case 'gain_stam_1': 
+        case 'gain_stam_1':
             source.stam = Math.min(source.maxStam, source.stam + 1); log(`${sourceKey} recovers 1 Stamina!`); break;
-        case 'gain_stam_2': 
+        case 'gain_stam_2':
             source.stam = Math.min(source.maxStam, source.stam + 2); log(`${sourceKey} recovers 2 Stamina!`); break;
-        case 'buff_next_atk_3': 
+        case 'buff_next_atk_3':
             source.statuses.nextAtkMod += 3; log(`${sourceKey} empowers next attack (+3 DMG)`); break;
-        case 'buff_next_atk_5': 
+        case 'buff_next_atk_5':
             source.statuses.nextAtkMod += 5; log(`${sourceKey} unleashes a Warcry! (+5 DMG to next attack)`); break;
-        case 'reduce_dmg_3': 
+        case 'reduce_dmg_3':
             source.statuses.dmgReduction += 3; log(`${sourceKey} braces (-3 DMG taken this turn)`); break;
         case 'draw_1':
-            if(sourceKey === 'player') { drawCards(1); log(`Player draws 1 card!`); } 
+            if(sourceKey === 'player') { drawCards(1); log(`Player draws 1 card!`); }
             else { log(`AI repositions and prepares...`); } break;
         case 'pierce':
-            if(context.targetBlocked) { 
+            if(context.targetBlocked) {
                 let effectiveArmor = Math.max(0, (target.armor || 0) + (target.statuses.bonusArmor || 0) - (target.statuses.armorDebuff || 0));
-                context.dmgOut += effectiveArmor; 
-                log(`${sourceKey} PIERCES right through the armor!`); 
+                context.dmgOut += effectiveArmor;
+                log(`${sourceKey} PIERCES right through the armor!`);
             } break;
         case 'exhaust_1':
             if(context.grabHit) { target.stam = Math.max(0, target.stam - 1); log(`${sourceKey} EXHAUSTS 1 of ${targetKey}'s stamina!`); source.roundData.appliedStatus = true; } break;
         case 'sunder':
             target.statuses.armorDebuff += 2; log(`${targetKey}'s armor is SUNDERED!`); source.roundData.appliedStatus = true; break;
         case 'steal_stam':
-            if(target.stam > 0) { target.stam--; source.stam = Math.min(source.maxStam, source.stam + 1); log(`${sourceKey} STOLE 1 Stamina!`); } 
+            if(target.stam > 0) { target.stam--; source.stam = Math.min(source.maxStam, source.stam + 1); log(`${sourceKey} STOLE 1 Stamina!`); }
             else { log(`${sourceKey} tried to steal stamina, but ${targetKey} is exhausted!`); } break;
         case 'meditate':
             source.stam = Math.min(source.maxStam, source.stam + 2);
-            if(sourceKey === 'player') drawCards(1, 'player'); 
+            if(sourceKey === 'player') drawCards(1, 'player');
             log(`${sourceKey} MEDITATES: Gains 2 Stamina & draws a card!`);
             break;
         case 'scare':
             target.statuses.mustBlock += 1;
-            if(sourceKey === 'player') drawCards(1, 'player'); log(`${targetKey} is SCARED! Must block next turn.`); 
+            if(sourceKey === 'player') drawCards(1, 'player'); log(`${targetKey} is SCARED! Must block next turn.`);
             source.roundData.appliedStatus = true; break;
         case 'siphon_soul':
-            if(context.hitLanded) { 
+            if(context.hitLanded) {
                 source.statuses.nextAtkMod += 3;
                 log(`${sourceKey} Siphons Soul! Next attack gains +3 DMG.`);
+            }
+            break;
+        case 'hypnotize':
+        case 'hypnotized':
+            if (typeof applyHypnotizedStatus === 'function') applyHypnotizedStatus(sourceKey, targetKey);
+            break;
+        case 'dont':
+            // Resolved at moment start by tryResolveDont(). Keep as no-op fallback.
+            break;
+        case 'snap_fingers':
+            if (consumeHypnotized(targetKey, sourceKey, 'Snap Fingers')) {
+                source.statuses.nextAtkMod += 2;
+                log(`${sourceKey} snaps fingers: next attack +2 DMG.`);
+            }
+            break;
+        case 'puppet_strings':
+            if (consumeHypnotized(targetKey, sourceKey, 'Puppet Strings')) {
+                target.statuses.drawLess = Math.max(target.statuses.drawLess || 0, 1);
+                source.stam = Math.min(source.maxStam, source.stam + 1);
+                log(`${sourceKey} pulls the strings: ${targetKey} draws 1 less next turn.`);
+            }
+            break;
+        case 'fae_needle':
+            if ((context.hitLanded || context.grabHit) && consumeHypnotized(targetKey, sourceKey, 'Fae Needle')) {
+                target.hp -= 2;
+                target.roundData.lostLife = true;
+                if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
+                spawnFloatingText(targetKey, '-2', 'float-dmg');
+                log(`${sourceKey}'s Fae Needle bursts for 2 bonus DMG!`);
             }
             break;
         case 'chiller':
@@ -419,6 +511,7 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                     target.statuses.freeze = 0;
                     target.hp -= stacks;
                     target.roundData.lostLife = true;
+                    if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
                     spawnFloatingText(targetKey, `-${stacks}`, 'float-dmg');
                     log(`Break the Ice detonates ${stacks} FREEZE for ${stacks} extra DMG!`);
                     playSound('heavy_impact');
@@ -437,7 +530,7 @@ function nextTurn(isFirstTurn = false) {
     document.body.classList.add('exert-mode');
     document.querySelectorAll('button').forEach(b => b.disabled = false);
     document.querySelectorAll('.slot').forEach(s => s.style.backgroundColor = 'transparent');
-    
+
     if(isFirstTurn) {
         state.player.statuses = getBaseStatuses();
         state.ai.statuses = getBaseStatuses();
@@ -473,13 +566,15 @@ function nextTurn(isFirstTurn = false) {
             state.ai.statuses.armorNextTurn = 0;
         }
     }
-    
+
+    if (typeof window.aiLearnFromRound === 'function') window.aiLearnFromRound();
+
     state.player.roundData = { lostLife: false, appliedStatus: false };
     state.ai.roundData = { lostLife: false, appliedStatus: false };
-    state.player.timeline = [null, null, null, null, null]; 
+    state.player.timeline = [null, null, null, null, null];
     state.ai.timeline = [null, null, null, null, null];
     document.querySelectorAll('.player-placed').forEach(e => e.remove());
-    
+
     // Toggle UI for Exert Phase
     document.getElementById('action-controls').style.display = 'none';
     const exertUI = document.getElementById('exert-controls');
@@ -623,3 +718,4 @@ function runTriggeredCardEffects(card, triggerName, args) {
         }
     }
 }
+

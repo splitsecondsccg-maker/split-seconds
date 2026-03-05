@@ -134,12 +134,46 @@
 
     switch (action.type) {
       case ActionTypes.PLACE_CARD_FROM_HAND: {
-        const { handIndex, startMoment } = action.payload || {};
+        const { handIndex, startMoment, targetTimelineIndex } = action.payload || {};
         if (s.phase !== "planning" && s.phase !== "pivot_wait") {
           return { ok: false, error: "You can only place cards during Planning." };
         }
         const card = s.player.hand?.[handIndex];
         if (!card) return { ok: false, error: "Card not found in hand." };
+
+        const effectiveCost = (typeof window.getMoveCost === "function") ? window.getMoveCost("player", card) : (card.cost || 0);
+        if (s.player.stam < effectiveCost) return { ok: false, error: "Not enough stamina!" };
+
+        // Enhancers attach to an existing timeline action and consume no timeline slots.
+        if (card.type === "enhancer") {
+          let targetIdx = Number(targetTimelineIndex);
+          if (!Number.isFinite(targetIdx) && Number.isFinite(Number(startMoment)) && typeof window.getCardData === "function") {
+            const data = window.getCardData("player", Number(startMoment));
+            targetIdx = Number(data?.startIndex);
+          }
+          if (!Number.isFinite(targetIdx) || targetIdx < 0 || targetIdx > 4) {
+            return { ok: false, error: "Enhancer must target an existing action." };
+          }
+          const targetData = (typeof window.getCardData === "function") ? window.getCardData("player", targetIdx) : null;
+          const targetCard = targetData?.card;
+          if (!targetCard || targetCard === "occupied") {
+            return { ok: false, error: "Enhancer must target an existing action." };
+          }
+          if (!Array.isArray(targetCard.enhancers)) targetCard.enhancers = [];
+
+          s.player.stam -= effectiveCost;
+          card.paidCost = effectiveCost;
+          card.paidUpfront = true;
+          card.enhancedTargetId = targetCard.uniqueId || targetCard.id || null;
+          targetCard.enhancers.push(card);
+          s.player.hand.splice(handIndex, 1);
+
+          return {
+            ok: true,
+            events: [{ type: "PLACE_SOUND", payload: { moments: 1 } }],
+          };
+        }
+
         const sm = Number(startMoment);
         if (!Number.isFinite(sm) || sm < 0 || sm > 4) return { ok: false, error: "Invalid slot." };
 
@@ -155,9 +189,6 @@
         for (let i = 0; i < card.moments; i++) {
           if (s.player.timeline[sm + i] !== null) return { ok: false, error: "Slot occupied!" };
         }
-
-        const effectiveCost = (typeof window.getMoveCost === "function") ? window.getMoveCost("player", card) : (card.cost || 0);
-        if (s.player.stam < effectiveCost) return { ok: false, error: "Not enough stamina!" };
 
         s.player.stam -= effectiveCost;
         card.paidCost = effectiveCost;
@@ -194,6 +225,19 @@
         s.player.stam = Math.min(s.player.maxStam, s.player.stam + refund);
         const startIdx = idx - (card.moments - 1);
         for (let i = 0; i < card.moments; i++) s.player.timeline[startIdx + i] = null;
+
+        if (Array.isArray(card.enhancers) && card.enhancers.length > 0) {
+          for (const enh of card.enhancers) {
+            const enhRefund = (enh?.paidCost ?? enh?.cost ?? 0);
+            s.player.stam = Math.min(s.player.maxStam, s.player.stam + enhRefund);
+            if (enh) {
+              delete enh.enhancedTargetId;
+              s.player.hand.push(enh);
+            }
+          }
+          card.enhancers = [];
+        }
+
         if (card.id) s.player.hand.push(card);
 
         return { ok: true };

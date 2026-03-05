@@ -62,6 +62,16 @@ const EffectTypeRegistry = {
       window.applyExhaustedStatus(sourceKey, targetKey);
     }
   },
+  hypnotized: ({ sourceKey, targetKey }) => {
+    if (typeof window.applyHypnotizedStatus === "function") {
+      window.applyHypnotizedStatus(sourceKey, targetKey);
+    }
+  },
+  hypnotize: ({ sourceKey, targetKey }) => {
+    if (typeof window.applyHypnotizedStatus === "function") {
+      window.applyHypnotizedStatus(sourceKey, targetKey);
+    }
+  },
 };
 
 function tryRunEffectType(typeKey, args) {

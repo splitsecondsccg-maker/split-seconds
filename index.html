@@ -73,7 +73,15 @@
         <button onclick="startTutorial()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em; background-color: #f1c40f; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">PLAY TUTORIAL</button>
         <button onclick="openDeckBuilder()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(79,172,254,0.15); color: #4facfe; font-weight: bold; border: 1px solid #4facfe; border-radius: 8px; cursor: pointer; margin-left: 10px;">🎴 DECK BUILDER</button>
     </div>
-        <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
+            <div id="ai-difficulty-picker" style="margin: 10px 0 14px; display:flex; align-items:center; justify-content:center; gap:10px;">
+        <label for="ai-difficulty-select" style="font-weight: bold; color: #f1c40f;">AI Difficulty</label>
+        <select id="ai-difficulty-select" style="padding: 8px 12px; border-radius: 8px; border: 2px solid rgba(241,196,15,0.65); background: rgba(0,0,0,0.45); color: #f8f8f2; font-weight: 700;">
+            <option value="normal">Normal</option>
+            <option value="hard" selected>Hard</option>
+            <option value="pro">Pro</option>
+        </select>
+    </div>
+<button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
     </div>
 
     <div id="game-screen">
@@ -221,6 +229,7 @@
                                 <option value="block">Block</option>
                                 <option value="buff">Buff</option>
                                 <option value="utility">Utility</option>
+                                <option value="enhancer">Enhancer</option>
                             </select>
                         </div>
                     </div>

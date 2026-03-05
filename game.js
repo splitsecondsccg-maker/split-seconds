@@ -1,3 +1,300 @@
+function aiGetDifficulty() {
+    const level = String(state.aiDifficulty || (window.getAIDifficulty ? window.getAIDifficulty() : 'hard') || 'hard').toLowerCase();
+    if (level === 'normal' || level === 'hard' || level === 'pro') return level;
+    return 'hard';
+}
+
+function aiGetMind() {
+    if (!state.aiMind) {
+        state.aiMind = {
+            revealed: { attack: 0, grab: 0, block: 0, parry: 0, buff: 0, utility: 0 },
+            roundsSeen: 0,
+            adapt: {
+                aggression: 0.5,
+                defense: 0.5,
+                antiParry: 0.5,
+                antiGrab: 0.5
+            }
+        };
+    }
+    return state.aiMind;
+}
+function aiRememberReveal(card) {
+    if (!card) return;
+    const mind = aiGetMind();
+    const type = String(card.type || 'utility');
+    if (typeof mind.revealed[type] !== 'number') mind.revealed[type] = 0;
+    mind.revealed[type] += 1;
+    mind.roundsSeen += 1;
+}
+
+function aiLearnFromRound() {
+    if (aiGetDifficulty() !== 'pro') return;
+    const mind = aiGetMind();
+
+    const aiLost = !!state.ai?.roundData?.lostLife;
+    const pLost = !!state.player?.roundData?.lostLife;
+
+    // Gentle decay so the AI evolves but does not lock into one script forever.
+    const nudgeToMid = (v) => (v * 0.88) + (0.5 * 0.12);
+    mind.adapt.aggression = nudgeToMid(mind.adapt.aggression);
+    mind.adapt.defense = nudgeToMid(mind.adapt.defense);
+    mind.adapt.antiParry = nudgeToMid(mind.adapt.antiParry);
+    mind.adapt.antiGrab = nudgeToMid(mind.adapt.antiGrab);
+
+    if (aiLost && !pLost) {
+        mind.adapt.defense = Math.min(1, mind.adapt.defense + 0.11);
+        mind.adapt.antiGrab = Math.min(1, mind.adapt.antiGrab + 0.09);
+        mind.adapt.aggression = Math.max(0, mind.adapt.aggression - 0.05);
+    } else if (pLost && !aiLost) {
+        mind.adapt.aggression = Math.min(1, mind.adapt.aggression + 0.11);
+        mind.adapt.antiParry = Math.min(1, mind.adapt.antiParry + 0.08);
+        mind.adapt.defense = Math.max(0, mind.adapt.defense - 0.04);
+    } else if (pLost && aiLost) {
+        mind.adapt.antiParry = Math.min(1, mind.adapt.antiParry + 0.04);
+        mind.adapt.antiGrab = Math.min(1, mind.adapt.antiGrab + 0.04);
+    }
+}
+
+window.aiLearnFromRound = aiLearnFromRound;
+function aiBuildHandModel(hand) {
+    const model = {
+        attack: 0, grab: 0, block: 0, parry: 0, buff: 0, utility: 0,
+        enhancer: 0, total: 0, highDmg: 0, avgCost: 0, avgMoments: 1
+    };
+    if (!Array.isArray(hand) || !hand.length) return model;
+
+    let totalCost = 0;
+    let totalMoments = 0;
+    for (const card of hand) {
+        if (!card) continue;
+        model.total += 1;
+        const t = String(card.type || 'utility');
+        if (typeof model[t] === 'number') model[t] += 1;
+        if ((card.dmg || 0) >= 4) model.highDmg += 1;
+        totalCost += (card.cost || 0);
+        totalMoments += (card.moments || 1);
+    }
+    model.avgCost = model.total ? (totalCost / model.total) : 0;
+    model.avgMoments = model.total ? (totalMoments / model.total) : 1;
+    return model;
+}
+
+function aiEstimatePlayerProfile(useMemory = false) {
+    const p = state.player;
+    const mind = aiGetMind();
+
+    const hpRatio = p.maxHp > 0 ? (p.hp / p.maxHp) : 1;
+    const stamRatio = Math.min(1, (p.stam || 0) / Math.max(1, p.maxStam || 6));
+
+    // Strict anti-cheat: use only observed history, never player's hidden hand contents.
+    const seenTotal = Object.values(mind.revealed).reduce((a, b) => a + b, 0);
+    const observed = {
+        attack: (mind.revealed.attack || 0) / Math.max(1, seenTotal),
+        grab: (mind.revealed.grab || 0) / Math.max(1, seenTotal),
+        block: (mind.revealed.block || 0) / Math.max(1, seenTotal),
+        parry: (mind.revealed.parry || 0) / Math.max(1, seenTotal),
+        highDmgRate: Math.min(1, (mind.adapt.aggression || 0.5) * 0.8)
+    };
+
+    // Fallback priors before enough reveals.
+    if (seenTotal < 3) {
+        observed.attack = 0.34;
+        observed.grab = 0.16;
+        observed.block = 0.30;
+        observed.parry = 0.20;
+        observed.highDmgRate = 0.45;
+    }
+
+    const defenseDensity = observed.block + observed.parry;
+    const aggroDensity = observed.attack + observed.grab;
+    const handRatio = Math.min(1, 0.45 + (stamRatio * 0.35));
+
+    let defendBias = 0.12 + (defenseDensity * 0.55);
+    if ((p.statuses?.mustBlock || 0) > 0) defendBias += 0.35;
+    if ((p.stam || 0) <= 1) defendBias += 0.18;
+    if (hpRatio < 0.45) defendBias += 0.12;
+    defendBias = Math.max(0.05, Math.min(0.95, defendBias));
+
+    let attackBias = 0.14 + (aggroDensity * 0.55) + (stamRatio * 0.22) + (handRatio * 0.14);
+    attackBias += observed.highDmgRate * 0.12;
+    attackBias -= defendBias * 0.2;
+    attackBias = Math.max(0.05, Math.min(0.98, attackBias));
+
+    let counterParryBias = Math.max(0.02, Math.min(0.9, (observed.parry * 1.15) + defenseDensity * 0.2));
+    let counterGrabBias = Math.max(0.02, Math.min(0.9, (observed.grab * 1.15) + aggroDensity * 0.15));
+
+    if (useMemory) {
+        counterParryBias = Math.max(0.02, Math.min(1, (counterParryBias * 0.7) + (mind.adapt.antiParry * 0.3)));
+        counterGrabBias = Math.max(0.02, Math.min(1, (counterGrabBias * 0.7) + (mind.adapt.antiGrab * 0.3)));
+        attackBias = Math.max(0.05, Math.min(0.99, (attackBias * 0.82) + (mind.adapt.aggression * 0.18)));
+        defendBias = Math.max(0.05, Math.min(0.99, (defendBias * 0.82) + (mind.adapt.defense * 0.18)));
+    }
+
+    const threat = Math.max(0.05, Math.min(0.98, (stamRatio * 0.42) + (handRatio * 0.2) + (attackBias * 0.38)));
+    const handModel = { total: seenTotal, highDmg: Math.round(observed.highDmgRate * 5) };
+
+    return { defendBias, attackBias, threat, hpRatio, handRatio, stamRatio, handModel, counterParryBias, counterGrabBias };
+}
+function aiScoreMove(move, ctx) {
+    if (!move) return -999;
+    const cost = getMoveCost('ai', move);
+    if (cost > ctx.virtualStam) return -999;
+    if ((move.moments || 1) > ctx.slotsLeft) return -999;
+
+    const p = ctx.playerModel;
+    const aiHpRatio = state.ai.maxHp > 0 ? (state.ai.hp / state.ai.maxHp) : 1;
+    const lowHp = aiHpRatio < 0.45;
+    const finishing = (state.player.hp || 0) <= 10;
+    const postMoveStam = ctx.virtualStam - cost;
+
+    let score = (Math.random() * 0.55);
+
+    if (move.type === 'attack') {
+        score += 22 + ((move.dmg || 0) * 2.2) - ((move.moments || 1) - 1) * 2.4;
+        score += (1 - p.defendBias) * 5.5;
+        score -= p.counterParryBias * 7.5;
+        if (finishing) score += 6;
+    } else if (move.type === 'grab') {
+        score += 17 + ((move.dmg || 0) * 1.9);
+        score += p.defendBias * 15;
+        score += p.counterParryBias * 12;
+        score -= p.attackBias * 7;
+    } else if (move.type === 'block') {
+        score += 8 + p.threat * 17 + p.counterGrabBias * 8;
+        if (lowHp) score += 6;
+    } else if (move.type === 'parry') {
+        score += 9 + p.attackBias * 13 + p.threat * 9;
+        if (lowHp) score += 3;
+    } else if (move.type === 'buff' || move.type === 'utility') {
+        score += 8;
+        if (ctx.slotIndex <= 2) score += 3;
+        if (p.defendBias > 0.55) score += 2.5;
+    }
+
+    if ((move.effect || '').includes('heal') && lowHp) score += 10;
+    if ((move.effect || '').includes('reduce_dmg') && lowHp) score += 8;
+    if (move.effect === 'dont' && (state.player.statuses?.hypnotized || 0) > 0) score += 14;
+    if ((move.effect === 'hypnotize' || move.effect === 'hypnotized') && (state.player.statuses?.hypnotized || 0) <= 0) score += 8;
+
+    if (ctx.revealedPlayerCard) {
+        const rp = ctx.revealedPlayerCard;
+        if (rp.type === 'parry') {
+            if (move.type === 'grab') score += 13;
+            if (move.type === 'attack') score -= 9;
+        } else if (rp.type === 'block') {
+            if (move.type === 'grab') score += 11;
+            if (move.type === 'buff' || move.type === 'utility') score += 2;
+        } else if (rp.type === 'attack') {
+            if (move.type === 'parry') score += 11;
+            if (move.type === 'block') score += 6;
+            if (move.type === 'grab') score -= 6;
+        } else if (rp.type === 'grab') {
+            if (move.type === 'attack') score += 8;
+            if (move.type === 'block') score += 5;
+        }
+    }
+
+    if (postMoveStam < 0) score -= 20;
+    if (postMoveStam === 0 && ctx.slotsLeft >= 2) score -= 2.5;
+    if (cost >= Math.max(1, Math.ceil(ctx.virtualStam * 0.75)) && move.type === 'utility') score -= 3;
+    if (ctx.lastMove && move.type === ctx.lastMove.type) score -= 2.2;
+    if (lowHp && move.type === 'attack' && (move.moments || 1) >= 3) score -= 3.2;
+    if (ctx.slotIndex <= 1 && move.type === 'parry' && p.attackBias < 0.35) score -= 2.5;
+    if (ctx.slotIndex >= 3 && move.type === 'buff') score -= 3;
+
+    return score;
+}
+
+function aiPickMove(validMoves, ctx) {
+    if (!validMoves || !validMoves.length) return null;
+    const scored = validMoves
+        .map(m => ({ move: m, score: aiScoreMove(m, ctx) }))
+        .filter(x => x.score > -900)
+        .sort((a, b) => b.score - a.score);
+
+    if (!scored.length) return null;
+    if (scored.length === 1) return scored[0].move;
+
+    const top = scored.slice(0, Math.min(4, scored.length));
+    const weights = top.map(x => Math.exp(x.score / 16));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < top.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return top[i].move;
+    }
+    return top[0].move;
+}
+
+function aiPickMoveNormal(validMoves, ctx) {
+    if (!validMoves || !validMoves.length) return null;
+
+    const aiClass = state.ai.class;
+    let chosenMove = null;
+
+    if (state.ai.hp < state.ai.maxHp * 0.4) {
+        const defensiveMoves = validMoves.filter(m => m.type === 'block' || m.type === 'parry' || (m.effect && (m.effect.includes('heal') || m.effect.includes('reduce_dmg'))));
+        if (defensiveMoves.length > 0 && Math.random() < 0.75) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
+    }
+
+    if (!chosenMove && ctx.virtualStam >= 2 && (aiClass === 'Mauja' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
+        const heavyMoves = validMoves.filter(m => getMoveCost('ai', m) >= 2);
+        if (heavyMoves.length > 0 && Math.random() < 0.6) chosenMove = heavyMoves[Math.floor(Math.random() * heavyMoves.length)];
+    }
+
+    if (!chosenMove && (aiClass === 'Rogue' || aiClass === 'Vampiress')) {
+        const fastMoves = validMoves.filter(m => m.moments === 1 && (m.type === 'attack' || m.type === 'grab'));
+        if (fastMoves.length > 0 && Math.random() < 0.6) chosenMove = fastMoves[Math.floor(Math.random() * fastMoves.length)];
+    }
+
+    if (!chosenMove && Math.random() < 0.2) {
+        const randomIdx = Math.floor(Math.random() * validMoves.length);
+        chosenMove = validMoves[randomIdx];
+    }
+
+    return chosenMove || validMoves[Math.floor(Math.random() * validMoves.length)];
+}
+
+function aiPickMoveByDifficulty(validMoves, ctx) {
+    const level = aiGetDifficulty();
+    if (level === 'normal') return aiPickMoveNormal(validMoves, ctx);
+    return aiPickMove(validMoves, ctx);
+}
+function aiShouldPivot(aiCard, pCard) {
+    if (!aiCard || !pCard) return false;
+
+    const level = aiGetDifficulty();
+    if (level === 'normal') {
+        let shouldPivot = false;
+        if (aiCard.type === 'attack' && pCard.type === 'parry') shouldPivot = true;
+        if (aiCard.type === 'grab' && pCard.type === 'attack') shouldPivot = true;
+        if (aiCard.type === 'attack' && (aiCard.dmg || 0) >= 3 && pCard.type === 'block' && Math.random() < 0.6) shouldPivot = true;
+        if (state.ai.hp < state.ai.maxHp * 0.4 && pCard.type === 'attack' && (pCard.dmg || 0) >= 3 && aiCard.type !== 'block' && aiCard.type !== 'parry' && Math.random() < 0.8) shouldPivot = true;
+        return shouldPivot;
+    }
+
+    const playerModel = aiEstimatePlayerProfile(level === 'pro');
+    let score = 0;
+
+    if (aiCard.type === 'attack' && pCard.type === 'parry') score += 9;
+    if (aiCard.type === 'grab' && pCard.type === 'attack') score += 8;
+    if (aiCard.type === 'attack' && pCard.type === 'block' && (aiCard.dmg || 0) >= 4) score += 5;
+    if (state.ai.hp < state.ai.maxHp * 0.45 && pCard.type === 'attack') score += 6;
+
+    score += playerModel.threat * 5.5;
+    score += playerModel.stamRatio * 2.5;
+    score += (playerModel.handModel?.highDmg || 0) * 0.7;
+
+    if (level === 'pro') {
+        const mind = aiGetMind();
+        score += (mind.adapt.defense * 2.2);
+        score += (mind.adapt.antiParry * 1.6);
+    }
+
+    score += (Math.random() * 2.4);
+    return score >= 9.8;
+}
 function planAI() {
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
         return; // The tutorial will handle AI placement, don't do random stuff!
@@ -55,26 +352,19 @@ function planAI() {
         }
 
         state.ai.hand.forEach(card => {
+            if (card.type === 'enhancer') return;
             if (getMoveCost('ai', card) <= virtualStam && slotsLeft >= card.moments) validMoves.push(card);
         });
 
-        let chosenMove = null;
-
-        if (state.ai.hp < state.ai.maxHp * 0.4) {
-            let defensiveMoves = validMoves.filter(m => m.type === 'block' || m.type === 'parry' || (m.effect && (m.effect.includes('heal') || m.effect.includes('reduce_dmg'))));
-            if (defensiveMoves.length > 0 && Math.random() < 0.75) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
-        }
-
-        if (!chosenMove && virtualStam >= 2 && (aiClass === 'Mauja' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
-            let heavyMoves = validMoves.filter(m => m.cost >= 2);
-            if (heavyMoves.length > 0 && Math.random() < 0.6) chosenMove = heavyMoves[Math.floor(Math.random() * heavyMoves.length)];
-        }
-
-        if (!chosenMove && (aiClass === 'Rogue' || aiClass === 'Vampiress')) {
-            let fastMoves = validMoves.filter(m => m.moments === 1 && (m.type === 'attack' || m.type === 'grab'));
-            if (fastMoves.length > 0 && Math.random() < 0.6) chosenMove = fastMoves[Math.floor(Math.random() * fastMoves.length)];
-        }
-        
+        const ctx = {
+            slotIndex: i,
+            slotsLeft,
+            virtualStam,
+            playerModel: aiEstimatePlayerProfile(aiGetDifficulty() === 'pro'),
+            lastMove: (i > 0) ? getActiveCard('ai', i - 1) : null,
+            revealedPlayerCard: null
+        };
+        let chosenMove = aiPickMoveByDifficulty(validMoves, ctx);
         if (!chosenMove) chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
 
         virtualStam -= getMoveCost('ai', chosenMove); 
@@ -150,6 +440,16 @@ function generateCardHTML(card) {
     `;
 }
 
+function cloneFlashCardPublic(card) {
+    if (!card || card === 'occupied') return null;
+    return {
+        name: card.name || '',
+        type: card.type || 'utility',
+        dmg: card.dmg || 0,
+        moments: card.moments || 1,
+        effect: card.effect || ''
+    };
+}
 function _startResolutionImpl() {
     // --- Tutorial gating (data-driven via tutorial.js `expect`) ---
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
@@ -213,8 +513,14 @@ function _startResolutionImpl() {
     
     // --- ANTI-CHEAT SNAPSHOT ---
     // Save exactly what was revealed so the AI can't look at the player's new cards later!
-    state.originalPCard = pData.card;
-    state.originalAICard = aiData.card;
+    state.originalPCard = cloneFlashCardPublic(pData.card);
+    state.originalAICard = cloneFlashCardPublic(aiData.card);
+
+    // AI commits now from flash info only (before seeing if player pivots).
+    const preShouldPivot = (state.originalAICard && state.originalPCard)
+        ? aiShouldPivot(state.originalAICard, state.originalPCard)
+        : false;
+    state.aiFlashDecision = { shouldPivot: !!preShouldPivot };
     // ---------------------------
     
     document.getElementById('flash-p-card').innerHTML = pData.card ? generateCardHTML(pData.card) : '<div class="empty-flash">EMPTY SLOT</div>';
@@ -280,6 +586,13 @@ function _pivotImpl() {
         // -------------------------------------------
 
         state.player.stam = Math.min(state.player.maxStam, state.player.stam + (pData.card.paidCost ?? pData.card.cost ?? 0)); 
+        if (Array.isArray(pData.card.enhancers) && pData.card.enhancers.length > 0) {
+            pData.card.enhancers.forEach(enh => {
+                state.player.stam = Math.min(state.player.maxStam, state.player.stam + (enh?.paidCost ?? enh?.cost ?? 0));
+                if (enh) state.player.hand.push(enh);
+            });
+            pData.card.enhancers = [];
+        }
         if (!pData.card.isBasic) state.player.hand.push(pData.card);
         for(let i=0; i<momentsFreed; i++) state.player.timeline[startIndex + i] = null; 
     } else {
@@ -322,21 +635,20 @@ function handleAIReaction() {
         state.pivotSlots = null;
     }
     
-    // THE AI NO LONGER CHEATS! 
-    // It only uses the cards that were originally revealed in the flash.
-    let aiCard = state.originalAICard; 
-    let pCard = state.originalPCard;
-    
-    // We still need the AI's current data just to know where to clear its own timeline
-    let aiData = getCardData('ai', state.flashMoment); 
-    let shouldPivot = false;
+    // AI can only use frozen flash info (same info a regular player has).
 
-    // --- AI PIVOT EVALUATION LOGIC (Based ONLY on the original flash) ---
-    if (aiCard && pCard) {
-        if (aiCard.type === 'attack' && pCard.type === 'parry') shouldPivot = true; 
-        if (aiCard.type === 'grab' && pCard.type === 'attack') shouldPivot = true; 
-        if (aiCard.type === 'attack' && aiCard.dmg >= 3 && pCard.type === 'block' && Math.random() < 0.6) shouldPivot = true;
-        if (state.ai.hp < state.ai.maxHp * 0.4 && pCard.type === 'attack' && pCard.dmg >= 3 && aiCard.type !== 'block' && aiCard.type !== 'parry' && Math.random() < 0.8) shouldPivot = true;
+    const aiCard = state.originalAICard;
+    const pCard = state.originalPCard;
+    if (aiGetDifficulty() === 'pro') aiRememberReveal(pCard);
+    
+    // Live AI timeline is used only for executing AI's own pivot refund/clear.
+    const aiData = getCardData('ai', state.flashMoment);
+    const aiLiveCard = aiData?.card || null;
+    let shouldPivot = !!(state.aiFlashDecision && state.aiFlashDecision.shouldPivot);
+
+    // Use decision committed at flash time; never recompute from post-pivot player state.
+    if (!state.aiFlashDecision && aiCard && pCard) {
+        shouldPivot = aiShouldPivot(aiCard, pCard);
     }
 
     // --- EXECUTE THE AI PIVOT ---
@@ -346,11 +658,18 @@ function handleAIReaction() {
         let pivotStartIndex = state.flashMoment;
         let momentsFreed = 1;
         
-        if (aiCard) {
+        if (aiLiveCard) {
             pivotStartIndex = aiData.startIndex;
-            momentsFreed = aiCard.moments;
-            state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + (aiCard.paidCost ?? getMoveCost('ai', aiCard) ?? aiCard.cost ?? 0)); 
-            if (!aiCard.isBasic) state.ai.hand.push(aiCard); 
+            momentsFreed = aiLiveCard.moments;
+            state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + (aiLiveCard.paidCost ?? getMoveCost('ai', aiLiveCard) ?? aiLiveCard.cost ?? 0)); 
+            if (Array.isArray(aiLiveCard.enhancers) && aiLiveCard.enhancers.length > 0) {
+                aiLiveCard.enhancers.forEach(enh => {
+                    state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + (enh?.paidCost ?? enh?.cost ?? 0));
+                    if (enh) state.ai.hand.push(enh);
+                });
+                aiLiveCard.enhancers = [];
+            }
+            if (!aiLiveCard.isBasic) state.ai.hand.push(aiLiveCard); 
             for(let i=0; i<momentsFreed; i++) state.ai.timeline[pivotStartIndex + i] = null; 
         } else {
              state.ai.timeline[state.flashMoment] = null;
@@ -367,25 +686,23 @@ function handleAIReaction() {
             if (virtualStam >= 1) validMoves.push({ name: 'Parry', type: 'parry', cost: 1, moments: 1, dmg: 0, isBasic: true });
             
             state.ai.hand.forEach(c => {
+                if (c.type === 'enhancer') return;
                 if (getMoveCost('ai', c) <= virtualStam && c.moments <= slotsLeftToFill) validMoves.push(c);
             });
 
-            let chosenMove = null;
-
-            // The AI attempts a counter-strategy based ONLY on the card it saw you reveal!
-            if (pCard && pCard.type === 'parry') {
-                 let grabs = validMoves.filter(m => m.type === 'grab');
-                 if (grabs.length > 0) chosenMove = grabs[Math.floor(Math.random() * grabs.length)];
-            }
-            else if (state.ai.hp < state.ai.maxHp * 0.4 && pCard && pCard.type === 'attack' && pCard.dmg >= 3) {
-                let defensiveMoves = validMoves.filter(m => m.type === 'parry' || m.type === 'block');
-                if (defensiveMoves.length > 0) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
-            }
-
+            const pivotCtx = {
+                slotIndex: currentSlot,
+                slotsLeft: slotsLeftToFill,
+                virtualStam,
+                playerModel: aiEstimatePlayerProfile(aiGetDifficulty() === 'pro'),
+                lastMove: (currentSlot > pivotStartIndex) ? getActiveCard('ai', currentSlot - 1) : null,
+                revealedPlayerCard: pCard || null
+            };
+            let chosenMove = aiPickMoveByDifficulty(validMoves, pivotCtx);
             if (!chosenMove) chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
 
             virtualStam -= getMoveCost('ai', chosenMove);
-            state.ai.stam -= chosenMove.cost;
+            state.ai.stam -= getMoveCost('ai', chosenMove);
             
             for(let j=0; j < chosenMove.moments; j++) {
                 state.ai.timeline[currentSlot + j] = (j === chosenMove.moments - 1) ? chosenMove : 'occupied';
@@ -406,6 +723,7 @@ function handleAIReaction() {
         log(`AI Locks In its plan.`);
     }
 
+    state.aiFlashDecision = null;
     renderAITimeline(); updateUI();
     
     setTimeout(() => {
@@ -413,3 +731,32 @@ function handleAIReaction() {
         resolveMoment(); 
     }, 1000); 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

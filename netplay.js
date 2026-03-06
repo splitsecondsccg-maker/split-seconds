@@ -1,10 +1,11 @@
-﻿// netplay.js
+// netplay.js
 // LAN PvP host/guest runtime for Split Seconds.
 
 (function () {
   'use strict';
 
   const API_BASE = '/api/room';
+  const LAN_HOST_LABEL_KEY = 'ss_lan_host_label';
 
   const net = {
     mode: 'offline', // offline | lan-host | lan-guest
@@ -23,12 +24,20 @@
     guestPlanningLocked: false,
     hostExertConfirmed: false,
     guestExertConfirmed: false,
-
+    hostFlashSubmitted: false,
+    guestFlashSubmitted: false,
+    hostFlashDecision: null,
+    guestFlashDecision: null,
+    hostPivotLocked: false,
+    guestPivotLocked: false,
     ui: {
       roomInput: null,
+      hostLabelInput: null,
       hostBtn: null,
       joinBtn: null,
       leaveBtn: null,
+      refreshBtn: null,
+      roomList: null,
       status: null
     },
 
@@ -43,6 +52,7 @@
   };
 
   let snapshotScheduled = false;
+  let roomListTimer = null;
 
   function isHost() { return net.mode === 'lan-host'; }
   function isGuest() { return net.mode === 'lan-guest'; }
@@ -54,6 +64,24 @@
 
   function safeJsonClone(v) {
     return JSON.parse(JSON.stringify(v));
+  }
+
+  function nextHostRandFloat() {
+    const s = window.state;
+    if (!s || !s.useDeterministicRng) return Math.random();
+    if (typeof s.rngSeed !== 'number') s.rngSeed = (Date.now() & 0xffffffff) >>> 0;
+    let t = (s.rngSeed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const out = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    s.rngSeed >>>= 0;
+    return out;
+  }
+
+  function hostRandInt(maxExclusive) {
+    const m = Number(maxExclusive);
+    if (!Number.isFinite(m) || m <= 1) return 0;
+    return Math.floor(nextHostRandFloat() * m);
   }
 
   async function fetchJson(url, options) {
@@ -69,10 +97,10 @@
     return data;
   }
 
-  async function apiHostRoom(roomCode) {
+  async function apiHostRoom(roomCode, hostLabel) {
     const data = await fetchJson(`${API_BASE}/host`, {
       method: 'POST',
-      body: { roomCode: roomCode || '' }
+      body: { roomCode: roomCode || '', hostLabel: (hostLabel || '').trim() }
     });
     net.mode = 'lan-host';
     net.role = 'host';
@@ -83,6 +111,7 @@
     net.inMatch = false;
     setStatus(`Hosting room ${net.roomCode}. Waiting for guest...`);
     startPolling();
+    refreshRoomList().catch(() => {});
   }
 
   async function apiJoinRoom(roomCode) {
@@ -102,9 +131,69 @@
     net.inMatch = false;
     setStatus(`Joined room ${net.roomCode}. Waiting for host to start.`);
     startPolling();
+    refreshRoomList().catch(() => {});
     sendLocalSelectionToHost();
   }
 
+  async function apiListRooms() {
+    return fetchJson(`${API_BASE}/list`, { method: 'GET' });
+  }
+
+  function formatRoomAge(ts) {
+    const d = Math.max(0, Math.floor((Date.now() - Number(ts || 0)) / 1000));
+    if (d < 60) return `${d}s ago`;
+    const m = Math.floor(d / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    return `${h}h ago`;
+  }
+
+  function renderRoomList(rooms) {
+    const el = net.ui.roomList;
+    if (!el) return;
+    const list = Array.isArray(rooms) ? rooms : [];
+    if (!list.length) {
+      el.innerHTML = '<div class="lan-room-empty">No rooms found. Host one and it will appear here.</div>';
+      return;
+    }
+
+    el.innerHTML = list.map((r) => {
+      const code = String(r.roomCode || '');
+      const host = String(r.hostLabel || 'Host');
+      const canJoin = !!r.canJoin;
+      const cls = canJoin ? 'lan-room-item waiting' : 'lan-room-item';
+      const state = canJoin ? 'Waiting for guest' : 'In match';
+      const joinLabel = canJoin ? 'Join' : 'Full';
+      const disabled = canJoin ? '' : 'disabled';
+      return `
+        <div class="${cls}">
+          <div class="lan-room-meta">
+            <div class="lan-room-code">${code}</div>
+            <div>${host} - ${state} - ${formatRoomAge(r.updatedAt)}</div>
+          </div>
+          <button class="lan-btn" data-room-code="${code}" ${disabled}>${joinLabel}</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function refreshRoomList() {
+    if (!net.ui.roomList) return;
+    try {
+      const data = await apiListRooms();
+      renderRoomList(data.rooms || []);
+    } catch {
+      renderRoomList([]);
+    }
+  }
+
+  function startRoomListPolling() {
+    if (roomListTimer) clearInterval(roomListTimer);
+    refreshRoomList().catch(() => {});
+    roomListTimer = setInterval(() => {
+      refreshRoomList().catch(() => {});
+    }, 2500);
+  }
   function stopPolling() {
     if (net.pollTimer) clearInterval(net.pollTimer);
     net.pollTimer = null;
@@ -124,6 +213,12 @@
     net.guestPlanningLocked = false;
     net.hostExertConfirmed = false;
     net.guestExertConfirmed = false;
+    net.hostFlashSubmitted = false;
+    net.guestFlashSubmitted = false;
+    net.hostFlashDecision = null;
+    net.guestFlashDecision = null;
+    net.hostPivotLocked = false;
+    net.guestPivotLocked = false;
     net.guestSelection = { char: null, deckId: null };
     window.__ssLanPvpMode = { enabled: false, role: null };
     setStatus('LAN mode disconnected.');
@@ -167,16 +262,40 @@
 
   function bindUi() {
     net.ui.roomInput = document.getElementById('lan-room-code');
+    net.ui.hostLabelInput = document.getElementById('lan-host-label');
     net.ui.hostBtn = document.getElementById('lan-host-btn');
     net.ui.joinBtn = document.getElementById('lan-join-btn');
     net.ui.leaveBtn = document.getElementById('lan-leave-btn');
+    net.ui.refreshBtn = document.getElementById('lan-refresh-btn');
+    net.ui.roomList = document.getElementById('lan-room-list');
     net.ui.status = document.getElementById('lan-status');
 
     if (!net.ui.hostBtn || !net.ui.joinBtn || !net.ui.leaveBtn) return;
 
-    net.ui.hostBtn.addEventListener('click', async () => {
+    if (net.ui.roomInput) {
+      net.ui.roomInput.addEventListener('input', () => {
+        net.ui.roomInput.value = String(net.ui.roomInput.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      });
+    }
+    if (net.ui.hostLabelInput) {
       try {
-        await apiHostRoom(net.ui.roomInput?.value || '');
+        const saved = localStorage.getItem(LAN_HOST_LABEL_KEY);
+        if (saved) net.ui.hostLabelInput.value = String(saved).slice(0, 18);
+      } catch {}
+      net.ui.hostLabelInput.addEventListener('input', () => {
+        const v = String(net.ui.hostLabelInput.value || '').replace(/\s+/g, ' ').slice(0, 18);
+        net.ui.hostLabelInput.value = v;
+        try { localStorage.setItem(LAN_HOST_LABEL_KEY, v.trim()); } catch {}
+      });
+    }
+
+    net.ui.hostBtn.addEventListener('click', async () => {
+      if (isActive()) {
+        setStatus('Leave the current room first.');
+        return;
+      }
+      try {
+        await apiHostRoom(net.ui.roomInput?.value || '', net.ui.hostLabelInput?.value || '');
         if (net.ui.roomInput) net.ui.roomInput.value = net.roomCode;
       } catch (err) {
         setStatus(`Host failed: ${err.message}`);
@@ -184,6 +303,10 @@
     });
 
     net.ui.joinBtn.addEventListener('click', async () => {
+      if (isActive()) {
+        setStatus('Leave the current room first.');
+        return;
+      }
       try {
         await apiJoinRoom(net.ui.roomInput?.value || '');
       } catch (err) {
@@ -193,9 +316,38 @@
 
     net.ui.leaveBtn.addEventListener('click', () => {
       resetNetState();
+      refreshRoomList().catch(() => {});
     });
-  }
 
+    if (net.ui.refreshBtn) {
+      net.ui.refreshBtn.addEventListener('click', () => {
+        refreshRoomList().catch(() => {});
+      });
+    }
+
+    if (net.ui.roomList) {
+      net.ui.roomList.addEventListener('click', async (e) => {
+        const btn = e.target?.closest?.('button[data-room-code]');
+        if (!btn || btn.disabled) return;
+        const code = String(btn.getAttribute('data-room-code') || '').trim().toUpperCase();
+        if (!code) return;
+        if (isActive()) {
+          setStatus('Leave the current room first.');
+          return;
+        }
+
+        if (net.ui.roomInput) net.ui.roomInput.value = code;
+        try {
+          await apiJoinRoom(code);
+        } catch (err) {
+          setStatus(`Join failed: ${err.message}`);
+          refreshRoomList().catch(() => {});
+        }
+      });
+    }
+
+    startRoomListPolling();
+  }
   function getSelectedForLocalPlayer() {
     const char = (typeof window.getSelectedChar === 'function') ? window.getSelectedChar('player') : null;
     const deckId = (typeof window.getSelectedDeckId === 'function') ? window.getSelectedDeckId('player') : null;
@@ -238,7 +390,9 @@
       phase === 'pivot_wait' ||
       phase === 'flash' ||
       phase === 'net_wait_lock' ||
-      phase === 'net_wait_exert'
+      phase === 'net_wait_exert' ||
+      phase === 'net_wait_flash' ||
+      phase === 'net_wait_pivot_lock'
     );
 
     if (hideTimeline) out.timeline = [null, null, null, null, null];
@@ -248,11 +402,29 @@
   function buildGuestSnapshotState() {
     const s = window.state;
     const clone = safeJsonClone(s);
+    const guestPivotSlots = Array.isArray(s.aiPivotSlots) ? safeJsonClone(s.aiPivotSlots) : null;
+
     const projected = {
       ...clone,
       player: safeJsonClone(s.ai),
-      ai: redactedOpponentForGuest(s.player, s.phase)
+      ai: redactedOpponentForGuest(s.player, s.phase),
+      pivotSlots: guestPivotSlots,
+      aiPivotSlots: null
     };
+
+    if (!Array.isArray(projected.pivotSlots) || projected.pivotSlots.length === 0) {
+      projected.pivotSlots = null;
+    }
+
+    // Never leak host-internal flash AI bookkeeping fields to guest snapshots.
+    projected.originalPCard = null;
+    projected.originalAICard = null;
+    projected.aiFlashDecision = null;
+
+    // Do not expose RNG internals to guest clients.
+    projected.rngSeed = undefined;
+    projected.useDeterministicRng = undefined;
+
     return projected;
   }
 
@@ -273,14 +445,94 @@
     if (basePhase === 'exert' && meta.guestExertConfirmed && !meta.hostExertConfirmed) {
       return 'net_wait_exert';
     }
+    if (basePhase === 'flash' && meta.guestFlashSubmitted && !meta.hostFlashSubmitted) {
+      return 'net_wait_flash';
+    }
+    if (basePhase === 'pivot_wait' && meta.guestPivotLocked && !meta.hostPivotLocked) {
+      return 'net_wait_pivot_lock';
+    }
     return basePhase;
+  }
+
+  function cloneFlashRevealCard(card) {
+    if (!card || card === 'occupied') return null;
+    return {
+      name: card.name || '',
+      type: card.type || 'utility',
+      dmg: Number(card.dmg || 0),
+      moments: Math.max(1, Number(card.moments || 1)),
+      cost: Number(card.cost || 0),
+      desc: card.desc || '',
+      effect: card.effect || ''
+    };
+  }
+
+  function clearFlashHighlights() {
+    document.querySelectorAll('.slot').forEach((s) => s.classList.remove('flash-highlight'));
+  }
+
+  function applyFlashHighlights(momentIndex) {
+    const idx = Number(momentIndex);
+    if (!Number.isFinite(idx) || idx < 0 || idx > 4) return;
+    clearFlashHighlights();
+    const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${idx + 1})`);
+    const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${idx + 1})`);
+    if (pSlot) pSlot.classList.add('flash-highlight');
+    if (aiSlot) aiSlot.classList.add('flash-highlight');
+  }
+
+  function hideFlashModal() {
+    const modal = document.getElementById('flash-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function renderFlashModal(ownCard, enemyCard, flashMoment, interactive) {
+    const modal = document.getElementById('flash-modal');
+    const pCardEl = document.getElementById('flash-p-card');
+    const aiCardEl = document.getElementById('flash-ai-card');
+    const titleEl = document.getElementById('flash-moment-title');
+    if (!modal || !pCardEl || !aiCardEl || !titleEl) return;
+
+    const render = (card) => {
+      if (!card) return '<div class="empty-flash">EMPTY SLOT</div>';
+      if (typeof window.generateCardHTML === 'function') {
+        return window.generateCardHTML(card);
+      }
+      return '<div class="empty-flash">REVEALED</div>';
+    };
+
+    pCardEl.innerHTML = render(ownCard);
+    aiCardEl.innerHTML = render(enemyCard);
+    titleEl.innerText = `FLASH: MOMENT ${Number(flashMoment) + 1}`;
+
+    modal.style.display = 'flex';
+    document.querySelectorAll('#flash-modal button').forEach((b) => {
+      b.disabled = !interactive;
+    });
+  }
+
+  function clearLocalPivotGlow() {
+    const slots = document.querySelectorAll('#player-timeline .slot');
+    slots.forEach((slot) => {
+      slot.style.boxShadow = 'none';
+    });
+  }
+
+  function paintLocalPivotGlow() {
+    clearLocalPivotGlow();
+    const slots = Array.isArray(window.state?.pivotSlots) ? window.state.pivotSlots : [];
+    for (const slotIdx of slots) {
+      const slotEl = document.querySelector(`#player-timeline .slot:nth-child(${Number(slotIdx) + 1})`);
+      if (slotEl) slotEl.style.boxShadow = '0 0 15px 5px #f1c40f';
+    }
   }
 
   function applyGuestSnapshot(payload) {
     const nextState = payload?.state;
     if (!nextState) return;
 
-    const phase = guestPhaseOverride(nextState.phase, payload.meta || {});
+    const hostPhase = nextState.phase;
+    const phase = guestPhaseOverride(hostPhase, payload.meta || {});
     nextState.phase = phase;
 
     replaceStateInPlace(nextState);
@@ -290,6 +542,25 @@
     if (typeof window.renderPlayerTimeline === 'function') window.renderPlayerTimeline();
     if (typeof window.renderAITimeline === 'function') window.renderAITimeline();
     if (typeof window.updateUI === 'function') window.updateUI();
+
+    if (phase === 'flash') {
+      const f = payload?.meta?.flash || {};
+      applyFlashHighlights(f.moment);
+      renderFlashModal(f.playerCard || null, f.aiCard || null, f.moment, true);
+      clearLocalPivotGlow();
+    } else if (phase === 'net_wait_flash') {
+      clearFlashHighlights();
+      hideFlashModal();
+      clearLocalPivotGlow();
+    } else {
+      clearFlashHighlights();
+      hideFlashModal();
+      if (phase !== 'pivot_wait' && phase !== 'net_wait_pivot_lock') clearLocalPivotGlow();
+    }
+
+    if (phase === 'pivot_wait' || phase === 'net_wait_pivot_lock') {
+      paintLocalPivotGlow();
+    }
   }
 
   function scheduleHostSnapshot(reason) {
@@ -302,6 +573,21 @@
     }, 50);
   }
 
+  function buildGuestFlashMeta() {
+    if (window.state.phase !== 'flash') return null;
+    const moment = Number(window.state.flashMoment);
+    if (!Number.isFinite(moment) || moment < 0 || moment > 4) return null;
+
+    const hostCard = getCardDataForSide('player', moment)?.card || null;
+    const guestCard = getCardDataForSide('ai', moment)?.card || null;
+
+    return {
+      moment,
+      playerCard: cloneFlashRevealCard(guestCard),
+      aiCard: cloneFlashRevealCard(hostCard)
+    };
+  }
+
   async function hostPushSnapshot(reason) {
     if (!isHost() || !net.inMatch) return;
     const payload = {
@@ -312,6 +598,11 @@
         guestPlanningLocked: !!net.guestPlanningLocked,
         hostExertConfirmed: !!net.hostExertConfirmed,
         guestExertConfirmed: !!net.guestExertConfirmed,
+        hostFlashSubmitted: !!net.hostFlashSubmitted,
+        guestFlashSubmitted: !!net.guestFlashSubmitted,
+        hostPivotLocked: !!net.hostPivotLocked,
+        guestPivotLocked: !!net.guestPivotLocked,
+        flash: buildGuestFlashMeta(),
         roomCode: net.roomCode
       }
     };
@@ -322,10 +613,31 @@
     }
   }
 
+  function sidePivotSlots(side) {
+    if (side === 'player') {
+      return Array.isArray(window.state.pivotSlots) ? window.state.pivotSlots : null;
+    }
+    return Array.isArray(window.state.aiPivotSlots) ? window.state.aiPivotSlots : null;
+  }
+
+  function sideIsLockedForPhase(side, phase) {
+    if (phase === 'planning') {
+      return side === 'player' ? net.hostPlanningLocked : net.guestPlanningLocked;
+    }
+    if (phase === 'pivot_wait') {
+      return side === 'player' ? net.hostPivotLocked : net.guestPivotLocked;
+    }
+    return true;
+  }
+
   function canApplyPlanningActionForSide(side) {
-    if (window.state.phase !== 'planning') return false;
-    if (side === 'player' && net.hostPlanningLocked) return false;
-    if (side === 'ai' && net.guestPlanningLocked) return false;
+    const phase = window.state.phase;
+    if (phase !== 'planning' && phase !== 'pivot_wait') return false;
+    if (sideIsLockedForPhase(side, phase)) return false;
+    if (phase === 'pivot_wait') {
+      const slots = sidePivotSlots(side);
+      if (!Array.isArray(slots) || slots.length === 0) return false;
+    }
     return true;
   }
 
@@ -343,6 +655,8 @@
     if (!canApplyPlanningActionForSide(side)) return false;
 
     const st = window.state[side];
+    const phase = window.state.phase;
+    const pivotSlots = sidePivotSlots(side);
     const handIndex = Number(payload?.handIndex);
     const startMoment = Number(payload?.startMoment);
     const targetTimelineIndex = Number(payload?.targetTimelineIndex);
@@ -357,6 +671,7 @@
     if (card.type === 'enhancer') {
       let targetIdx = Number.isFinite(targetTimelineIndex) ? targetTimelineIndex : startMoment;
       if (!Number.isFinite(targetIdx)) return false;
+      if (phase === 'pivot_wait' && (!Array.isArray(pivotSlots) || !pivotSlots.includes(targetIdx))) return false;
       const data = getCardDataForSide(side, targetIdx);
       const targetCard = data?.card;
       if (!targetCard || targetCard === 'occupied') return false;
@@ -375,6 +690,12 @@
 
     if (!Number.isFinite(startMoment) || startMoment < 0 || startMoment > 4) return false;
     if (startMoment + card.moments > 5) return false;
+    if (phase === 'pivot_wait') {
+      if (!Array.isArray(pivotSlots) || pivotSlots.length === 0) return false;
+      for (let i = 0; i < card.moments; i++) {
+        if (!pivotSlots.includes(startMoment + i)) return false;
+      }
+    }
     for (let i = 0; i < card.moments; i++) {
       if (st.timeline[startMoment + i] !== null) return false;
     }
@@ -397,6 +718,10 @@
     const st = window.state[side];
     const idx = Number(payload?.timelineIndex);
     if (!Number.isFinite(idx) || idx < 0 || idx > 4) return false;
+    if (window.state.phase === 'pivot_wait') {
+      const slots = sidePivotSlots(side);
+      if (!Array.isArray(slots) || !slots.includes(idx)) return false;
+    }
 
     const card = st.timeline[idx];
     if (!card || card === 'occupied') return false;
@@ -445,15 +770,31 @@
     if (st.stam < effectiveCost) return false;
 
     let slot = -1;
-    for (let i = 0; i <= 5 - moments; i++) {
-      let fits = true;
-      for (let j = 0; j < moments; j++) {
-        if (st.timeline[i + j] !== null) {
-          fits = false;
-          break;
+    if (window.state.phase === 'pivot_wait') {
+      const slots = sidePivotSlots(side);
+      if (!Array.isArray(slots) || slots.length === 0) return false;
+      for (let i = 0; i < slots.length; i++) {
+        const possibleSlot = slots[i];
+        let fits = true;
+        for (let j = 0; j < moments; j++) {
+          if (!slots.includes(possibleSlot + j) || st.timeline[possibleSlot + j] !== null) {
+            fits = false;
+            break;
+          }
         }
+        if (fits) { slot = possibleSlot; break; }
       }
-      if (fits) { slot = i; break; }
+    } else {
+      for (let i = 0; i <= 5 - moments; i++) {
+        let fits = true;
+        for (let j = 0; j < moments; j++) {
+          if (st.timeline[i + j] !== null) {
+            fits = false;
+            break;
+          }
+        }
+        if (fits) { slot = i; break; }
+      }
     }
     if (slot === -1) return false;
 
@@ -487,15 +828,31 @@
     if (st.stam < effectiveCost) return false;
 
     let slot = -1;
-    for (let i = 0; i <= 5 - abilityCard.moments; i++) {
-      let fits = true;
-      for (let j = 0; j < abilityCard.moments; j++) {
-        if (st.timeline[i + j] !== null) {
-          fits = false;
-          break;
+    if (window.state.phase === 'pivot_wait') {
+      const slots = sidePivotSlots(side);
+      if (!Array.isArray(slots) || slots.length === 0) return false;
+      for (let i = 0; i < slots.length; i++) {
+        const possibleSlot = slots[i];
+        let fits = true;
+        for (let j = 0; j < abilityCard.moments; j++) {
+          if (!slots.includes(possibleSlot + j) || st.timeline[possibleSlot + j] !== null) {
+            fits = false;
+            break;
+          }
         }
+        if (fits) { slot = possibleSlot; break; }
       }
-      if (fits) { slot = i; break; }
+    } else {
+      for (let i = 0; i <= 5 - abilityCard.moments; i++) {
+        let fits = true;
+        for (let j = 0; j < abilityCard.moments; j++) {
+          if (st.timeline[i + j] !== null) {
+            fits = false;
+            break;
+          }
+        }
+        if (fits) { slot = i; break; }
+      }
     }
     if (slot === -1) return false;
 
@@ -580,6 +937,17 @@
     net.guestExertConfirmed = false;
     net.hostPlanningLocked = false;
     net.guestPlanningLocked = false;
+    net.hostFlashSubmitted = false;
+    net.guestFlashSubmitted = false;
+    net.hostFlashDecision = null;
+    net.guestFlashDecision = null;
+    net.hostPivotLocked = false;
+    net.guestPivotLocked = false;
+    window.state.pivotSlots = null;
+    window.state.aiPivotSlots = null;
+    clearFlashHighlights();
+    hideFlashModal();
+    clearLocalPivotGlow();
 
     if (typeof window.updateUI === 'function') window.updateUI();
     scheduleHostSnapshot('exert_complete');
@@ -598,6 +966,136 @@
     }
   }
 
+  function applyPivotForSide(side) {
+    const st = window.state?.[side];
+    if (!st) return null;
+    if ((st.stam || 0) < 1) return null;
+
+    const flashMoment = Number(window.state.flashMoment);
+    if (!Number.isFinite(flashMoment) || flashMoment < 0 || flashMoment > 4) return null;
+
+    st.stam -= 1; // Pivot tax
+    const data = getCardDataForSide(side, flashMoment);
+
+    let startIndex = flashMoment;
+    let momentsFreed = 1;
+
+    if (data?.card) {
+      const c = data.card;
+      startIndex = data.startIndex;
+      momentsFreed = c.moments || 1;
+
+      st.stam = Math.min(st.maxStam, st.stam + (c.paidCost ?? c.cost ?? 0));
+
+      if (Array.isArray(c.enhancers) && c.enhancers.length > 0) {
+        c.enhancers.forEach((enh) => {
+          st.stam = Math.min(st.maxStam, st.stam + (enh?.paidCost ?? enh?.cost ?? 0));
+          if (enh) {
+            delete enh.enhancedTargetId;
+            st.hand.push(enh);
+          }
+        });
+        c.enhancers = [];
+      }
+
+      if (!c.isBasic) st.hand.push(c);
+      for (let i = 0; i < momentsFreed; i++) {
+        st.timeline[startIndex + i] = null;
+      }
+    } else {
+      st.timeline[flashMoment] = null;
+    }
+
+    const slots = [];
+    for (let i = 0; i < momentsFreed; i++) slots.push(startIndex + i);
+    return slots;
+  }
+
+  function finalizeHostFlashDecisions() {
+    clearFlashHighlights();
+    hideFlashModal();
+
+    const hostWantsPivot = net.hostFlashDecision === 'pivot';
+    const guestWantsPivot = net.guestFlashDecision === 'pivot';
+
+    const hostSlots = hostWantsPivot ? applyPivotForSide('player') : null;
+    const guestSlots = guestWantsPivot ? applyPivotForSide('ai') : null;
+
+    if (hostWantsPivot && !hostSlots && typeof window.log === 'function') {
+      window.log('[LAN] Host attempted Pivot but could not (insufficient stamina or invalid flash moment).');
+    }
+    if (guestWantsPivot && !guestSlots && typeof window.log === 'function') {
+      window.log('[LAN] Guest attempted Pivot but could not (insufficient stamina or invalid flash moment).');
+    }
+
+    window.state.pivotSlots = (hostSlots && hostSlots.length) ? hostSlots : null;
+    window.state.aiPivotSlots = (guestSlots && guestSlots.length) ? guestSlots : null;
+
+    const hostDidPivot = !!(window.state.pivotSlots && window.state.pivotSlots.length);
+    const guestDidPivot = !!(window.state.aiPivotSlots && window.state.aiPivotSlots.length);
+
+    if (hostDidPivot || guestDidPivot) {
+      window.state.phase = 'pivot_wait';
+      net.hostPivotLocked = !hostDidPivot;
+      net.guestPivotLocked = !guestDidPivot;
+
+      if (typeof window.log === 'function') {
+        if (hostDidPivot) window.log('[LAN] Host pivoted. Rebuild your highlighted slots, then lock.');
+        if (guestDidPivot) window.log('[LAN] Guest pivoted and is replanning.');
+      }
+
+      if (typeof window.renderPlayerTimeline === 'function') window.renderPlayerTimeline();
+      if (typeof window.renderAITimeline === 'function') window.renderAITimeline();
+      if (typeof window.updateUI === 'function') window.updateUI();
+      paintLocalPivotGlow();
+      scheduleHostSnapshot('pivot_wait_start');
+
+      if (net.hostPivotLocked && net.guestPivotLocked) {
+        hostBeginResolutionNow();
+      }
+      return;
+    }
+
+    hostBeginResolutionNow();
+  }
+
+  function onHostLocalFlashDecision(decision) {
+    if (!isHost() || !net.inMatch) return;
+    if (window.state.phase !== 'flash') return;
+    if (net.hostFlashSubmitted) return;
+
+    net.hostFlashSubmitted = true;
+    net.hostFlashDecision = (decision === 'pivot') ? 'pivot' : 'lock';
+
+    hideFlashModal();
+    clearFlashHighlights();
+
+    if (net.guestFlashSubmitted) {
+      finalizeHostFlashDecisions();
+    } else {
+      if (typeof window.log === 'function') window.log('[LAN] Host chose. Waiting for guest Flash decision...');
+      if (typeof window.updateUI === 'function') window.updateUI();
+      scheduleHostSnapshot('host_flash_decision');
+    }
+  }
+
+  function onHostLocalPivotLock() {
+    if (!isHost() || !net.inMatch) return;
+    if (window.state.phase !== 'pivot_wait') return;
+    if (net.hostPivotLocked) return;
+
+    net.hostPivotLocked = true;
+    clearLocalPivotGlow();
+
+    if (net.guestPivotLocked) {
+      hostBeginResolutionNow();
+    } else {
+      if (typeof window.log === 'function') window.log('[LAN] Host pivot locked. Waiting for guest...');
+      if (typeof window.updateUI === 'function') window.updateUI();
+      scheduleHostSnapshot('host_pivot_lock');
+    }
+  }
+
   function onHostLocalPlanningLock() {
     if (!isHost() || !net.inMatch) return;
     if (window.state.phase !== 'planning') return;
@@ -605,7 +1103,7 @@
 
     net.hostPlanningLocked = true;
     if (net.guestPlanningLocked) {
-      hostBeginResolutionNow();
+      hostBeginFlashPhase();
     } else {
       if (typeof window.log === 'function') window.log('[LAN] Host locked. Waiting for guest...');
       if (typeof window.updateUI === 'function') window.updateUI();
@@ -613,11 +1111,59 @@
     }
   }
 
+  function hostBeginFlashPhase() {
+    net.hostPlanningLocked = false;
+    net.guestPlanningLocked = false;
+    net.hostFlashSubmitted = false;
+    net.guestFlashSubmitted = false;
+    net.hostFlashDecision = null;
+    net.guestFlashDecision = null;
+    net.hostPivotLocked = false;
+    net.guestPivotLocked = false;
+
+    window.state.phase = 'flash';
+    window.state.pivotSlots = null;
+    window.state.aiPivotSlots = null;
+    window.state.flashMoment = hostRandInt(5);
+
+    const pData = getCardDataForSide('player', window.state.flashMoment);
+    const aData = getCardDataForSide('ai', window.state.flashMoment);
+
+    window.state.originalPCard = cloneFlashRevealCard(pData?.card || null);
+    window.state.originalAICard = cloneFlashRevealCard(aData?.card || null);
+
+    applyFlashHighlights(window.state.flashMoment);
+    renderFlashModal(window.state.originalPCard, window.state.originalAICard, window.state.flashMoment, true);
+
+    if (typeof window.log === 'function') {
+      window.log(`[LAN][PRECOGNITION FLASH] Moment ${window.state.flashMoment + 1} revealed.`);
+    }
+
+    if (typeof window.renderPlayerTimeline === 'function') window.renderPlayerTimeline();
+    if (typeof window.renderAITimeline === 'function') window.renderAITimeline();
+    if (typeof window.updateUI === 'function') window.updateUI();
+
+    scheduleHostSnapshot('flash_start');
+  }
+
   function hostBeginResolutionNow() {
     net.hostPlanningLocked = false;
     net.guestPlanningLocked = false;
+    net.hostFlashSubmitted = false;
+    net.guestFlashSubmitted = false;
+    net.hostFlashDecision = null;
+    net.guestFlashDecision = null;
+    net.hostPivotLocked = false;
+    net.guestPivotLocked = false;
 
+    clearFlashHighlights();
+    hideFlashModal();
+    clearLocalPivotGlow();
+
+    window.state.pivotSlots = null;
+    window.state.aiPivotSlots = null;
     window.state.phase = 'resolution';
+
     if (typeof window.log === 'function') window.log('[LAN] Both players locked. Resolving timeline.');
     document.querySelectorAll('button').forEach((b) => { b.disabled = true; });
 
@@ -635,6 +1181,16 @@
 
   function enterGuestMatch(payload) {
     net.inMatch = true;
+    net.hostPlanningLocked = false;
+    net.guestPlanningLocked = false;
+    net.hostExertConfirmed = false;
+    net.guestExertConfirmed = false;
+    net.hostFlashSubmitted = false;
+    net.guestFlashSubmitted = false;
+    net.hostFlashDecision = null;
+    net.guestFlashDecision = null;
+    net.hostPivotLocked = false;
+    net.guestPivotLocked = false;
     window.__ssLanPvpMode = { enabled: true, role: 'guest' };
 
     const cs = document.getElementById('char-select-screen');
@@ -684,8 +1240,28 @@
       if (type === 'planning_lock') {
         if (window.state.phase === 'planning' && !net.guestPlanningLocked) {
           net.guestPlanningLocked = true;
-          if (net.hostPlanningLocked) hostBeginResolutionNow();
+          if (net.hostPlanningLocked) hostBeginFlashPhase();
           else scheduleHostSnapshot('guest_planning_lock');
+        }
+        return;
+      }
+
+      if (type === 'flash_decision') {
+        if (window.state.phase === 'flash' && !net.guestFlashSubmitted) {
+          const decision = (String(payload?.decision || '').toLowerCase() === 'pivot') ? 'pivot' : 'lock';
+          net.guestFlashSubmitted = true;
+          net.guestFlashDecision = decision;
+          if (net.hostFlashSubmitted) finalizeHostFlashDecisions();
+          else scheduleHostSnapshot('guest_flash_decision');
+        }
+        return;
+      }
+
+      if (type === 'pivot_lock') {
+        if (window.state.phase === 'pivot_wait' && !net.guestPivotLocked) {
+          net.guestPivotLocked = true;
+          if (net.hostPivotLocked) hostBeginResolutionNow();
+          else scheduleHostSnapshot('guest_pivot_lock');
         }
         return;
       }
@@ -730,7 +1306,23 @@
 
       if (isGuest()) {
         if (t === at.START_RESOLUTION) {
-          sendEvent('planning_lock', {}).catch(() => {});
+          if (window.state.phase === 'planning') {
+            sendEvent('planning_lock', {}).catch(() => {});
+          } else if (window.state.phase === 'pivot_wait') {
+            sendEvent('pivot_lock', {}).catch(() => {});
+          }
+          return { ok: true, skipUIRefresh: true };
+        }
+        if (t === at.LOCK_IN) {
+          if (window.state.phase === 'flash') {
+            sendEvent('flash_decision', { decision: 'lock' }).catch(() => {});
+          }
+          return { ok: true, skipUIRefresh: true };
+        }
+        if (t === at.PIVOT) {
+          if (window.state.phase === 'flash') {
+            sendEvent('flash_decision', { decision: 'pivot' }).catch(() => {});
+          }
           return { ok: true, skipUIRefresh: true };
         }
         if (t === at.CONFIRM_EXERT) {
@@ -746,7 +1338,16 @@
 
       if (isHost()) {
         if (t === at.START_RESOLUTION) {
-          onHostLocalPlanningLock();
+          if (window.state.phase === 'planning') onHostLocalPlanningLock();
+          else if (window.state.phase === 'pivot_wait') onHostLocalPivotLock();
+          return { ok: true, skipUIRefresh: true };
+        }
+        if (t === at.LOCK_IN) {
+          if (window.state.phase === 'flash') onHostLocalFlashDecision('lock');
+          return { ok: true, skipUIRefresh: true };
+        }
+        if (t === at.PIVOT) {
+          if (window.state.phase === 'flash') onHostLocalFlashDecision('pivot');
           return { ok: true, skipUIRefresh: true };
         }
         if (t === at.CONFIRM_EXERT) {
@@ -754,10 +1355,13 @@
           return { ok: true, skipUIRefresh: true };
         }
         if (t === at.TOGGLE_EXERT_CARD && net.hostExertConfirmed) {
-          return { ok: false, error: 'Already confirmed exert.', skipUIRefresh: true };
+          return { ok: true, skipUIRefresh: true };
         }
-        if ((t === at.PLACE_CARD_FROM_HAND || t === at.RETURN_CARD_TO_HAND || t === at.ADD_BASIC_ACTION || t === at.USE_ABILITY) && net.hostPlanningLocked) {
-          return { ok: false, error: 'Already locked.', skipUIRefresh: true };
+
+        const planningLocked = (window.state.phase === 'planning' && net.hostPlanningLocked);
+        const pivotLocked = (window.state.phase === 'pivot_wait' && net.hostPivotLocked);
+        if ((t === at.PLACE_CARD_FROM_HAND || t === at.RETURN_CARD_TO_HAND || t === at.ADD_BASIC_ACTION || t === at.USE_ABILITY) && (planningLocked || pivotLocked)) {
+          return { ok: true, skipUIRefresh: true };
         }
 
         const res = net.original.dispatch(action);
@@ -799,6 +1403,23 @@
       net.guestPlanningLocked = false;
       net.hostExertConfirmed = false;
       net.guestExertConfirmed = false;
+      net.hostFlashSubmitted = false;
+      net.guestFlashSubmitted = false;
+      net.hostFlashDecision = null;
+      net.guestFlashDecision = null;
+      net.hostPivotLocked = false;
+      net.guestPivotLocked = false;
+
+      if (window.state) {
+        window.state.useDeterministicRng = true;
+        if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+          const seedArr = new Uint32Array(1);
+          window.crypto.getRandomValues(seedArr);
+          window.state.rngSeed = seedArr[0] >>> 0;
+        } else {
+          window.state.rngSeed = (Date.now() & 0xffffffff) >>> 0;
+        }
+      }
 
       net.original.startGame();
 
@@ -819,6 +1440,19 @@
         net.guestPlanningLocked = false;
         net.hostExertConfirmed = false;
         net.guestExertConfirmed = false;
+        net.hostFlashSubmitted = false;
+        net.guestFlashSubmitted = false;
+        net.hostFlashDecision = null;
+        net.guestFlashDecision = null;
+        net.hostPivotLocked = false;
+        net.guestPivotLocked = false;
+        clearFlashHighlights();
+        hideFlashModal();
+        clearLocalPivotGlow();
+        if (window.state) {
+          window.state.pivotSlots = null;
+          window.state.aiPivotSlots = null;
+        }
         scheduleHostSnapshot('back_to_menu');
       }
       return net.original.backToMenu();
@@ -869,6 +1503,12 @@
         guestPlanningLocked: net.guestPlanningLocked,
         hostExertConfirmed: net.hostExertConfirmed,
         guestExertConfirmed: net.guestExertConfirmed,
+        hostFlashSubmitted: net.hostFlashSubmitted,
+        guestFlashSubmitted: net.guestFlashSubmitted,
+        hostFlashDecision: net.hostFlashDecision,
+        guestFlashDecision: net.guestFlashDecision,
+        hostPivotLocked: net.hostPivotLocked,
+        guestPivotLocked: net.guestPivotLocked,
         guestConnected: net.guestConnected
       })
     };
@@ -876,3 +1516,4 @@
 
   window.addEventListener('load', init);
 })();
+

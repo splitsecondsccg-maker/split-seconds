@@ -363,7 +363,7 @@ function renderAITimeline() {
     // Fog of war: AI timeline must stay hidden while the player is still planning,
     // including the post-PIVOT adjustment window (pivot_wait). Otherwise the player
     // can gain information before pressing LOCK.
-    const isHidden = (state.phase === 'planning' || state.phase === 'pivot_wait' || state.phase === 'flash' || state.phase === 'exert' || state.phase === 'net_wait_lock' || state.phase === 'net_wait_exert');
+    const isHidden = (state.phase === 'planning' || state.phase === 'pivot_wait' || state.phase === 'flash' || state.phase === 'exert' || state.phase === 'net_wait_lock' || state.phase === 'net_wait_exert' || state.phase === 'net_wait_flash' || state.phase === 'net_wait_pivot_lock');
     const tl = document.getElementById('ai-timeline');
     document.querySelectorAll('.ai-placed').forEach(e => e.remove());
     

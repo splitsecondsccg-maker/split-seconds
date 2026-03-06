@@ -761,14 +761,14 @@ function ensureBattleLogUI(){
     el.innerHTML = `
       <div class="log-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
         <strong>Battle Log</strong>
-        <button id="battle-log-toggle" title="Minimize" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:4px 10px; cursor:pointer;">Ã¢â‚¬â€œ</button>
+        <button id="battle-log-toggle" title="Minimize" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:4px 10px; cursor:pointer;">-</button>
       </div>
       <div class="log-body"></div>
     `;
     const btn = document.getElementById('battle-log-toggle');
     btn.onclick = () => {
         const collapsed = el.classList.toggle('collapsed');
-        btn.textContent = collapsed ? '+' : 'Ã¢â‚¬â€œ';
+        btn.textContent = collapsed ? '+' : '-';
         btn.title = collapsed ? 'Expand' : 'Minimize';
     };
 }
@@ -1094,8 +1094,8 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
    Does NOT scale deck builder overlays/modals (they remain full-size for readability).
 */
 (function appScaleToFit(){
-  const DESIGN_W = 1600; // baseline layout width
-  const DESIGN_H = 900;  // baseline layout height
+  const DESIGN_W = 1024; // baseline layout width after HUD rework
+  const DESIGN_H = 700;  // baseline layout height after HUD rework
 
   function ensureScaleRoot(){
     // Wrap only the main screens (char select + game) so overlays can stay unscaled.
@@ -1133,9 +1133,10 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
     if(!root) return;
 
     const { w, h } = viewport();
-    // Leave a bit of breathing room for iOS safe areas
     const pad = 8;
-    const scale = Math.min((w - pad) / DESIGN_W, (h - pad) / DESIGN_H, 1);
+    const touchLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const shouldScale = !!touchLike && (w < DESIGN_W || h < DESIGN_H);
+    const scale = shouldScale ? Math.min((w - pad) / DESIGN_W, (h - pad) / DESIGN_H, 1) : 1;
 
     document.documentElement.style.setProperty('--ui-scale', String(scale));
     document.documentElement.style.setProperty('--ui-inv-scale', String(scale > 0 ? (1/scale) : 1));

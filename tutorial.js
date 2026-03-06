@@ -65,6 +65,7 @@ function clearBoard({ clearHands = true } = {}) {
     state.pivotSlots = null;
     state.originalPCard = null;
     state.originalAICard = null;
+    state.aiFlashDecision = null;
 }
 
 function hideNext() {
@@ -129,7 +130,9 @@ function waitUntil(condFn, onReady, timeoutMs = 12000, pollMs = 80) {
 const TUT = {
     quickJab: { id: 'r1', uniqueId: 'tut_quickjab', name: 'Quick Jab', type: 'attack', cost: 0, moments: 1, dmg: 2, desc: 'Fast jab.' },
     lungingDagger: { id: 'r3', uniqueId: 'tut_lunge', name: 'Lunging Dagger', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Wind-up, then strike.' },
-    kidneyStrike: { id: 'r4', uniqueId: 'tut_grab', name: 'Kidney Strike', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Grab: beats Block, loses to Attack.' }
+    kidneyStrike: { id: 'r4', uniqueId: 'tut_grab', name: 'Kidney Strike', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Grab: beats Block, loses to Attack.' },
+    sharpen: { id: 'r5', uniqueId: 'tut_sharpen', name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: '+3 DMG to next Attack.', effect: 'buff_next_atk_3' },
+    arcaneAmp: { id: 'palea_arcane_amp', uniqueId: 'tut_arcane_amp', name: 'Arcane Amp', type: 'enhancer', cost: 1, moments: 0, dmg: 0, desc: 'Enhancer: attached action gains +2 DMG.', enhance: { dmg: 2 } }
 };
 
 // --- Steps ---
@@ -316,7 +319,7 @@ const tutorialSteps = [
         setup: () => { hideNext(); }
     },
     {
-        message: "Yep — Grab punishes Block.\n\nThey will also work and interrupt Buffs!\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
+        message: "Yep — Grab punishes Block.\n\nWe'll cover Grab vs Buff in a dedicated lesson next.\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());
@@ -377,6 +380,73 @@ const tutorialSteps = [
         }
     },
 
+
+    // Grab vs Buff (separate lesson)
+    {
+        message: "New triangle detail: Grab also interrupts Buff/Utility actions.\n\nOpponent planned a Buff in Slot 1. Play Kidney Strike in Slot 1 and hit LOCK.",
+        expect: 'lock',
+        requiredSlot: 0,
+        highlightIds: ['player-hand', 'btn-start-resolution'],
+        highlightSelectors: [slotSel('player', 1)],
+        setup: () => {
+            hideNext();
+            forcePlanningPhase();
+            clearBoard();
+            state.ai.timeline[0] = { name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, isBasic: true, effect: 'buff_next_atk_3' };
+            state.player.stam = 1;
+            state.player.hand = [{ ...TUT.kidneyStrike, uniqueId: 'tut_grab_buff_1' }];
+            updateUI();
+        }
+    },
+    {
+        message: "FLASH (Moment 1): you can see their Buff. LOCK IN to watch Grab interrupt it.",
+        expect: 'lockIn',
+        forceFlashMoment: 0,
+        highlightIds: ['flash-modal', 'btn-lock'],
+        setup: () => { hideNext(); }
+    },
+    {
+        message: "Great. Grab interrupted the Buff entirely.\n\nNext: Enhancer cards.",
+        setup: () => {
+            hideNext();
+            waitUntil(() => state.phase === 'exert', () => showNext());
+        }
+    },
+
+    // Enhancer lesson
+    {
+        message: "Enhancer cards are attached to actions and DO NOT take a timeline slot by themselves.\n\nPlace Quick Jab in Slot 1, then drag Arcane Amp ONTO that action card, then hit LOCK.",
+        expect: 'lock',
+        requiredSlot: 0,
+        requiredEnhancerOnSlot: 0,
+        highlightIds: ['player-hand', 'btn-start-resolution'],
+        highlightSelectors: [slotSel('player', 1)],
+        setup: () => {
+            hideNext();
+            forcePlanningPhase();
+            clearBoard();
+            state.player.stam = 2;
+            state.player.hand = [
+                { ...TUT.quickJab, uniqueId: 'tut_enhancer_attack_1' },
+                { ...TUT.arcaneAmp, uniqueId: 'tut_enhancer_amp_1' }
+            ];
+            updateUI();
+        }
+    },
+    {
+        message: "FLASH (Moment 1): LOCK IN.",
+        expect: 'lockIn',
+        forceFlashMoment: 0,
+        highlightIds: ['flash-modal', 'btn-lock'],
+        setup: () => { hideNext(); }
+    },
+    {
+        message: "Nice. Enhancers modify the attached action and travel with it if returned to hand (as separate card objects).",
+        setup: () => {
+            hideNext();
+            waitUntil(() => state.phase === 'exert', () => showNext());
+        }
+    },
     // Parry lesson
     {
         message: "Parry costs 1⚡. If you attack into a Parry, your attack is canceled AND you draw 1 fewer card next round.\n\nThe opponent secretly planned a PARRY in Slot 1. Play Quick Jab in Slot 1 and hit LOCK.",
@@ -533,3 +603,8 @@ function endTutorial() {
     alert('Tutorial Complete! Returning to menu.');
     location.reload();
 }
+
+
+
+
+

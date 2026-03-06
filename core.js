@@ -63,13 +63,13 @@ function punchPortrait(targetKey, power = 1) {
 
 
 function getIcon(type) {
-    if(type === 'attack') return '⚔️';
-    if(type === 'grab') return '🤚';
-    if(type === 'block') return '🛡️';
-    if(type === 'parry') return '🤺';
+    if(type === 'attack') return 'Ã¢Å¡â€Ã¯Â¸Â';
+    if(type === 'grab') return 'Ã°Å¸Â¤Å¡';
+    if(type === 'block') return 'Ã°Å¸â€ºÂ¡Ã¯Â¸Â';
+    if(type === 'parry') return 'Ã°Å¸Â¤Âº';
     if(type === 'enhancer') return '[ENH]';
-    if(type === 'utility') return '💨';
-    return '✨'; // buff
+    if(type === 'utility') return 'Ã°Å¸â€™Â¨';
+    return 'Ã¢Å“Â¨'; // buff
 }
 
 const getBaseStatuses = () => ({ 
@@ -134,7 +134,7 @@ function applyFreezeCounters(sourceKey, targetKey, amount) {
     target.statuses.freeze = (target.statuses.freeze || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}❄`, 'float-freeze');
+    spawnFloatingText(targetKey, `+${amount}Ã¢Ââ€ž`, 'float-freeze');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} FREEZE (${target.statuses.freeze}).`);
 }
 
@@ -147,7 +147,7 @@ function applyBleedCounters(sourceKey, targetKey, amount) {
     target.statuses.bleed = (target.statuses.bleed || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}🩸`, 'float-bleed');
+    spawnFloatingText(targetKey, `+${amount}Ã°Å¸Â©Â¸`, 'float-bleed');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} BLEED (${target.statuses.bleed}).`);
 }
 
@@ -159,7 +159,7 @@ function applyPoisonCounters(sourceKey, targetKey, amount) {
     target.statuses.poison = (target.statuses.poison || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}☠`, 'float-poison');
+    spawnFloatingText(targetKey, `+${amount}Ã¢ËœÂ `, 'float-poison');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} POISON (${target.statuses.poison}).`);
 }
 
@@ -383,7 +383,7 @@ function renderDeckPickerInto(containerId, target){
         if(locked) btn.classList.add('locked');
         btn.disabled = locked;
 
-        btn.innerText = getDeckName(id).replace(/^.*—\s*/,''); // keep it short
+        btn.innerText = getDeckName(id).replace(/^.*Ã¢â‚¬â€\s*/,''); // keep it short
         btn.onclick = (e) => {
             e.stopPropagation();
             selectDeck(target, id);
@@ -761,14 +761,14 @@ function ensureBattleLogUI(){
     el.innerHTML = `
       <div class="log-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
         <strong>Battle Log</strong>
-        <button id="battle-log-toggle" title="Minimize" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:4px 10px; cursor:pointer;">–</button>
+        <button id="battle-log-toggle" title="Minimize" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:4px 10px; cursor:pointer;">Ã¢â‚¬â€œ</button>
       </div>
       <div class="log-body"></div>
     `;
     const btn = document.getElementById('battle-log-toggle');
     btn.onclick = () => {
         const collapsed = el.classList.toggle('collapsed');
-        btn.textContent = collapsed ? '+' : '–';
+        btn.textContent = collapsed ? '+' : 'Ã¢â‚¬â€œ';
         btn.title = collapsed ? 'Expand' : 'Minimize';
     };
 }
@@ -779,6 +779,46 @@ function clearBattleLog(){
     if(body) body.innerHTML = '';
 }
 
+function buildHeroTooltipHtml(charName, cData) {
+    const profs = [];
+    if (cData && cData.class) profs.push(String(cData.class).toUpperCase());
+    for (const t of ((cData && cData.talents) || [])) profs.push(String(t).toUpperCase());
+    const chips = profs.map(p => '<span class="tt-prof-chip">' + p + '</span>').join('');
+    const passive = (cData && cData.passiveDesc) ? cData.passiveDesc : 'No passive ability.';
+    return '<div class="tt-title">' + charName + '</div>' +
+        '<div class="tt-passive">' + passive + '</div>' +
+        '<div class="tt-profs">' + chips + '</div>';
+}
+
+function applyBattleMetaFromState() {
+    const pName = state?.player?.class || selectedPlayer;
+    const aiName = state?.ai?.class || selectedAI;
+
+    const pData = classData?.[pName] || {};
+    const aiData = classData?.[aiName] || {};
+
+    const pClassEl = document.getElementById('p-class-name');
+    const aiClassEl = document.getElementById('ai-class-name');
+    if (pClassEl) pClassEl.innerText = pName || '';
+    if (aiClassEl) aiClassEl.innerText = aiName || '';
+
+    const pPortrait = document.getElementById('p-portrait');
+    const aiPortrait = document.getElementById('ai-portrait');
+    if (pPortrait && charImages?.[pName]) pPortrait.style.backgroundImage = `url('${charImages[pName]}')`;
+    if (aiPortrait && charImages?.[aiName]) aiPortrait.style.backgroundImage = `url('${charImages[aiName]}')`;
+
+    const pTip = document.getElementById('p-portrait-tooltip');
+    const aiTip = document.getElementById('ai-portrait-tooltip');
+    if (pTip) pTip.innerHTML = buildHeroTooltipHtml(pName, pData);
+    if (aiTip) aiTip.innerHTML = buildHeroTooltipHtml(aiName, aiData);
+
+    const pArmorEl = document.getElementById('p-armor');
+    const aiArmorEl = document.getElementById('ai-armor');
+    if (pArmorEl) pArmorEl.innerText = (typeof getEffectiveArmor === 'function') ? getEffectiveArmor('player') : (state?.player?.armor ?? pData.armor ?? 0);
+    if (aiArmorEl) aiArmorEl.innerText = (typeof getEffectiveArmor === 'function') ? getEffectiveArmor('ai') : (state?.ai?.armor ?? aiData.armor ?? 0);
+}
+
+window.applyBattleMetaFromState = applyBattleMetaFromState;
 function startGame() {
     // Fighting View convenience:
     // - If player didn't press LOCK IN, we treat their current pick as locked.
@@ -838,14 +878,8 @@ function startGame() {
         roundData: { lostLife: false, appliedStatus: false } 
     };
 
-    document.getElementById('p-class-name').innerText = selectedPlayer; document.getElementById('p-armor').innerText = pData.armor;
-    document.getElementById('ai-class-name').innerText = selectedAI; document.getElementById('ai-armor').innerText = aiData.armor;
-    document.getElementById('p-portrait').style.backgroundImage = `url('${charImages[selectedPlayer]}')`;
-    document.getElementById('ai-portrait').style.backgroundImage = `url('${charImages[selectedAI]}')`;
+    applyBattleMetaFromState();
 
-    // Tooltips added successfully
-    document.getElementById('p-portrait-tooltip').innerText = pData.passiveDesc || 'No passive ability.';
-    document.getElementById('ai-portrait-tooltip').innerText = aiData.passiveDesc || 'No passive ability.';
 
     clearBattleLog();
     drawCards(3, 'player'); drawCards(3, 'ai'); 
@@ -899,17 +933,21 @@ function updateUI() {
     // UI Phase Lock: Strictly enforce which buttons are visible!
     const exertUI = document.getElementById('exert-controls');
     const actionUI = document.getElementById('action-controls');
+    const defenseUI = document.getElementById('defense-controls');
     
     if (state.phase === 'exert') {
         if (exertUI) exertUI.style.display = 'flex';
         if (actionUI) actionUI.style.display = 'none';
+        if (defenseUI) defenseUI.style.display = 'none';
     } else if (state.phase === 'planning' || state.phase === 'pivot_wait') { // <-- FIXED HERE
         if (exertUI) exertUI.style.display = 'none';
         if (actionUI) actionUI.style.display = 'flex';
+        if (defenseUI) defenseUI.style.display = 'flex';
     } else {
         // Hide both during clash/resolution
         if (exertUI) exertUI.style.display = 'none';
         if (actionUI) actionUI.style.display = 'none';
+        if (defenseUI) defenseUI.style.display = 'none';
     }
     
     document.getElementById('p-hp-bar').style.height = `${(state.player.hp / state.player.maxHp) * 100}%`;
@@ -954,12 +992,12 @@ function renderAbilities() {
             container.innerHTML += `
                 <div class="ability-wrapper">
                     <button class="ability-btn" ${char === 'player' ? `onclick="useAbility(${i})"` : ''}>
-                        🌟 <b>${ability.name}</b>
+                        Ã°Å¸Å’Å¸ <b>${ability.name}</b>
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
                         <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
-                        Cost: ${costDisplay}⚡ | Time: ${ability.moments}⏳<br>
-                        ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}⚔️</span><br>` : ''}
+                        Cost: ${costDisplay}Ã¢Å¡Â¡ | Time: ${ability.moments}Ã¢ÂÂ³<br>
+                        ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}Ã¢Å¡â€Ã¯Â¸Â</span><br>` : ''}
                         <i>${formatKeywords(ability.desc)}</i>
                     </div>
                 </div>
@@ -990,7 +1028,7 @@ if((statuses.exhausted || 0) > 0) {
 if((statuses.freeze || 0) > 0) {
     const fr = statuses.freeze;
     const taxed = fr >= 10;
-    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' · Attacks +1⚡' : ''}</div>`;
+    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' Ã‚Â· Attacks +1Ã¢Å¡Â¡' : ''}</div>`;
     count++;
 }
 if((statuses.bleed || 0) > 0) {

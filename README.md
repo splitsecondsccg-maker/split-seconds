@@ -342,3 +342,17 @@ Right now the event system is mostly UX (log/sound/floaters). Next:
 - ✅ Clear documentation for contributors
 
 Next steps can be done incrementally without changing UX.
+
+---
+
+## LAN PvP (same WiFi)
+
+A host-authoritative LAN PvP mode is available.
+
+1. Run `node lan_server.js` from project root.
+2. Open one printed LAN URL on both devices.
+3. Use the in-game `LAN PvP (Same WiFi)` panel to host/join.
+
+Detailed setup and flow: `docs/LAN_PVP_QUICKSTART.md`.
+
+Current v1 limitation: LAN mode skips Flash/Pivot and resolves once both players lock planning.

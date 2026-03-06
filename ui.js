@@ -62,7 +62,7 @@ function renderHand() {
 
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
-            <div class="card-stats"><span>${card.type === 'enhancer' ? 'ENH' : `⏱ ${card.moments}`}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
+            <div class="card-stats"><span>${card.type === 'enhancer' ? 'ENH' : `â± ${card.moments}`}</span><span>âš¡ ${getMoveCost('player', card)}</span></div>
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         `;
@@ -76,7 +76,7 @@ function renderHand() {
 
 
 
-// HAND HOVER MANAGER (desktop) — avoids hovered card blocking others
+// HAND HOVER MANAGER (desktop) â€” avoids hovered card blocking others
 let _handHoverBound = false;
 function bindHandHover(){
     if(_handHoverBound) return;
@@ -348,9 +348,9 @@ function renderPlayerTimeline() {
 
             let extraText = '';
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
-            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
-            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
+            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ›¡ï¸ Block</span>`;
+            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ¤º Parry</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">âœ¨ ${t.type}</span>`;
 
             let icon = getIcon(t.type);
             div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
@@ -363,7 +363,7 @@ function renderAITimeline() {
     // Fog of war: AI timeline must stay hidden while the player is still planning,
     // including the post-PIVOT adjustment window (pivot_wait). Otherwise the player
     // can gain information before pressing LOCK.
-    const isHidden = (state.phase === 'planning' || state.phase === 'pivot_wait');
+    const isHidden = (state.phase === 'planning' || state.phase === 'pivot_wait' || state.phase === 'flash' || state.phase === 'exert' || state.phase === 'net_wait_lock' || state.phase === 'net_wait_exert');
     const tl = document.getElementById('ai-timeline');
     document.querySelectorAll('.ai-placed').forEach(e => e.remove());
     
@@ -380,9 +380,9 @@ function renderAITimeline() {
 
             let extraText = '';
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
-            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
-            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${t.type}</span>`;
+            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ›¡ï¸ Block</span>`;
+            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ¤º Parry</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">âœ¨ ${t.type}</span>`;
 
             const enhInfo = getEnhancerUiInfo(t);
             let icon = getIcon(t.type);
@@ -473,7 +473,7 @@ function renderAITimeline() {
 
     window.addEventListener('scroll', () => {
         if (!activeKeyword) return;
-        // On scroll, just hide to avoid “stale” position.
+        // On scroll, just hide to avoid â€œstaleâ€ position.
         hide();
     }, true);
 })();

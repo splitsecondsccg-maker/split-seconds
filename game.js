@@ -472,6 +472,15 @@ function _startResolutionImpl() {
             return;
         }
 
+        if (typeof step.requiredEnhancerOnSlot === 'number') {
+            const d = getCardData('player', step.requiredEnhancerOnSlot);
+            const hasEnh = !!(d && d.card && Array.isArray(d.card.enhancers) && d.card.enhancers.length > 0);
+            if (!hasEnh) {
+                alert('Coach: Attach the enhancer by dropping it on your action card first.');
+                return;
+            }
+        }
+
         // Advance the tutorial immediately on successful LOCK.
         advanceTutorial();
     }
@@ -731,6 +740,7 @@ function handleAIReaction() {
         resolveMoment(); 
     }, 1000); 
 }
+
 
 
 

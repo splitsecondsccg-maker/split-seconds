@@ -68,10 +68,11 @@
 
 <div style="margin-bottom: 20px;">
         <a href="rules.html" target="_blank" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 8px 20px; border-radius: 5px; background: rgba(241, 196, 15, 0.1);">
-            📖 HOW TO PLAY (RULES)
+            HOW TO PLAY (RULES)
         </a>
         <button onclick="startTutorial()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em; background-color: #f1c40f; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">PLAY TUTORIAL</button>
-        <button onclick="openDeckBuilder()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(79,172,254,0.15); color: #4facfe; font-weight: bold; border: 1px solid #4facfe; border-radius: 8px; cursor: pointer; margin-left: 10px;">🎴 DECK BUILDER</button>
+        <button onclick="openDeckBuilder()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(79,172,254,0.15); color: #4facfe; font-weight: bold; border: 1px solid #4facfe; border-radius: 8px; cursor: pointer; margin-left: 10px;">DECK BUILDER</button>
+        <button onclick="openCardEditor()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(46,204,113,0.15); color: #2ecc71; font-weight: bold; border: 1px solid #2ecc71; border-radius: 8px; cursor: pointer; margin-left: 10px;">CARD LAB</button>
     </div>
             <div id="ai-difficulty-picker" style="margin: 10px 0 14px; display:flex; align-items:center; justify-content:center; gap:10px;">
         <label for="ai-difficulty-select" style="font-weight: bold; color: #f1c40f;">AI Difficulty</label>
@@ -81,29 +82,43 @@
             <option value="pro">Pro</option>
         </select>
     </div>
+    <div id="lan-pvp-panel" class="lan-pvp-panel">
+        <div class="lan-pvp-title">LAN PvP (Same WiFi)</div>
+        <div class="lan-pvp-row">
+            <input id="lan-room-code" type="text" maxlength="8" placeholder="Room code" />
+            <button id="lan-host-btn" class="lan-btn">Host Room</button>
+            <button id="lan-join-btn" class="lan-btn">Join Room</button>
+            <button id="lan-leave-btn" class="lan-btn lan-btn-danger">Leave</button>
+        </div>
+        <div id="lan-status" class="lan-status">Offline</div>
+    </div>
 <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
     </div>
 
     <div id="game-screen">
-        <div class="top-bar">
-            <div class="stats-area" id="ai-stats">
-                <div class="portrait-container" id="ai-portrait-anchor">
-                    <div class="portrait" id="ai-portrait"></div>
-                    <div class="portrait-tooltip" id="ai-portrait-tooltip"></div>
+                <div class="top-bar">
+            <div class="stats-area battle-hero enemy-hero" id="ai-stats">
+                <div class="hero-panel hero-panel-left">
+                    <div class="status-container" id="ai-statuses"></div>
+                    <div id="ai-hand-count" class="hero-hand-count"></div>
                 </div>
-                <div class="char-details"><strong>Opponent<br><span id="ai-class-name" style="color: #ccc;">Mauja</span></strong></div>
-                <div class="bars">
-                    <div class="bar-container"><div class="bar-label" id="ai-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="ai-hp-bar"></div></div><div class="bar-label">HP</div></div>
-                    <div class="bar-container"><div class="bar-label" id="ai-stam-label">10/10</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="ai-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                <div class="hero-panel hero-panel-center">
+                    <div class="char-details hero-name"><strong>Opponent<br><span id="ai-class-name" style="color: #ccc;">Mauja</span></strong></div>
+                    <div class="portrait-container hero-portrait-wrap" id="ai-portrait-anchor">
+                        <div class="portrait hero-portrait" id="ai-portrait"></div>
+                        <div class="portrait-tooltip hero-tooltip" id="ai-portrait-tooltip"></div>
+                        <div id="ai-ability-container" class="ability-orbit"></div>
+                    </div>
                 </div>
-                <div class="armor-box">🛡️<span id="ai-armor">3</span></div>
-                
-                <div id="ai-ability-container" style="margin-left: 10px; display: flex; flex-direction: row; gap: 10px; flex-wrap: wrap;"></div>
-                <div class="status-container" id="ai-statuses"></div>
-                <div id="ai-hand-count" style="font-size: 14px; font-weight: bold; color: #ddd; margin-left: 15px;"></div>
+                <div class="hero-panel hero-panel-right">
+                    <div class="bars">
+                        <div class="bar-container"><div class="bar-label" id="ai-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="ai-hp-bar"></div></div><div class="bar-label">HP</div></div>
+                        <div class="bar-container"><div class="bar-label" id="ai-stam-label">10/10</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="ai-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                    </div>
+                    <div class="armor-box"><span id="ai-armor">3</span></div>
+                </div>
             </div>
         </div>
-
         <!-- Center area: timelines + LOCK (keep LOCK to the RIGHT of the timelines) -->
         <div id="timeline-and-lock" style="display: flex; align-items: center; justify-content: center; gap: 30px; flex-grow: 1; margin: 20px 0;">
             <div class="timeline-stack" style="display: flex; flex-direction: column; gap: 15px;">
@@ -112,42 +127,48 @@
             </div>
             
             <button id="btn-start-resolution" class="submit-btn" onclick="startResolution()">
-                ⚔️<br>LOCK
+                <br>LOCK
             </button>
         </div>
 
-        <div class="bottom-bar" style="display: flex; justify-content: flex-start; align-items: flex-end; gap: 40px; width: 100%; box-sizing: border-box;">
-            
-            <div class="stats-area" id="player-stats">
-                <div class="portrait-container" id="p-portrait-anchor">
-                    <div class="portrait" id="p-portrait"></div>
-                    <div class="portrait-tooltip" id="p-portrait-tooltip"></div>
+                <div class="bottom-bar" style="display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; width: 100%; box-sizing: border-box;">
+            <div class="stats-area battle-hero player-hero" id="player-stats">
+                <div class="hero-panel hero-panel-left">
+                    <div class="controls defense-controls" id="defense-controls">
+                        <button id="btn-block" class="basic-action-btn circle-action-btn" onclick="addBasicAction('Block', 0, 1, 0, 'block')">
+                            <span class="circle-action-title">Block</span>
+                            <small>0 ST | 1 MOM</small>
+                        </button>
+                        <button id="btn-parry" class="basic-action-btn circle-action-btn" onclick="addBasicAction('Parry', 1, 1, 0, 'parry')">
+                            <span class="circle-action-title">Parry</span>
+                            <small>1 ST | 1 MOM</small>
+                        </button>
+                    </div>
+                    <div class="status-container" id="p-statuses"></div>
                 </div>
-                <div class="char-details"><strong>Player<br><span id="p-class-name" style="color: #4facfe;">Rogue</span></strong></div>
-                <div class="bars">
-                    <div class="bar-container"><div class="bar-label" id="p-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="p-hp-bar"></div></div><div class="bar-label">HP</div></div>
-                    <div class="bar-container"><div class="bar-label" id="p-stam-label">6/6</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="p-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                <div class="hero-panel hero-panel-center">
+                    <div class="char-details hero-name"><strong>Player<br><span id="p-class-name" style="color: #4facfe;">Rogue</span></strong></div>
+                    <div class="portrait-container hero-portrait-wrap" id="p-portrait-anchor">
+                        <div class="portrait hero-portrait" id="p-portrait"></div>
+                        <div class="portrait-tooltip hero-tooltip" id="p-portrait-tooltip"></div>
+                        <div id="player-ability-container" class="ability-orbit"></div>
+                    </div>
                 </div>
-                <div class="armor-box" style="border-color: #4facfe;">🛡️<span id="p-armor">2</span></div>
-                
-                <div id="player-ability-container" style="margin-left: 10px; display: flex; flex-direction: row; gap: 10px; flex-wrap: wrap;"></div>
-                <div class="status-container" id="p-statuses"></div>
+                <div class="hero-panel hero-panel-right">
+                    <div class="bars">
+                        <div class="bar-container"><div class="bar-label" id="p-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="p-hp-bar"></div></div><div class="bar-label">HP</div></div>
+                        <div class="bar-container"><div class="bar-label" id="p-stam-label">6/6</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="p-stam-bar"></div></div><div class="bar-label">ST</div></div>
+                    </div>
+                    <div class="armor-box" style="border-color: #4facfe;"><span id="p-armor">2</span></div>
+                </div>
             </div>
-            
-            <div class="controls" id="action-controls" style="display: flex; gap: 15px; align-items: center; margin-bottom: 5px;">
-                <button id="btn-block" class="basic-action-btn" onclick="addBasicAction('Block', 0, 1, 0, 'block')">
-                    <span style="font-size: 24px;">🛡️</span><br><b>Block</b><br><small>0⚡ | 1⏳</small>
-                </button>
-                <button id="btn-parry" class="basic-action-btn" onclick="addBasicAction('Parry', 1, 1, 0, 'parry')">
-                    <span style="font-size: 24px;">🤺</span><br><b>Parry</b><br><small>1⚡ | 1⏳</small>
-                </button>
+            <div class="controls" id="action-controls" style="display: flex; gap: 12px; align-items: center; margin-bottom: 5px;">
                 <button class="btn-danger basic-action-btn" onclick="backToMenu()" style="height: 100%;">
-                    <span style="font-size: 24px;">🚪</span><br><b>Menu</b><br><small>Quit</small>
+                    <span style="font-size: 20px;">Menu</span><br><b>Menu</b><br><small>Quit</small>
                 </button>
             </div>
-
             <div class="controls" id="exert-controls" style="display: none; flex-direction: column; gap: 10px; align-items: center; margin-bottom: 5px; background: rgba(255, 71, 87, 0.1); padding: 15px; border: 2px dashed #ff4757; border-radius: 10px;">
-                <h3 style="margin: 0; color: #ff4757; text-transform: uppercase; letter-spacing: 2px;">⚡ Phase 1: Exertion ⚡</h3>
+                <h3 style="margin: 0; color: #ff4757; text-transform: uppercase; letter-spacing: 2px;">PHASE 1: EXERTION</h3>
                 <p style="margin: 0; font-size: 14px; color: #ddd;">Select cards to burn for +1 Stamina each, or click confirm to skip.</p>
                 
                 <div style="display: flex; gap: 15px;">
@@ -155,7 +176,7 @@
                         CONFIRM & DRAW
                     </button>
                     <button class="btn-danger basic-action-btn" onclick="backToMenu()">
-                        <span style="font-size: 18px;">🚪</span><br><b>Menu</b>
+                        <span style="font-size: 18px;">Menu</span><br><b>Menu</b>
                     </button>                </div>
             </div>
             <div class="hand" id="player-hand" style="margin-top: 0; margin-bottom: 5px;"></div>
@@ -179,9 +200,9 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 20px; justify-content: center;">
-                    <button id="btn-lock" class="submit-btn" onclick="lockIn()">🔒 LOCK IN (0 ⚡)</button>
+                    <button id="btn-lock" class="submit-btn" onclick="lockIn()">LOCK IN (0 ST)</button>
                     
-                    <button id="btn-pivot" class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">🔄 PIVOT (-1 ⚡)</button>                    
+                    <button id="btn-pivot" class="submit-btn" onclick="pivot()" style="border-color: #f1c40f; color: #f1c40f;">PIVOT (-1 ST)</button>                    
                 </div>
             </div>
         </div>
@@ -194,8 +215,8 @@
     <div id="deck-builder-overlay" style="display:none;">
         <div id="deck-builder-modal">
             <div class="db-header">
-                <div class="db-title">🎴 Deck Builder</div>
-                <button class="db-close" onclick="closeDeckBuilder()">✕</button>
+                <div class="db-title">Deck Builder</div>
+                <button class="db-close" onclick="closeDeckBuilder()">X</button>
             </div>
 
             <div class="db-body">
@@ -218,7 +239,7 @@
                     <div class="db-row db-row-inline">
                         <div style="flex:1;">
                             <label>Search cards</label>
-                            <input id="db-search" type="text" placeholder="Search by name, type, keyword…" />
+                            <input id="db-search" type="text" placeholder="Search by name, type, keyword" />
                         </div>
                         <div style="width:160px;">
                             <label>Type</label>
@@ -253,13 +274,105 @@
                     </div>
 
                     <div class="db-hint">
-                        Tip: Base decks can’t be overwritten. Use <b>Duplicate</b> to create a custom deck, then Save.
+                        Tip: Base decks can't be overwritten. Use <b>Duplicate</b> to create a custom deck, then Save.
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Card Editor Overlay -->
+    <div id="card-editor-overlay" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(6px); z-index: 9998; align-items: center; justify-content: center; padding: 22px;">
+        <div id="card-editor-modal" class="ce-modal">
+            <div class="db-header ce-header">
+                <div class="db-title ce-title">Card Lab</div>
+                <button id="ce-btn-close" class="db-close">X</button>
+            </div>
+
+            <div class="db-body ce-body">
+                <div class="db-left ce-left">
+                    <div class="db-row ce-row-tight">
+                        <label>Search Cards</label>
+                        <input id="ce-search" type="text" placeholder="Search by id, name, type, effect" />
+                    </div>
+
+                    <div class="ce-filter-grid">
+                        <div><label>Type</label><select id="ce-filter-type"><option value="">All</option><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Buff</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
+                        <div><label>Cost Min</label><input id="ce-filter-cost-min" type="number" min="0" step="1" /></div>
+                        <div><label>Cost Max</label><input id="ce-filter-cost-max" type="number" min="0" step="1" /></div>
+                        <div><label>Mom Min</label><input id="ce-filter-mom-min" type="number" min="0" step="1" /></div>
+                        <div><label>Mom Max</label><input id="ce-filter-mom-max" type="number" min="0" step="1" /></div>
+                        <div><label>DMG Min</label><input id="ce-filter-dmg-min" type="number" min="0" step="1" /></div>
+                        <div><label>DMG Max</label><input id="ce-filter-dmg-max" type="number" min="0" step="1" /></div>
+                        <div><label>Keyword Contains</label><input id="ce-filter-keyword" type="text" placeholder="e.g. bleed, hypnotized" /></div>
+                        <div style="grid-column: span 2;"><label>Proficiency Filter (comma-separated)</label><input id="ce-filter-prof" type="text" placeholder="e.g. brute, wizard" /></div>
+                    </div>
+
+                    <div class="db-actions ce-actions-tight">
+                        <button id="ce-btn-clear-filters" class="db-btn">Clear Filters</button>
+                        <div id="ce-filter-count" class="ce-filter-count"></div>
+                    </div>
+
+                    <div id="ce-card-list" class="db-card-list ce-card-list"></div>
+                </div>
+
+                <div class="db-right ce-right">
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;"><label>Card ID</label><input id="ce-id" type="text" /></div>
+                        <div style="flex:1;"><label>Name</label><input id="ce-name" type="text" /></div>
+                    </div>
+                    <div class="db-row db-row-inline">
+                        <div style="width:150px;"><label>Type</label><select id="ce-type"><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Buff</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
+                        <div style="width:120px;"><label>Cost</label><input id="ce-cost" type="number" min="0" step="1" /></div>
+                        <div style="width:120px;"><label>Moments</label><input id="ce-moments" type="number" min="0" step="1" /></div>
+                        <div style="width:120px;"><label>DMG</label><input id="ce-dmg" type="number" min="0" step="1" /></div>
+                    </div>
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;"><label>Effect (optional)</label><input id="ce-effect" type="text" placeholder="e.g. buff_next_atk_3 / hypnotize" /></div>
+                        <div style="width:180px;"><label>Enhancer DMG</label><input id="ce-enhance-dmg" type="number" min="0" step="1" /></div>
+                    </div>
+                    <div class="db-row">
+                        <label>Description</label>
+                        <input id="ce-desc" type="text" placeholder="Card text shown in UI" />
+                    </div>
+                    <div class="db-actions">
+                        <button id="ce-btn-new" class="db-btn">New Card</button>
+                        <button id="ce-btn-save" class="db-btn">Save</button>
+                        <button id="ce-btn-delete" class="db-btn db-btn-danger">Remove Custom Override</button>
+                    </div>
+                    <div class="db-actions">
+                        <button id="ce-btn-export-json" class="db-btn">Export JSON</button>
+                        <button id="ce-btn-copy-snippet" class="db-btn">Copy CardsDB Snippet</button>
+                    </div>
+                    <div id="ce-status" class="db-hint"></div>
+
+                    <div class="ce-stats-box">
+                        <div class="ce-stats-title">Filter Statistics</div>
+                        <div id="ce-stats-summary" class="ce-stat-grid"></div>
+                        <div id="ce-stats-keywords" class="ce-chip-cloud"></div>
+                        <div class="ce-graph-grid">
+                            <div>
+                                <div class="ce-graph-title">Damage Distribution</div>
+                                <div id="ce-graph-dmg" class="ce-bars"></div>
+                            </div>
+                            <div>
+                                <div class="ce-graph-title">Cost Distribution</div>
+                                <div id="ce-graph-cost" class="ce-bars"></div>
+                            </div>
+                            <div>
+                                <div class="ce-graph-title">Moments Distribution</div>
+                                <div id="ce-graph-mom" class="ce-bars"></div>
+                            </div>
+                            <div>
+                                <div class="ce-graph-title">Type Distribution</div>
+                                <div id="ce-graph-type" class="ce-bars"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Tutorial overlay lives at the end of body so it can sit above everything -->
     <div id="tutorial-overlay">
         <div id="tutorial-dialogue">
@@ -270,15 +383,29 @@
     </div>
 
     <!-- Load scripts ONCE, in the correct order -->
+    <script src="data/cards.data.js"></script>
+    <script src="data/decks.data.js"></script>
+    <script src="data/characters.data.js"></script>
     <script src="data.js"></script>
     <script src="engine_runtime.js"></script>
     <script src="core.js"></script>
     <script src="deck_builder.js"></script>
+    <script src="card_editor.js"></script>
     <script src="ui.js"></script>
     <script src="game.js"></script>
     <script src="effects_registry.js"></script>
     <script src="resolution.js"></script>
     <script src="tutorial.js"></script> 
     <script src="tests.js"></script>
+    <script src="netplay.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+

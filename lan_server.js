@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /*
  * lan_server.js
  * Split Seconds LAN relay + static file server.
@@ -59,7 +59,12 @@ function normalizeRoomCode(raw) {
   return s.slice(0, 8);
 }
 
-function createRoom(roomCode) {
+function normalizeHostLabel(raw) {
+  const s = String(raw || '').trim().replace(/\s+/g, ' ');
+  if (!s) return 'Host';
+  return s.slice(0, 18);
+}
+function createRoom(roomCode, hostLabel) {
   const code = normalizeRoomCode(roomCode) || randomToken(6).toUpperCase();
   if (rooms.has(code)) return null;
 
@@ -74,7 +79,8 @@ function createRoom(roomCode) {
     updatedAt: now(),
     meta: {
       hostConnected: true,
-      guestConnected: false
+      guestConnected: false,
+      hostLabel: normalizeHostLabel(hostLabel)
     }
   };
 
@@ -173,14 +179,16 @@ async function handleApi(req, res, urlObj) {
     const body = await readJsonBody(req);
     const requested = normalizeRoomCode(body.roomCode);
 
-    const room = requested ? createRoom(requested) : createRoom();
+    const hostLabel = normalizeHostLabel(body.hostLabel);
+    const room = requested ? createRoom(requested, hostLabel) : createRoom('', hostLabel);
     if (!room) return sendError(res, 409, 'Room code already exists.');
 
     return sendJson(res, 200, {
       ok: true,
       roomCode: room.roomCode,
       role: 'host',
-      token: room.hostToken
+      token: room.hostToken,
+      hostLabel: room.meta.hostLabel
     });
   }
 
@@ -216,6 +224,24 @@ async function handleApi(req, res, urlObj) {
 
     const evt = pushEvent(room, role, type, body.payload || {});
     return sendJson(res, 200, { ok: true, eventId: evt.id });
+  }
+
+  if (req.method === 'GET' && urlObj.pathname === '/api/room/list') {
+    const list = [];
+    for (const room of rooms.values()) {
+      const canJoin = !room.guestToken;
+      list.push({
+        roomCode: room.roomCode,
+        hostLabel: room.meta?.hostLabel || 'Host',
+        guestConnected: !!room.meta?.guestConnected,
+        canJoin,
+        updatedAt: room.updatedAt,
+        createdAt: room.createdAt
+      });
+    }
+
+    list.sort((a, b) => b.updatedAt - a.updatedAt);
+    return sendJson(res, 200, { ok: true, rooms: list });
   }
 
   if (req.method === 'GET' && urlObj.pathname === '/api/room/poll') {
@@ -324,3 +350,4 @@ server.listen(PORT, () => {
   }
   console.log('Share one LAN URL above with the second device.');
 });
+

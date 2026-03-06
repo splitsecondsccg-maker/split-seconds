@@ -351,8 +351,10 @@ A host-authoritative LAN PvP mode is available.
 
 1. Run `node lan_server.js` from project root.
 2. Open one printed LAN URL on both devices.
-3. Use the in-game `LAN PvP (Same WiFi)` panel to host/join.
+3. Use `LAN PvP (Same WiFi)` panel:
+- Host clicks `Host Room` (optional name).
+- Guest can tap `Join` from `Open Rooms` list, or join by room code.
 
 Detailed setup and flow: `docs/LAN_PVP_QUICKSTART.md`.
 
-Current v1 limitation: LAN mode skips Flash/Pivot and resolves once both players lock planning.
+LAN PvP supports full battle flow, including Flash and Pivot synchronization.

@@ -90,6 +90,14 @@
             <button id="lan-join-btn" class="lan-btn">Join Room</button>
             <button id="lan-leave-btn" class="lan-btn lan-btn-danger">Leave</button>
         </div>
+        <div class="lan-pvp-row lan-pvp-row-meta">
+            <input id="lan-host-label" type="text" maxlength="18" placeholder="Your name (optional)" />
+            <button id="lan-refresh-btn" class="lan-btn lan-btn-secondary">Refresh Rooms</button>
+        </div>
+        <div class="lan-room-list-wrap">
+            <div class="lan-room-list-title">Open Rooms</div>
+            <div id="lan-room-list" class="lan-room-list"></div>
+        </div>
         <div id="lan-status" class="lan-status">Offline</div>
     </div>
 <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>

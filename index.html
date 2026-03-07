@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -359,6 +359,21 @@
                     <div class="db-row">
                         <label>Description</label>
                         <input id="ce-desc" type="text" placeholder="Card text shown in UI" />
+                    </div>
+                    <div class="ce-stats-box" style="margin-top:12px;">
+                        <div class="ce-stats-title">Character Lab</div>
+                        <div class="db-row db-row-inline">
+                            <div style="flex:1;"><label>Character</label><select id="ce-char-select"></select></div>
+                            <div style="flex:1;"><label>On-screen Name</label><input id="ce-char-display-name" type="text" placeholder="Display name" /></div>
+                        </div>
+                        <div class="db-row db-row-inline">
+                            <div style="flex:1;"><label>Ability 1</label><select id="ce-char-ability1"></select></div>
+                            <div style="flex:1;"><label>Ability 2</label><select id="ce-char-ability2"></select></div>
+                        </div>
+                        <div class="db-actions">
+                            <button id="ce-char-save" class="db-btn">Save Character</button>
+                            <button id="ce-char-reset" class="db-btn db-btn-danger">Remove Character Override</button>
+                        </div>
                     </div>
                     <div class="db-actions">
                         <button id="ce-btn-new" class="db-btn">New Card</button>

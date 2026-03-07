@@ -68,6 +68,18 @@
       defaultDeckId: "palea_base",
       abilityIds: { 1: "ability_palea_1", 2: "ability_palea_2" }
     },
+    "Ice Assassin": {
+      class: "assassin",
+      talents: ["ice"],
+      maxHp: 40,
+      maxStam: 7,
+      armor: 2,
+      passiveDesc: "If the opponent has 5+ FREEZE counters, your ATTACKs have +1 DMG.",
+      premise: "A tempo assassin that turns stacked FREEZE into clean finishing pressure.",
+      deckIds: ["ice_assassin_base"],
+      defaultDeckId: "ice_assassin_base",
+      abilityIds: { 1: "ability_ice_assassin_1", 2: "ability_ice_assassin_2" }
+    },
     "Ice Djinn": {
       class: "spirit",
       talents: ["ice", "sorcerer"],
@@ -89,7 +101,8 @@
     Vampiress: "vampiress.png",
     Necromancer: "necromancer.png",
     "Ice Djinn": "ice_djinn.png",
-    Palea: "palea.png"
+    Palea: "palea.png",
+    "Ice Assassin": "rogue.png"
   };
 
   window.SS_PROFICIENCY_ICONS = {
@@ -109,3 +122,5 @@
     spirit: "SPIRIT"
   };
 })();
+
+

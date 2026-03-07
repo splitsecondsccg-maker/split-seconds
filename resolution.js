@@ -1,4 +1,4 @@
-﻿function getEnhancerDamageBonus(action) {
+function getEnhancerDamageBonus(action) {
     if (!action || !Array.isArray(action.enhancers) || action.enhancers.length === 0) return 0;
     return action.enhancers.reduce((sum, enh) => sum + (enh?.enhance?.dmg || 0), 0);
 }
@@ -183,6 +183,7 @@ function resolveMoment() {
         if(pAction.type === 'attack') {
             let roguePenalty = state.player.statuses.rogueDebuff || 0;
             pDmg = pAction.dmg + state.player.statuses.nextAtkMod + getEnhancerDamageBonus(pAction) - roguePenalty;
+            if (state.player.class === 'Ice Assassin' && (state.ai.statuses?.freeze || 0) >= 5) pDmg += 1;
             state.player.statuses.nextAtkMod = 0; state.player.statuses.rogueDebuff = 0;
         }
         if(pAction.type === 'parry') pParry = true;
@@ -200,6 +201,7 @@ function resolveMoment() {
         if(aiAction.type === 'attack') {
             let roguePenalty = state.ai.statuses.rogueDebuff || 0;
             aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod + getEnhancerDamageBonus(aiAction) - roguePenalty;
+            if (state.ai.class === 'Ice Assassin' && (state.player.statuses?.freeze || 0) >= 5) aiDmg += 1;
             state.ai.statuses.nextAtkMod = 0; state.ai.statuses.rogueDebuff = 0;
         }
         if(aiAction.type === 'parry') aiParry = true;
@@ -582,6 +584,19 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                 }
             }
             break;
+        case 'forge_ice_dagger': {
+            const daggerBase = window.CardsDB?.ice_assassin_ice_dagger;
+            if (!daggerBase) break;
+            if ((source.hand || []).length >= 7) {
+                if (sourceKey === 'player') log('Hand full! Ice Dagger was not created.');
+                break;
+            }
+            const dagger = { ...daggerBase, uniqueId: 'uid_' + Math.random(), _deckId: source._deckId || 'generated' };
+            source.hand.push(dagger);
+            log(`${sourceKey} forges an Ice Dagger.`);
+            if (sourceKey === 'player') playSound('draw');
+            break;
+        }
         case 'spirit_form':
             source.statuses.armorNextTurn = (source.statuses.armorNextTurn || 0) + 2;
             log(`${sourceKey} will gain +2 Armor next turn.`);
@@ -782,5 +797,8 @@ function runTriggeredCardEffects(card, triggerName, args) {
         }
     }
 }
+
+
+
 
 

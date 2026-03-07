@@ -280,6 +280,11 @@ function getAllCharacters(){
     return Object.keys(classData || {});
 }
 
+function getCharacterLabel(charName){
+    if(typeof window.getCharacterDisplayName === 'function') return window.getCharacterDisplayName(charName);
+    return String(charName || '');
+}
+
 function pickRandomOpponent(excludeName){
     const chars = getAllCharacters().filter(c => c !== excludeName);
     if(chars.length === 0) return excludeName || (getAllCharacters()[0] || '');
@@ -451,6 +456,7 @@ function buildFightRoster(){
         const btn = document.createElement('button');
         btn.className = 'char-btn';
         btn.style.backgroundImage = `url('${charImages[name]}')`;
+        btn.dataset.charKey = name;
         btn.onclick = () => selectFightChar(name, btn);
 
         const row = Math.floor(i / cols);
@@ -458,14 +464,14 @@ function buildFightRoster(){
         btn.dataset.stagger = (row % 2 === 1) ? '1' : '0';
 
         const span = document.createElement('span');
-        span.innerText = name;
+        span.innerText = getCharacterLabel(name);
         btn.appendChild(span);
 
         // Same tooltip behavior as TCG view (hover reveals premise).
         const t = document.createElement('div');
         t.className = 'pitch-tooltip';
         const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
-        t.innerHTML = `<b style="color: #f1c40f;">The ${name}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+        t.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(name)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
         btn.appendChild(t);
 
         el.appendChild(btn);
@@ -482,6 +488,7 @@ function createTcgCharButton(target, name, rosterId){
     const btn = document.createElement('button');
     btn.className = 'char-btn';
     btn.style.backgroundImage = `url('${charImages[name]}')`;
+    btn.dataset.charKey = name;
     btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -489,13 +496,13 @@ function createTcgCharButton(target, name, rosterId){
     };
 
     const span = document.createElement('span');
-    span.innerText = name;
+    span.innerText = getCharacterLabel(name);
     btn.appendChild(span);
 
     const t = document.createElement('div');
     t.className = 'pitch-tooltip';
     const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
-    t.innerHTML = `<b style="color: #f1c40f;">The ${name}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+    t.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(name)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
     btn.appendChild(t);
 
     return btn;
@@ -615,12 +622,12 @@ function markFightRosterSelections(){
     if(!el) return;
     for(const btn of el.children){
         btn.classList.remove('selected','ai-selected','locked-player');
-        const label = btn.querySelector('span')?.innerText?.trim();
-        if(label === selectedPlayer){
+        const key = btn.dataset.charKey || btn.querySelector('span')?.innerText?.trim();
+        if(key === selectedPlayer){
             btn.classList.add('selected');
             if(__fightPlayerLocked) btn.classList.add('locked-player');
         }
-        if(__fightAiChosen && label === selectedAI){
+        if(__fightAiChosen && key === selectedAI){
             btn.classList.add('ai-selected');
         }
     }
@@ -631,8 +638,8 @@ function markRosterSelection(rosterId, selectedClass, charName){
     if(!el) return;
     for(const btn of el.children){
         btn.classList.remove(selectedClass);
-        const label = btn.querySelector('span')?.innerText?.trim();
-        if(label === charName) btn.classList.add(selectedClass);
+        const key = btn.dataset.charKey || btn.querySelector('span')?.innerText?.trim();
+        if(key === charName) btn.classList.add(selectedClass);
     }
 }
 
@@ -655,8 +662,8 @@ function updateFightingPortraits(){
 
     const pName = document.getElementById('fight-player-name');
     const aName = document.getElementById('fight-ai-name');
-    if(pName) pName.innerText = selectedPlayer;
-    if(aName) aName.innerText = __fightAiChosen ? selectedAI : '???';
+    if(pName) pName.innerText = getCharacterLabel(selectedPlayer);
+    if(aName) aName.innerText = __fightAiChosen ? getCharacterLabel(selectedAI) : '???';
 
     // Fighting View uses the same "pitch" tooltip style as TCG View.
     // We show the character premise on hover over the big portrait.
@@ -664,12 +671,12 @@ function updateFightingPortraits(){
     const aTip = document.getElementById('fight-ai-tooltip');
     if(pTip){
         const premise = pData?.premise || pData?.passiveDesc || '';
-        pTip.innerHTML = `<b style="color: #f1c40f;">The ${selectedPlayer}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+        pTip.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(selectedPlayer)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
     }
     if(aTip){
         if(__fightAiChosen && aData){
             const premise = aData?.premise || aData?.passiveDesc || '';
-            aTip.innerHTML = `<b style="color: #f1c40f;">The ${selectedAI}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+            aTip.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(selectedAI)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
         }else{
             aTip.innerHTML = '';
         }
@@ -829,7 +836,7 @@ function buildHeroTooltipHtml(charName, cData) {
     for (const t of ((cData && cData.talents) || [])) profs.push(String(t).toUpperCase());
     const chips = profs.map(p => '<span class="tt-prof-chip">' + p + '</span>').join('');
     const passive = (cData && cData.passiveDesc) ? cData.passiveDesc : 'No passive ability.';
-    return '<div class="tt-title">' + charName + '</div>' +
+    return '<div class="tt-title">' + getCharacterLabel(charName) + '</div>' +
         '<div class="tt-passive">' + passive + '</div>' +
         '<div class="tt-profs">' + chips + '</div>';
 }
@@ -843,8 +850,8 @@ function applyBattleMetaFromState() {
 
     const pClassEl = document.getElementById('p-class-name');
     const aiClassEl = document.getElementById('ai-class-name');
-    if (pClassEl) pClassEl.innerText = pName || '';
-    if (aiClassEl) aiClassEl.innerText = aiName || '';
+    if (pClassEl) pClassEl.innerText = getCharacterLabel(pName || '');
+    if (aiClassEl) aiClassEl.innerText = getCharacterLabel(aiName || '');
 
     const pPortrait = document.getElementById('p-portrait');
     const aiPortrait = document.getElementById('ai-portrait');
@@ -1231,6 +1238,16 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
+
+
+
+
+
+
+
+
+
+
 
 
 

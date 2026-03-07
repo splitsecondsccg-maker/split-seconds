@@ -26,6 +26,10 @@
     enhDmg: () => $('ce-enhance-dmg'),
     enhTargets: () => $('ce-enhance-targets'),
     status: () => $('ce-status'),
+    charSelect: () => $('ce-char-select'),
+    charDisplayName: () => $('ce-char-display-name'),
+    charAbility1: () => $('ce-char-ability1'),
+    charAbility2: () => $('ce-char-ability2'),
 
     filterType: () => $('ce-filter-type'),
     filterCostMin: () => $('ce-filter-cost-min'),
@@ -619,6 +623,78 @@
     if (countEl) countEl.textContent = `${filtered.length} / ${all.length} cards`;
   }
 
+  function getAbilityCardsForLab(){
+    return Object.values(window.CardsDB || {})
+      .filter(Boolean)
+      .filter(c => c.isAbility)
+      .sort((a,b)=> String(a.name || a.id).localeCompare(String(b.name || b.id)));
+  }
+
+  function renderCharacterLabOptions(){
+    const sel = UI.charSelect();
+    const a1 = UI.charAbility1();
+    const a2 = UI.charAbility2();
+    if (!sel || !a1 || !a2) return;
+
+    const chars = Object.keys(window.CharactersDB || {}).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = chars.map((name) => `<option value="${name}">${name}</option>`).join('');
+
+    const abilities = getAbilityCardsForLab();
+    const abilityOptions = abilities.map((ab) => `<option value="${ab.id}">${ab.name} (${ab.id})</option>`).join('');
+    a1.innerHTML = abilityOptions;
+    a2.innerHTML = abilityOptions;
+
+    if (!sel.value && chars.length) sel.value = chars[0];
+    loadSelectedCharacterLab();
+  }
+
+  function loadSelectedCharacterLab(){
+    const sel = UI.charSelect();
+    if (!sel) return;
+    const charName = String(sel.value || '').trim();
+    const c = (window.CharactersDB || {})[charName] || {};
+    const display = String(c.displayName || charName || '');
+    const ab1 = String(c?.abilityIds?.[1] || c?.abilityIds?.['1'] || '');
+    const ab2 = String(c?.abilityIds?.[2] || c?.abilityIds?.['2'] || '');
+    if (UI.charDisplayName()) UI.charDisplayName().value = display;
+    if (UI.charAbility1() && ab1) UI.charAbility1().value = ab1;
+    if (UI.charAbility2() && ab2) UI.charAbility2().value = ab2;
+  }
+
+  function saveCharacterLab(){
+    const sel = UI.charSelect();
+    if (!sel) return;
+    const charName = String(sel.value || '').trim();
+    if (!charName) return;
+    if (typeof window.upsertCustomCharacter !== 'function') return alert('Character editing APIs are missing.');
+
+    const patch = {
+      displayName: String(UI.charDisplayName()?.value || charName).trim(),
+      abilityIds: {
+        1: String(UI.charAbility1()?.value || '').trim(),
+        2: String(UI.charAbility2()?.value || '').trim()
+      }
+    };
+
+    window.upsertCustomCharacter(charName, patch);
+    if (typeof window.buildTCGRosters === 'function') window.buildTCGRosters();
+    if (typeof window.syncSelectionAcrossViews === 'function') window.syncSelectionAcrossViews();
+    setStatus(`Character saved: ${charName}`);
+  }
+
+  function resetCharacterLab(){
+    const sel = UI.charSelect();
+    if (!sel) return;
+    const charName = String(sel.value || '').trim();
+    if (!charName) return;
+    if (typeof window.deleteCustomCharacter !== 'function') return;
+    const ok = window.deleteCustomCharacter(charName);
+    if (!ok) return alert('No custom override found for this character.');
+    loadSelectedCharacterLab();
+    if (typeof window.buildTCGRosters === 'function') window.buildTCGRosters();
+    if (typeof window.syncSelectionAcrossViews === 'function') window.syncSelectionAcrossViews();
+    setStatus(`Character override removed: ${charName}`);
+  }
   function bind(){
     const overlay = UI.overlay();
     if (!overlay || overlay.dataset.bound === '1') return;
@@ -637,6 +713,9 @@
     UI.filterKeyword()?.addEventListener('input', refresh);
     UI.filterProf()?.addEventListener('input', refresh);
     UI.addEffectBtn()?.addEventListener('click', addCurrentEffectFromBuilder);
+    UI.charSelect()?.addEventListener('change', loadSelectedCharacterLab);
+    $("ce-char-save")?.addEventListener('click', saveCharacterLab);
+    $("ce-char-reset")?.addEventListener('click', resetCharacterLab);
 
     const copyBtn = $("ce-btn-copy-snippet");
     if (copyBtn) copyBtn.textContent = 'Copy Cards Snippet';
@@ -755,6 +834,7 @@
   function openCardEditor(){
     bind();
     populateEffectTypeOptions();
+    renderCharacterLabOptions();
     st.open = true;
     clearFilters();
     UI.overlay().style.display = 'flex';
@@ -775,6 +855,12 @@
   window.openCardEditor = openCardEditor;
   window.closeCardEditor = closeCardEditor;
 })();
+
+
+
+
+
+
 
 
 

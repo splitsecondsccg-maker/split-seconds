@@ -22,6 +22,8 @@
 
   const CUSTOM_CARDS_KEY = 'ss_custom_cards_v1';
   const BuiltinCardsDB = JSON.parse(JSON.stringify(CardsDB));
+  const CUSTOM_CHARACTERS_KEY = 'ss_custom_characters_v1';
+  const BuiltinCharactersDB = JSON.parse(JSON.stringify(CharactersDB));
 
   function loadCustomCardsMap() {
     try {
@@ -96,6 +98,87 @@
   }
 
   applyCustomCardsToDB();
+  function loadCustomCharactersMap() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_CHARACTERS_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return {};
+      return parsed;
+    } catch (e) {
+      console.warn('Failed to load custom characters:', e);
+      return {};
+    }
+  }
+
+  function saveCustomCharactersMap(map) {
+    try {
+      localStorage.setItem(CUSTOM_CHARACTERS_KEY, JSON.stringify(map || {}));
+    } catch (e) {
+      console.warn('Failed to save custom characters:', e);
+    }
+  }
+
+  function applyCustomCharactersToDB() {
+    const custom = loadCustomCharactersMap();
+    for (const [charName, patch] of Object.entries(custom)) {
+      if (!charName || !patch || typeof patch !== 'object') continue;
+      if (!CharactersDB[charName]) continue;
+      CharactersDB[charName] = { ...CharactersDB[charName], ...patch };
+      classData[charName] = CharactersDB[charName];
+    }
+  }
+
+  function upsertCustomCharacter(charName, patch) {
+    const key = String(charName || '').trim();
+    if (!key || !CharactersDB[key] || !patch || typeof patch !== 'object') return null;
+
+    const cleaned = { ...patch };
+    if (Object.prototype.hasOwnProperty.call(cleaned, 'displayName')) {
+      cleaned.displayName = String(cleaned.displayName || '').trim();
+    }
+    if (cleaned.abilityIds && typeof cleaned.abilityIds === 'object') {
+      cleaned.abilityIds = {
+        1: String(cleaned.abilityIds[1] || cleaned.abilityIds['1'] || '').trim(),
+        2: String(cleaned.abilityIds[2] || cleaned.abilityIds['2'] || '').trim()
+      };
+    }
+
+    const custom = loadCustomCharactersMap();
+    custom[key] = { ...(custom[key] || {}), ...cleaned };
+    saveCustomCharactersMap(custom);
+
+    CharactersDB[key] = { ...CharactersDB[key], ...cleaned };
+    classData[key] = CharactersDB[key];
+    return CharactersDB[key];
+  }
+
+  function deleteCustomCharacter(charName) {
+    const key = String(charName || '').trim();
+    if (!key) return false;
+    const custom = loadCustomCharactersMap();
+    if (!custom[key]) return false;
+    delete custom[key];
+    saveCustomCharactersMap(custom);
+    if (BuiltinCharactersDB[key]) {
+      CharactersDB[key] = JSON.parse(JSON.stringify(BuiltinCharactersDB[key]));
+      classData[key] = CharactersDB[key];
+    }
+    return true;
+  }
+
+  function isCustomCharacter(charName) {
+    const custom = loadCustomCharactersMap();
+    return !!custom[String(charName || '')];
+  }
+
+  function getCharacterDisplayName(charName) {
+    const c = CharactersDB?.[charName];
+    const dn = c?.displayName;
+    return (typeof dn === 'string' && dn.trim()) ? dn.trim() : String(charName || '');
+  }
+
+  applyCustomCharactersToDB();
 
   const CUSTOM_DECKS_KEY = 'ss_custom_decks_v1';
 
@@ -288,8 +371,17 @@
   window.deleteCustomCard = deleteCustomCard;
   window.isCustomCard = isCustomCard;
   window.BuiltinCardsDB = BuiltinCardsDB;
+  window.BuiltinCharactersDB = BuiltinCharactersDB;
 
   window.getAbilityIdForCharacter = getAbilityIdForCharacter;
+  window.loadCustomCharactersMap = loadCustomCharactersMap;
+  window.upsertCustomCharacter = upsertCustomCharacter;
+  window.deleteCustomCharacter = deleteCustomCharacter;
+  window.isCustomCharacter = isCustomCharacter;
+  window.getCharacterDisplayName = getCharacterDisplayName;
 })();
+
+
+
 
 

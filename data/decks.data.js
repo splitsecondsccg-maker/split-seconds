@@ -136,9 +136,32 @@
         { cardId: "ice_ice_spear", copies: 4 },
         { cardId: "ice_break_the_ice", copies: 2 },
         { cardId: "ice_ice_wall", copies: 4 }
+      ]    },
+    ice_assassin_base: {
+      id: "ice_assassin_base",
+      name: "Ice Assassin - Classic",
+      character: "Ice Assassin",
+      description: "Assassin tempo with freeze pressure and precision finishers.",
+      cards: [
+        { cardId: "rogue_quick_jab", copies: 3 },
+        { cardId: "rogue_flurry", copies: 3 },
+        { cardId: "rogue_lunging_dagger", copies: 3 },
+        { cardId: "rogue_cutthroat", copies: 2 },
+        { cardId: "rogue_kidney_strike", copies: 3 },
+        { cardId: "rogue_sharpen", copies: 2 },
+        { cardId: "rogue_coat_with_sedative", copies: 2 },
+        { cardId: "ice_cold_wind", copies: 3 },
+        { cardId: "ice_break_the_ice", copies: 2 }
       ]
     }
   };
 })();
+
+
+
+
+
+
+
 
 

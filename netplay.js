@@ -1013,7 +1013,7 @@
     else if (t === window.EngineRuntime?.ActionTypes?.ADD_BASIC_ACTION) ok = applyAddBasicForSide('ai', p);
     else if (t === window.EngineRuntime?.ActionTypes?.USE_ABILITY) ok = applyUseAbilityForSide('ai', p);
     else if (t === window.EngineRuntime?.ActionTypes?.TOGGLE_EXERT_CARD) {
-      if (window.state.phase === 'exert' && !net.guestExertConfirmed) {
+      if ((window.state.phase === 'exert' || window.state.phase === 'net_wait_exert') && !net.guestExertConfirmed) {
         const idx = Number(p.handIndex);
         if (Number.isFinite(idx) && idx >= 0 && idx < window.state.ai.hand.length) {
           const c = window.state.ai.hand[idx];
@@ -1494,7 +1494,19 @@
           }, 900);
           return { ok: true, skipUIRefresh: true };
         }
-        if (t === at.PLACE_CARD_FROM_HAND || t === at.RETURN_CARD_TO_HAND || t === at.ADD_BASIC_ACTION || t === at.USE_ABILITY || t === at.TOGGLE_EXERT_CARD) {
+        if (t === at.TOGGLE_EXERT_CARD) {
+          if (!net.guestExertConfirmed && (window.state.phase === 'exert' || window.state.phase === 'net_wait_exert')) {
+            const idx = Number(action?.payload?.handIndex);
+            if (Number.isFinite(idx) && idx >= 0 && idx < (window.state?.player?.hand?.length || 0)) {
+              const c = window.state.player.hand[idx];
+              if (c) c.selectedForExert = !c.selectedForExert;
+            }
+            if (typeof window.updateUI === 'function') window.updateUI();
+          }
+          sendEvent('guest_action', { action: safeJsonClone(action) }).catch(() => {});
+          return { ok: true, skipUIRefresh: true };
+        }
+        if (t === at.PLACE_CARD_FROM_HAND || t === at.RETURN_CARD_TO_HAND || t === at.ADD_BASIC_ACTION || t === at.USE_ABILITY) {
           sendEvent('guest_action', { action: safeJsonClone(action) }).catch(() => {});
           return { ok: true, skipUIRefresh: true };
         }
@@ -1730,6 +1742,8 @@
 
   window.addEventListener('load', init);
 })();
+
+
 
 
 

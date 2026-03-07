@@ -454,3 +454,302 @@
     margin-left: 8px !important;
   }
 }
+
+/* Final iPad landscape battle fit: keep portrait centered, move HP/ST left, avoid hand overlap */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  #game-screen #player-stats {
+    width: min(980px, 94vw) !important;
+    display: grid !important;
+    grid-template-columns: minmax(150px, 0.85fr) auto minmax(170px, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  #game-screen #player-stats .hero-panel-right {
+    grid-column: 1 !important;
+    justify-content: flex-end !important;
+    min-width: 0 !important;
+    padding-left: 0 !important;
+    margin: 0 10px 0 0 !important;
+    transform: none !important;
+  }
+
+  #game-screen #player-stats .hero-panel-center {
+    grid-column: 2 !important;
+    justify-self: center !important;
+    margin: 0 auto !important;
+  }
+
+  #game-screen #player-stats .hero-panel-left {
+    grid-column: 3 !important;
+    justify-content: flex-start !important;
+    margin-left: 8px !important;
+  }
+
+  #game-screen #player-stats .ability-orbit {
+    left: calc(100% + 6px) !important;
+    gap: 8px !important;
+  }
+
+  #game-screen #player-stats .ability-orbit .ability-btn,
+  #game-screen .circle-action-btn {
+    width: 78px !important;
+    height: 78px !important;
+    font-size: 11px !important;
+    line-height: 1.08 !important;
+    padding: 6px !important;
+  }
+
+  #game-screen #player-hand {
+    width: min(46vw, 500px) !important;
+    height: 164px !important;
+    right: 8px !important;
+    bottom: 0 !important;
+  }
+
+  #game-screen #exert-controls {
+    right: 12px !important;
+    bottom: 188px !important;
+    width: min(52vw, 560px) !important;
+  }
+
+  #game-screen .net-wait-indicator {
+    right: 14px !important;
+    bottom: 152px !important;
+    max-width: 44vw !important;
+  }
+}
+
+/* FINAL HARD OVERRIDE: iPad landscape old-style separation (hub left, hand/exert right) */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  #game-screen {
+    padding-right: 10px !important;
+  }
+
+  #game-screen .hero-portrait {
+    width: 152px !important;
+    height: 152px !important;
+  }
+
+  #game-screen #timeline-and-lock {
+    width: min(98vw, 980px) !important;
+    column-gap: 14px !important;
+    margin: 6px auto 8px auto !important;
+  }
+
+  #game-screen .timeline-stack {
+    width: min(72vw, 700px) !important;
+    gap: 8px !important;
+  }
+
+  #game-screen .timeline {
+    height: 92px !important;
+  }
+
+  #game-screen .bottom-bar {
+    display: grid !important;
+    grid-template-columns: minmax(480px, 56vw) minmax(300px, 42vw) !important;
+    align-items: end !important;
+    column-gap: 10px !important;
+    min-height: 220px !important;
+  }
+
+  #game-screen #player-stats {
+    grid-column: 1 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(140px, 0.75fr) auto minmax(170px, 1fr) !important;
+    align-items: center !important;
+    gap: 8px !important;
+    z-index: 60 !important;
+  }
+
+  #game-screen #player-stats .hero-panel-right {
+    grid-column: 1 !important;
+    justify-content: flex-end !important;
+    min-width: 0 !important;
+    margin: 0 8px 0 0 !important;
+    padding-left: 0 !important;
+  }
+
+  #game-screen #player-stats .hero-panel-center {
+    grid-column: 2 !important;
+    justify-self: center !important;
+  }
+
+  #game-screen #player-stats .hero-panel-left {
+    grid-column: 3 !important;
+    justify-content: flex-start !important;
+    margin-left: 4px !important;
+  }
+
+  #game-screen #player-stats .ability-orbit {
+    left: calc(100% + 4px) !important;
+    gap: 6px !important;
+    z-index: 55 !important;
+  }
+
+  #game-screen #player-stats .ability-orbit .ability-btn,
+  #game-screen .circle-action-btn {
+    width: 70px !important;
+    height: 70px !important;
+    font-size: 10px !important;
+    line-height: 1.04 !important;
+    padding: 5px !important;
+  }
+
+  #game-screen #player-hand {
+    grid-column: 2 !important;
+    position: relative !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 164px !important;
+    margin: 0 !important;
+    justify-self: end !important;
+    align-self: end !important;
+    z-index: 140 !important;
+  }
+
+  #game-screen #exert-controls {
+    grid-column: 2 !important;
+    position: relative !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    margin: 0 0 8px 0 !important;
+    z-index: 145 !important;
+  }
+
+  #game-screen .net-wait-indicator {
+    grid-column: 2 !important;
+    position: relative !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 0 6px 0 !important;
+    max-width: 100% !important;
+    z-index: 146 !important;
+  }
+
+  #game-screen #player-stats,
+  #game-screen #action-controls {
+    pointer-events: auto !important;
+  }
+}
+
+/* FINAL PORTRAIT iPad FIX: mini log button, no ghost row, hand+exert pinned */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  html, body {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  #app-scale-wrap,
+  #app-scale-root,
+  #game-screen {
+    height: calc(var(--vh, 1vh) * 100) !important;
+    min-height: 0 !important;
+  }
+
+  #game-screen {
+    padding-bottom: 0 !important;
+    padding-right: 8px !important;
+  }
+
+  #game-screen .bottom-bar {
+    position: relative !important;
+    display: block !important;
+    min-height: 320px !important;
+    padding-bottom: 178px !important;
+  }
+
+  #game-screen #player-stats {
+    width: min(96vw, 920px) !important;
+    margin: 0 auto !important;
+  }
+
+  #game-screen #player-hand {
+    position: absolute !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 0 !important;
+    transform: translateX(-50%) !important;
+    width: min(95vw, 760px) !important;
+    height: 168px !important;
+    margin: 0 !important;
+    z-index: 120 !important;
+  }
+
+  #game-screen #exert-controls {
+    position: absolute !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 176px !important;
+    transform: translateX(-50%) !important;
+    width: min(94vw, 760px) !important;
+    margin: 0 !important;
+    z-index: 125 !important;
+  }
+
+  #game-screen .net-wait-indicator {
+    position: absolute !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 142px !important;
+    transform: translateX(-50%) !important;
+    width: min(86vw, 640px) !important;
+    max-width: min(86vw, 640px) !important;
+    z-index: 126 !important;
+  }
+
+  /* Battle log as a small floating button; expands only on click */
+  #game-screen .log {
+    position: fixed !important;
+    top: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(58vw, 320px) !important;
+    max-height: 42vh !important;
+    height: auto !important;
+    z-index: 260 !important;
+    padding: 8px !important;
+  }
+
+  #game-screen .log .log-body {
+    max-height: 30vh !important;
+    overflow: auto !important;
+  }
+
+  #game-screen .log.collapsed {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 4px !important;
+    overflow: hidden !important;
+  }
+
+  #game-screen .log.collapsed .log-header {
+    margin: 0 !important;
+    justify-content: center !important;
+  }
+
+  #game-screen .log.collapsed .log-header strong {
+    display: none !important;
+  }
+
+  #game-screen .log.collapsed #battle-log-toggle {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    line-height: 30px !important;
+    text-align: center !important;
+  }
+}

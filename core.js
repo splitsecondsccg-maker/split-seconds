@@ -63,13 +63,13 @@ function punchPortrait(targetKey, power = 1) {
 
 
 function getIcon(type) {
-    if(type === 'attack') return 'Ã¢Å¡â€Ã¯Â¸Â';
-    if(type === 'grab') return 'Ã°Å¸Â¤Å¡';
-    if(type === 'block') return 'Ã°Å¸â€ºÂ¡Ã¯Â¸Â';
-    if(type === 'parry') return 'Ã°Å¸Â¤Âº';
-    if(type === 'enhancer') return '[ENH]';
-    if(type === 'utility') return 'Ã°Å¸â€™Â¨';
-    return 'Ã¢Å“Â¨'; // buff
+    if(type === 'attack') return '\u2694\uFE0F';
+    if(type === 'grab') return '\u270B';
+    if(type === 'block') return '\uD83D\uDEE1\uFE0F';
+    if(type === 'parry') return '\uD83E\uDD3A';
+    if(type === 'enhancer') return '\u2728';
+    if(type === 'utility') return '\uD83D\uDCA8';
+    return '\u2728';
 }
 
 const getBaseStatuses = () => ({ 
@@ -134,7 +134,7 @@ function applyFreezeCounters(sourceKey, targetKey, amount) {
     target.statuses.freeze = (target.statuses.freeze || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}Ã¢Ââ€ž`, 'float-freeze');
+    spawnFloatingText(targetKey, `+${amount} FREEZE`, 'float-freeze');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} FREEZE (${target.statuses.freeze}).`);
 }
 
@@ -147,7 +147,7 @@ function applyBleedCounters(sourceKey, targetKey, amount) {
     target.statuses.bleed = (target.statuses.bleed || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}Ã°Å¸Â©Â¸`, 'float-bleed');
+    spawnFloatingText(targetKey, `+${amount} BLEED`, 'float-bleed');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} BLEED (${target.statuses.bleed}).`);
 }
 
@@ -159,7 +159,7 @@ function applyPoisonCounters(sourceKey, targetKey, amount) {
     target.statuses.poison = (target.statuses.poison || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
-    spawnFloatingText(targetKey, `+${amount}Ã¢ËœÂ `, 'float-poison');
+    spawnFloatingText(targetKey, `+${amount} POISON`, 'float-poison');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} POISON (${target.statuses.poison}).`);
 }
 
@@ -383,7 +383,7 @@ function renderDeckPickerInto(containerId, target){
         if(locked) btn.classList.add('locked');
         btn.disabled = locked;
 
-        btn.innerText = getDeckName(id).replace(/^.*Ã¢â‚¬â€\s*/,''); // keep it short
+        btn.innerText = getDeckName(id).replace(/^(.*?)(?:—|-)\s*/, ''); // keep it short
         btn.onclick = (e) => {
             e.stopPropagation();
             selectDeck(target, id);
@@ -536,7 +536,7 @@ function selectChar(target, charName, rosterId = null, btnEl = null) {
     if(clicked) clicked.classList.add(selectedClass);
 
     if(target === 'player') selectedPlayer = charName;
-    if(target === 'ai') selectedAI = charName;
+    if(target === 'ai') { selectedAI = charName; __fightAiChosen = true; }
 
 
     // Keep deck selection valid for the newly chosen character
@@ -719,6 +719,20 @@ function selectFightChar(charName, btnEl){
     updateFightingPortraits();
 }
 
+function setFightOpponentPreview(charName, deckId = null){
+    const next = String(charName || '').trim();
+    if(!next) return;
+    selectedAI = next;
+    if(deckId){
+        selectedAIDeckId = String(deckId);
+    }
+    __fightAiChosen = true;
+    ensureValidDeckSelection('ai');
+    syncSelectionAcrossViews();
+    updateFightingPortraits();
+}
+window.setFightOpponentPreview = setFightOpponentPreview;
+
 // Expose for inline onclick handlers
 window.selectFightChar = selectFightChar;
 window.fightLockIn = fightLockIn;
@@ -779,6 +793,25 @@ function clearBattleLog(){
     if(body) body.innerHTML = '';
 }
 
+function setBattleLogDefaultCollapsed(){
+    ensureBattleLogUI();
+    const el = document.getElementById('battle-log');
+    if(!el) return;
+    const btn = document.getElementById('battle-log-toggle');
+    const isCoarse = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+    if(isCoarse){
+        el.classList.add('collapsed');
+    } else {
+        el.classList.remove('collapsed');
+    }
+    if(btn){
+        const collapsed = el.classList.contains('collapsed');
+        btn.textContent = collapsed ? '+' : '-';
+        btn.title = collapsed ? 'Expand' : 'Minimize';
+    }
+}
+window.setBattleLogDefaultCollapsed = setBattleLogDefaultCollapsed;
+
 function buildHeroTooltipHtml(charName, cData) {
     const profs = [];
     if (cData && cData.class) profs.push(String(cData.class).toUpperCase());
@@ -825,15 +858,20 @@ function startGame() {
     // - If opponent wasn't chosen yet, we randomize it from remaining characters.
     if(getCharSelectView() === 'fight'){
         if(!__fightPlayerLocked) __fightPlayerLocked = true;
+        const lanHostPvp = !!(window.__ssLanPvpMode && window.__ssLanPvpMode.enabled && window.__ssLanPvpMode.role === 'host');
         if(!__fightAiChosen){
-            selectedAI = pickRandomOpponent(selectedPlayer);
-            __fightAiChosen = true;
+            if (lanHostPvp && selectedAI) {
+                __fightAiChosen = true;
+            } else {
+                selectedAI = pickRandomOpponent(selectedPlayer);
+                __fightAiChosen = true;
 
-            // If we randomize the opponent, also pick a deck for them.
-            if(typeof pickRandomDeckIdForCharacter === 'function'){
-                selectedAIDeckId = pickRandomDeckIdForCharacter(selectedAI);
-            }else{
-                selectedAIDeckId = null;
+                // If we randomize the opponent, also pick a deck for them.
+                if(typeof pickRandomDeckIdForCharacter === 'function'){
+                    selectedAIDeckId = pickRandomDeckIdForCharacter(selectedAI);
+                }else{
+                    selectedAIDeckId = null;
+                }
             }
         }
     }
@@ -882,6 +920,7 @@ function startGame() {
 
 
     clearBattleLog();
+    setBattleLogDefaultCollapsed();
     drawCards(3, 'player'); drawCards(3, 'ai'); 
     nextTurn(true);
 }
@@ -935,7 +974,7 @@ function updateUI() {
     const actionUI = document.getElementById('action-controls');
     const defenseUI = document.getElementById('defense-controls');
     
-    if (state.phase === 'exert') {
+    if (state.phase === 'exert' || state.phase === 'net_wait_exert') {
         if (exertUI) exertUI.style.display = 'flex';
         if (actionUI) actionUI.style.display = 'none';
         if (defenseUI) defenseUI.style.display = 'none';
@@ -943,6 +982,10 @@ function updateUI() {
         if (exertUI) exertUI.style.display = 'none';
         if (actionUI) actionUI.style.display = 'flex';
         if (defenseUI) defenseUI.style.display = 'flex';
+    } else if (state.phase === 'net_wait_lock' || state.phase === 'net_wait_pivot_lock') {
+        if (exertUI) exertUI.style.display = 'none';
+        if (actionUI) actionUI.style.display = 'flex';
+        if (defenseUI) defenseUI.style.display = 'none';
     } else {
         // Hide both during clash/resolution
         if (exertUI) exertUI.style.display = 'none';
@@ -959,6 +1002,31 @@ function updateUI() {
     document.getElementById('ai-hp-label').innerText = `${state.ai.hp}/${state.ai.maxHp}`;
     document.getElementById('ai-stam-bar').style.height = `${(state.ai.stam / state.ai.maxStam) * 100}%`;
     document.getElementById('ai-stam-label').innerText = `${state.ai.stam}/${state.ai.maxStam}`;
+
+    const waitEl = document.getElementById('net-wait-indicator');
+    if (waitEl) {
+        let waitMsg = '';
+        if (state.phase === 'net_wait_exert') waitMsg = 'Waiting for opponent to confirm exert...';
+        else if (state.phase === 'net_wait_lock') waitMsg = 'Waiting for opponent to lock planning...';
+        else if (state.phase === 'net_wait_flash') waitMsg = 'Waiting for opponent flash decision...';
+        else if (state.phase === 'net_wait_pivot_lock') waitMsg = 'Waiting for opponent to lock pivot...';
+        else if (window.__ssLanWaitMessage) waitMsg = String(window.__ssLanWaitMessage);
+
+        if (waitMsg) {
+            waitEl.style.display = 'block';
+            waitEl.innerText = waitMsg;
+        } else {
+            waitEl.style.display = 'none';
+            waitEl.innerText = '';
+        }
+    }
+
+    const exertBtn = document.getElementById('btn-confirm-exert');
+    if (exertBtn) {
+        exertBtn.disabled = (state.phase !== 'exert');
+        if (state.phase === 'net_wait_exert') exertBtn.innerText = 'Waiting for Opponent...';
+        else if (state.phase === 'exert') exertBtn.innerText = 'Confirm Exert';
+    }
 
     // Dynamic armor (includes temporary bonuses / debuffs)
     const pArmorEl = document.getElementById('p-armor');
@@ -992,12 +1060,12 @@ function renderAbilities() {
             container.innerHTML += `
                 <div class="ability-wrapper">
                     <button class="ability-btn" ${char === 'player' ? `onclick="useAbility(${i})"` : ''}>
-                        Ã°Å¸Å’Å¸ <b>${ability.name}</b>
+                        <b>${ability.name}</b>
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
                         <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
-                        Cost: ${costDisplay}Ã¢Å¡Â¡ | Time: ${ability.moments}Ã¢ÂÂ³<br>
-                        ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}Ã¢Å¡â€Ã¯Â¸Â</span><br>` : ''}
+                        Cost: ${costDisplay} ST | Time: ${ability.moments} MOM<br>
+                        ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}</span><br>` : ''}
                         <i>${formatKeywords(ability.desc)}</i>
                     </div>
                 </div>
@@ -1028,7 +1096,7 @@ if((statuses.exhausted || 0) > 0) {
 if((statuses.freeze || 0) > 0) {
     const fr = statuses.freeze;
     const taxed = fr >= 10;
-    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' Ã‚Â· Attacks +1Ã¢Å¡Â¡' : ''}</div>`;
+    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' · Attacks +1 ST' : ''}</div>`;
     count++;
 }
 if((statuses.bleed || 0) > 0) {
@@ -1152,6 +1220,17 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
+
+
+
+
+
+
+
+
+
+
+
 
 
 

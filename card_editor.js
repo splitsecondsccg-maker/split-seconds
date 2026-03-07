@@ -6,7 +6,7 @@
 
   const $ = (id) => document.getElementById(id);
 
-  const UI = {
+    const UI = {
     overlay: () => $('card-editor-overlay'),
     list: () => $('ce-card-list'),
     search: () => $('ce-search'),
@@ -17,6 +17,11 @@
     moments: () => $('ce-moments'),
     dmg: () => $('ce-dmg'),
     effect: () => $('ce-effect'),
+    effectTrigger: () => $('ce-effect-trigger'),
+    effectType: () => $('ce-effect-type'),
+    effectValue: () => $('ce-effect-value'),
+    addEffectBtn: () => $('ce-add-effect'),
+    effectsList: () => $('ce-effects-list'),
     desc: () => $('ce-desc'),
     enhDmg: () => $('ce-enhance-dmg'),
     status: () => $('ce-status'),
@@ -54,7 +59,8 @@
       dmgMax: '',
       keyword: '',
       prof: ''
-    }
+    },
+    formEffects: []
   };
 
   function allEditableCards(){
@@ -71,6 +77,122 @@
     el.textContent = msg || '';
   }
 
+  
+  function normalizeTriggerName(t){
+    const s = String(t || '').trim().toLowerCase();
+    if (s === 'upon hit' || s === 'on hit' || s === 'hit' || s === 'on_hit') return 'on_hit';
+    if (s === 'upon block' || s === 'on block' || s === 'block' || s === 'on_block') return 'on_block';
+    if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
+    if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
+    if (s === 'on get blocked' || s === 'on_blocked' || s === 'upon being blocked') return 'on_blocked';
+    if (s === 'on get parried' || s === 'on_parried' || s === 'upon being parried') return 'on_parried';
+    return s.replace(/\s+/g, '_');
+  }
+
+  function normalizeEffectEntry(entry){
+    if (!entry) return null;
+    if (Array.isArray(entry)) {
+      const [tr, a, b] = entry;
+      const trigger = normalizeTriggerName(tr);
+      if (Array.isArray(a)) {
+        const [type, value] = a;
+        return { trigger, type: String(type || '').toLowerCase(), value: Math.max(1, Number(value) || 1) };
+      }
+      if (typeof a === 'string') {
+        return { trigger, type: a.toLowerCase(), value: Math.max(1, Number(b) || 1) };
+      }
+      return null;
+    }
+    if (typeof entry === 'object') {
+      const trigger = normalizeTriggerName(entry.trigger);
+      if (entry.type) return { trigger, type: String(entry.type || '').toLowerCase(), value: Math.max(1, Number(entry.value) || 1) };
+      if (entry.effect) {
+        if (Array.isArray(entry.effect)) {
+          const [type, value] = entry.effect;
+          return { trigger, type: String(type || '').toLowerCase(), value: Math.max(1, Number(value) || 1) };
+        }
+        if (typeof entry.effect === 'object' && entry.effect.type) {
+          return { trigger, type: String(entry.effect.type || '').toLowerCase(), value: Math.max(1, Number(entry.effect.value) || 1) };
+        }
+      }
+    }
+    return null;
+  }
+
+  function triggerLabel(key){
+    const map = {
+      on_hit: 'On Hit',
+      on_block: 'On Block',
+      on_parry: 'On Parry',
+      on_blocked: 'On Blocked',
+      on_parried: 'On Parried',
+      on_turn_end: 'On Turn End'
+    };
+    return map[key] || key;
+  }
+
+  function renderEffectsEditor(){
+    const el = UI.effectsList();
+    if (!el) return;
+    if (!Array.isArray(st.formEffects) || !st.formEffects.length) {
+      el.innerHTML = '<div class="ce-empty">No triggered effects on this card.</div>';
+      return;
+    }
+    el.innerHTML = st.formEffects.map((fx, idx) => `
+      <div class="ce-effect-pill">
+        <span><b>${triggerLabel(fx.trigger)}</b> -> ${String(fx.type || '').toUpperCase()} ${Number(fx.value || 0)}</span>
+        <button type="button" class="db-btn db-btn-danger" data-remove-effect="${idx}">x</button>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('button[data-remove-effect]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.getAttribute('data-remove-effect'));
+        if (!Number.isFinite(idx) || idx < 0 || idx >= st.formEffects.length) return;
+        st.formEffects.splice(idx, 1);
+        renderEffectsEditor();
+      });
+    });
+  }
+
+  function populateEffectTypeOptions(){
+    const el = UI.effectType();
+    if (!el) return;
+    const types = Object.keys(window.EffectTypeRegistry || {}).sort();
+    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted'];
+    const merged = [...new Set([...(types.length ? types : fallback), ...fallback])].sort();
+    const current = String(el.value || '').toLowerCase();
+    el.innerHTML = merged.map((t) => `<option value="${t}">${t.toUpperCase()}</option>`).join('');
+    if (current && merged.includes(current)) el.value = current;
+  }
+
+  function loadFormEffectsFromCard(card){
+    const out = [];
+    if (Array.isArray(card?.effects)) {
+      for (const rawFx of card.effects) {
+        const fx = normalizeEffectEntry(rawFx);
+        if (!fx || !fx.trigger || !fx.type) continue;
+        out.push(fx);
+      }
+    }
+    st.formEffects = out;
+    renderEffectsEditor();
+  }
+
+  function addCurrentEffectFromBuilder(){
+    const trigger = normalizeTriggerName(UI.effectTrigger()?.value || 'on_hit');
+    const type = String(UI.effectType()?.value || '').trim().toLowerCase();
+    const value = Math.max(1, Number(UI.effectValue()?.value) || 1);
+
+    if (!trigger || !type) {
+      setStatus('Choose trigger and effect type before adding.');
+      return;
+    }
+
+    st.formEffects.push({ trigger, type, value });
+    renderEffectsEditor();
+    setStatus('Effect added. Save card to apply.');
+  }
   function fillForm(card){
     if (!card) return;
     UI.id().value = card.id || '';
@@ -81,6 +203,8 @@
     UI.dmg().value = Number(card.dmg || 0);
     UI.effect().value = card.effect || '';
     UI.desc().value = card.desc || '';
+    populateEffectTypeOptions();
+    loadFormEffectsFromCard(card);
     UI.enhDmg().value = Number(card?.enhance?.dmg || 0);
     setStatus(window.isCustomCard && window.isCustomCard(card.id) ? 'Custom override: ON' : 'Built-in card');
   }
@@ -102,6 +226,14 @@
 
     const effect = String(UI.effect().value || '').trim();
     if (effect) out.effect = effect;
+
+    if (Array.isArray(st.formEffects) && st.formEffects.length) {
+      out.effects = st.formEffects.map((fx) => ({
+        trigger: normalizeTriggerName(fx.trigger),
+        type: String(fx.type || '').toLowerCase(),
+        value: Math.max(1, Number(fx.value) || 1)
+      }));
+    }
 
     if (type === 'enhancer') {
       out.moments = 0;
@@ -499,6 +631,7 @@
     UI.filterDmgMax()?.addEventListener('input', refresh);
     UI.filterKeyword()?.addEventListener('input', refresh);
     UI.filterProf()?.addEventListener('input', refresh);
+    UI.addEffectBtn()?.addEventListener('click', addCurrentEffectFromBuilder);
 
     const copyBtn = $("ce-btn-copy-snippet");
     if (copyBtn) copyBtn.textContent = 'Copy Cards Snippet';
@@ -539,7 +672,7 @@
     $('ce-btn-new')?.addEventListener('click', () => {
       const id = `custom_card_${Date.now()}`;
       st.selectedId = id;
-      fillForm({ id, name: 'New Card', type: 'attack', cost: 1, moments: 1, dmg: 1, desc: '' });
+      fillForm({ id, name: 'New Card', type: 'attack', cost: 1, moments: 1, dmg: 1, desc: '', effects: [] });
       setStatus('New card draft created. Save to apply.');
     });
 
@@ -616,6 +749,7 @@
 
   function openCardEditor(){
     bind();
+    populateEffectTypeOptions();
     st.open = true;
     clearFilters();
     UI.overlay().style.display = 'flex';
@@ -636,6 +770,16 @@
   window.openCardEditor = openCardEditor;
   window.closeCardEditor = closeCardEditor;
 })();
+
+
+
+
+
+
+
+
+
+
 
 
 

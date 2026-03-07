@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --panel: rgba(43, 43, 54, 0.85); --text: #f8f8f2;
 }
 body { 
@@ -1765,3 +1765,889 @@ body {
   }
 }
 
+
+/* =========================================================
+   Final Layout Stabilization (2026-03-06)
+   ========================================================= */
+
+#char-select-screen {
+  justify-content: flex-start !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 14px 24px;
+  gap: 6px;
+}
+
+#char-select-screen > .submit-btn {
+  margin: 8px 0 14px;
+  min-height: 68px;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.lan-pvp-panel {
+  margin: 8px auto 10px;
+  max-height: min(36vh, 280px);
+  overflow-y: auto;
+}
+
+.lan-room-list {
+  max-height: 120px;
+}
+
+#game-screen {
+  padding: 14px 248px 12px 14px !important;
+  gap: 8px;
+}
+
+.log {
+  width: 226px;
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+}
+
+#timeline-and-lock {
+  margin: 6px 0 8px !important;
+}
+
+.bottom-bar {
+  display: grid !important;
+  grid-template-columns: minmax(520px, 1fr) auto;
+  grid-template-areas:
+    "hero controls"
+    "hand hand";
+  align-items: end !important;
+  column-gap: 12px;
+  row-gap: 6px;
+}
+
+#player-stats {
+  grid-area: hero;
+}
+
+#action-controls,
+#exert-controls {
+  position: absolute !important;
+  left: auto !important;
+  right: 22px !important;
+  transform: none !important;
+  bottom: 206px;
+  z-index: 31;
+  width: min(620px, 62vw);
+  margin: 0 !important;
+}
+
+#action-controls .basic-action-btn {
+  height: 56px !important;
+  min-height: 56px;
+  padding: 8px 12px !important;
+}
+
+#exert-controls {
+  position: absolute !important;
+  left: auto !important;
+  right: 22px !important;
+  transform: none !important;
+  bottom: 206px;
+  z-index: 31;
+  width: min(620px, 62vw);
+  margin: 0 !important;
+}
+
+.hero-panel-right {
+  padding-left: 106px;
+}
+
+.ability-orbit {
+  left: calc(100% + 14px) !important;
+  z-index: 12;
+  gap: 12px !important;
+}
+
+.ability-orbit .ability-btn {
+  width: 90px !important;
+  height: 90px !important;
+  border-radius: 999px !important;
+  padding: 8px !important;
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.circle-action-btn {
+  width: 90px !important;
+  height: 90px !important;
+}
+
+.circle-action-btn small {
+  font-size: 10px !important;
+}
+
+.armor-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.armor-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* LAN drawer on character select */
+#char-select-screen #lan-pvp-panel {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translate(calc(100% - 46px), -50%);
+  width: min(430px, 90vw);
+  max-height: 78vh;
+  overflow-y: auto;
+  margin: 0 !important;
+  z-index: 220;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  transform: translate(0, -50%);
+}
+
+#lan-panel-toggle {
+  position: absolute;
+  left: -46px;
+  top: 14px;
+  width: 46px;
+  height: 104px;
+  border: 1px solid rgba(79, 172, 254, 0.7);
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  background: linear-gradient(180deg, rgba(18, 26, 44, 0.95), rgba(10, 18, 34, 0.95));
+  color: #9cd3ff;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  cursor: pointer;
+}
+
+#char-select-screen #lan-pvp-panel .lan-room-list {
+  max-height: 240px !important;
+}
+
+@media (max-width: 1220px) {
+  #game-screen {
+    padding-right: 20px !important;
+  }
+
+  .log {
+    position: static;
+    width: auto;
+    height: 200px;
+    margin-top: 8px;
+  }
+
+  #player-hand {
+    width: min(640px, 70vw) !important;
+  }
+
+  #exert-controls {
+  position: absolute !important;
+  left: auto !important;
+  right: 22px !important;
+  transform: none !important;
+  bottom: 206px;
+  z-index: 31;
+  width: min(620px, 62vw);
+  margin: 0 !important;
+}
+
+#action-controls .menu-corner-btn {
+  width: 112px;
+  height: 46px !important;
+  min-height: 46px;
+  padding: 0 12px !important;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 46px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.hero-panel-right {
+  padding-left: 132px;
+  min-width: 248px;
+}
+
+.ability-orbit {
+  left: calc(100% + 16px) !important;
+}
+
+.ability-orbit .ability-btn {
+  width: 86px !important;
+  height: 86px !important;
+  font-size: 12px !important;
+  line-height: 1.12 !important;
+  padding: 7px !important;
+}
+
+#timeline-and-lock {
+  width: calc(100% - 18px);
+  margin: 12px auto !important;
+}
+
+.timeline-stack {
+  width: min(920px, 78vw);
+}
+
+.timeline {
+  width: 100% !important;
+  height: 132px !important;
+}
+
+.slot {
+  font-size: 30px;
+}
+
+/* LAN arrow drawer */
+#char-select-screen #lan-pvp-panel {
+  transform: translate(calc(100% - 30px), -50%) !important;
+  width: min(440px, 92vw);
+  overflow: visible !important;
+  padding-left: 36px;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  transform: translate(0, -50%) !important;
+}
+
+#lan-panel-toggle {
+  left: 0;
+  top: 10px;
+  width: 30px;
+  height: 92px;
+  border-radius: 10px 0 0 10px;
+  writing-mode: horizontal-tb;
+  text-orientation: initial;
+  font-size: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
+}
+
+#char-select-screen #lan-pvp-panel .lan-pvp-title {
+  margin-right: 22px;
+}
+
+@media (max-width: 1220px) {
+  .bottom-bar {
+    min-height: 230px;
+  }
+
+  #player-hand {
+    position: static !important;
+    width: min(700px, 72vw) !important;
+    margin-left: auto !important;
+  }
+
+  .hero-panel-right {
+    padding-left: 104px;
+    min-width: 220px;
+  }
+
+  .timeline-stack {
+    width: min(900px, 92vw);
+  }
+}
+
+
+/* =========================================================
+   Hotfix Overrides (global, outside media)
+   ========================================================= */
+
+#action-controls {
+  position: fixed !important;
+  top: 12px !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1300 !important;
+}
+
+#action-controls .menu-corner-btn {
+  width: 112px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  line-height: 46px !important;
+  padding: 0 12px !important;
+  font-size: 24px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+#exert-controls {
+  position: absolute !important;
+  left: auto !important;
+  right: 22px !important;
+  bottom: 206px !important;
+  transform: none !important;
+  width: min(620px, 62vw) !important;
+  z-index: 40 !important;
+}
+
+.bottom-bar {
+  position: relative !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+}
+
+.bottom-bar #player-stats {
+  margin: 0 auto !important;
+}
+
+#player-hand {
+  position: absolute !important;
+  right: 10px !important;
+  bottom: 0 !important;
+  margin: 0 !important;
+  width: min(560px, 44vw) !important;
+  height: 186px !important;
+}
+
+.timeline-stack {
+  width: min(920px, 78vw) !important;
+}
+
+.timeline {
+  width: 100% !important;
+  height: 132px !important;
+}
+
+.hero-panel-right {
+  padding-left: 132px !important;
+  min-width: 248px !important;
+}
+
+.ability-orbit {
+  left: calc(100% + 16px) !important;
+}
+
+.ability-orbit .ability-btn {
+  width: 86px !important;
+  height: 86px !important;
+  font-size: 12px !important;
+  line-height: 1.12 !important;
+}
+
+#char-select-screen #lan-pvp-panel {
+  position: fixed !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translate(calc(100% - 30px), -50%) !important;
+  width: min(440px, 92vw) !important;
+  max-height: 78vh !important;
+  overflow-y: auto !important;
+  overflow-x: visible !important;
+  padding-left: 36px !important;
+  margin: 0 !important;
+  z-index: 220 !important;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  transform: translate(0, -50%) !important;
+}
+
+#lan-panel-toggle {
+  position: absolute !important;
+  left: 0 !important;
+  top: 10px !important;
+  width: 30px !important;
+  height: 92px !important;
+  border-radius: 10px 0 0 10px !important;
+  font-size: 20px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: initial !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* =========================================================
+   Stable Fixes (minimal)
+   ========================================================= */
+#action-controls {
+  position: fixed !important;
+  top: 12px !important;
+  left: 12px !important;
+  z-index: 1300 !important;
+}
+
+#action-controls .menu-corner-btn {
+  width: 112px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  line-height: 46px !important;
+  padding: 0 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+#exert-controls {
+  position: absolute !important;
+  left: auto !important;
+  right: 22px !important;
+  bottom: 206px !important;
+  transform: none !important;
+  width: min(620px, 62vw) !important;
+  z-index: 40 !important;
+}
+
+#char-select-screen #lan-pvp-panel {
+  transform: translate(calc(100% - 30px), -50%) !important;
+  overflow-x: visible !important;
+  padding-left: 36px !important;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  transform: translate(0, -50%) !important;
+}
+
+#lan-panel-toggle {
+  left: 0 !important;
+  top: 10px !important;
+  width: 30px !important;
+  height: 92px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: initial !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* =========================================================
+   Authoritative Layout Override v3
+   ========================================================= */
+
+#game-screen {
+  position: relative !important;
+}
+
+#game-screen .bottom-bar {
+  position: static !important;
+}
+
+#game-screen #action-controls {
+  position: absolute !important;
+  top: 12px !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1300 !important;
+}
+
+#game-screen #action-controls .menu-corner-btn {
+  width: 112px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  line-height: 46px !important;
+  padding: 0 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+#game-screen #exert-controls {
+  position: absolute !important;
+  top: auto !important;
+  left: auto !important;
+  right: 22px !important;
+  bottom: 206px !important;
+  transform: none !important;
+  width: min(620px, 62vw) !important;
+  z-index: 40 !important;
+}
+
+#game-screen #player-hand {
+  position: absolute !important;
+  right: 10px !important;
+  bottom: 0 !important;
+  width: min(560px, 44vw) !important;
+  height: 186px !important;
+  margin: 0 !important;
+}
+
+#game-screen #player-stats {
+  width: min(980px, 72vw) !important;
+  margin: 0 auto !important;
+}
+
+#game-screen #timeline-and-lock {
+  width: min(1220px, calc(100vw - 320px)) !important;
+  margin: 12px auto !important;
+}
+
+#game-screen .timeline-stack {
+  width: min(920px, calc(100vw - 420px)) !important;
+}
+
+#game-screen .timeline {
+  width: 100% !important;
+  height: 132px !important;
+}
+
+/* LAN drawer: collapsed tab with arrow, expand left */
+#char-select-screen #lan-pvp-panel {
+  position: fixed !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 34px !important;
+  max-height: 78vh !important;
+  margin: 0 !important;
+  padding: 10px 10px 10px 34px !important;
+  overflow: hidden !important;
+  transition: width 180ms ease !important;
+  z-index: 220 !important;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  width: min(430px, 92vw) !important;
+}
+
+#lan-panel-toggle {
+  position: absolute !important;
+  left: 0 !important;
+  top: 10px !important;
+  width: 34px !important;
+  height: 94px !important;
+  border-radius: 10px 0 0 10px !important;
+  font-size: 20px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: initial !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+#char-select-screen #lan-pvp-panel:not(.open) .lan-pvp-title,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-pvp-row,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-room-list-wrap,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-status {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================================
+   iPad / Touch Compatibility Guard
+   ========================================================= */
+
+@media (max-width: 1280px), (hover: none) and (pointer: coarse) {
+  #game-screen {
+    padding-right: 20px !important;
+  }
+
+  #game-screen #timeline-and-lock {
+    width: min(980px, 96vw) !important;
+    margin: 10px auto !important;
+  }
+
+  #game-screen .timeline-stack {
+    width: min(900px, 96vw) !important;
+  }
+
+  #game-screen .timeline {
+    height: 120px !important;
+  }
+
+  #game-screen #player-stats {
+    width: min(980px, 96vw) !important;
+  }
+
+  #game-screen #player-hand {
+    position: static !important;
+    width: min(700px, 78vw) !important;
+    height: 176px !important;
+    margin-left: auto !important;
+  }
+
+  #game-screen #exert-controls {
+    position: static !important;
+    width: min(760px, 96vw) !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    transform: none !important;
+  }
+
+  #game-screen #action-controls {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+  }
+
+  #game-screen .hero-panel-right {
+    padding-left: 96px !important;
+    min-width: 210px !important;
+  }
+
+  #game-screen .ability-orbit {
+    left: calc(100% + 10px) !important;
+  }
+
+  #game-screen .ability-orbit .ability-btn {
+    width: 78px !important;
+    height: 78px !important;
+    font-size: 11px !important;
+  }
+
+  #char-select-screen #lan-pvp-panel.open {
+    width: min(420px, 92vw) !important;
+    max-height: 72vh !important;
+  }
+}
+
+/* =========================================================
+   FINAL DETERMINISTIC LAYOUT FIX (do not override below)
+   ========================================================= */
+#game-screen {
+  position: relative !important;
+  padding: 14px 248px 12px 14px !important; /* reserve room for battle log */
+  gap: 8px !important;
+}
+
+#game-screen .log {
+  position: absolute !important;
+  right: 10px !important;
+  top: 10px !important;
+  bottom: 10px !important;
+  width: 226px !important;
+}
+
+#game-screen #timeline-and-lock {
+  width: min(1240px, calc(100vw - 300px)) !important;
+  margin: 10px auto 12px auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 28px !important;
+}
+
+#game-screen .timeline-stack {
+  width: min(980px, calc(100vw - 420px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+#game-screen .timeline {
+  width: 100% !important;
+  height: 132px !important;
+}
+
+#game-screen .slot {
+  font-size: 30px !important;
+}
+
+#game-screen .bottom-bar {
+  position: relative !important;
+  display: block !important;
+  min-height: 250px !important;
+}
+
+#game-screen #player-stats {
+  width: min(1020px, calc(100vw - 320px)) !important;
+  margin: 0 auto !important;
+}
+
+#game-screen #player-hand {
+  position: absolute !important;
+  right: 10px !important;
+  bottom: 0 !important;
+  width: min(560px, 44vw) !important;
+  height: 190px !important;
+  margin: 0 !important;
+}
+
+/* Menu button must stay top-left */
+#game-screen #action-controls {
+  position: fixed !important;
+  top: 12px !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1300 !important;
+}
+
+#game-screen #action-controls .menu-corner-btn {
+  width: 112px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  line-height: 46px !important;
+  padding: 0 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+/* Exert panel above hand, not on the far edge */
+#game-screen #exert-controls {
+  position: absolute !important;
+  right: 24px !important;
+  left: auto !important;
+  bottom: 214px !important;
+  width: min(620px, 60vw) !important;
+  z-index: 60 !important;
+  transform: none !important;
+}
+
+/* Keep portrait centered; hand should not push it */
+#game-screen .hero-panel-right {
+  padding-left: 128px !important;
+  min-width: 248px !important;
+}
+
+#game-screen .ability-orbit {
+  left: calc(100% + 14px) !important;
+  z-index: 12 !important;
+  gap: 10px !important;
+}
+
+#game-screen .ability-orbit .ability-btn,
+#game-screen .circle-action-btn {
+  width: 90px !important;
+  height: 90px !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+  padding: 8px !important;
+}
+
+#game-screen .circle-action-btn small {
+  font-size: 10px !important;
+}
+
+/* LAN drawer: right-side arrow tab that expands left */
+#char-select-screen #lan-pvp-panel {
+  position: fixed !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  max-height: 78vh !important;
+  margin: 0 !important;
+  padding: 10px 10px 10px 36px !important;
+  overflow: hidden !important;
+  transition: width 180ms ease !important;
+  z-index: 500 !important;
+}
+
+#char-select-screen #lan-pvp-panel.open {
+  width: min(430px, 92vw) !important;
+}
+
+#char-select-screen #lan-pvp-panel:not(.open) .lan-pvp-title,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-pvp-row,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-room-list-wrap,
+#char-select-screen #lan-pvp-panel:not(.open) .lan-status {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#lan-panel-toggle {
+  position: absolute !important;
+  left: 0 !important;
+  top: 10px !important;
+  width: 36px !important;
+  height: 96px !important;
+  border-radius: 10px 0 0 10px !important;
+  font-size: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  padding: 0 !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
+
+@media (max-width: 1220px), (hover: none) and (pointer: coarse) {
+  #game-screen {
+    padding-right: 20px !important;
+  }
+
+  #game-screen .log {
+    position: static !important;
+    width: auto !important;
+    height: 200px !important;
+    margin-top: 10px !important;
+  }
+
+  #game-screen #timeline-and-lock {
+    width: min(980px, 96vw) !important;
+  }
+
+  #game-screen .timeline-stack {
+    width: min(920px, 96vw) !important;
+  }
+
+  #game-screen #player-stats {
+    width: min(980px, 96vw) !important;
+  }
+
+  #game-screen #player-hand {
+    position: static !important;
+    width: min(700px, 78vw) !important;
+    margin-left: auto !important;
+  }
+
+  #game-screen #exert-controls {
+    position: static !important;
+    width: min(760px, 96vw) !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* =========================================================
+   FINAL: Larger HP/ST bars (visibility boost)
+   ========================================================= */
+#game-screen .bars {
+  gap: 12px !important;
+}
+
+#game-screen .bar-container {
+  width: 52px !important;
+  height: 108px !important;
+  border-width: 2px !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55) !important;
+}
+
+#game-screen .v-bar-fill.hp-fill {
+  background: linear-gradient(0deg, #b80f1f, #ff5a67) !important;
+}
+
+#game-screen .v-bar-fill.stam-fill {
+  background: linear-gradient(0deg, #d48a00, #ffd84a) !important;
+}
+
+#game-screen .bar-label {
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85) !important;
+}
+
+#game-screen #ai-hp-label,
+#game-screen #ai-stam-label,
+#game-screen #p-hp-label,
+#game-screen #p-stam-label {
+  font-size: 14px !important;
+}
+
+/* Brace balance fix */
+}

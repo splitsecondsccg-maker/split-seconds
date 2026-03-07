@@ -6,6 +6,7 @@
 
   const API_BASE = '/api/room';
   const LAN_HOST_LABEL_KEY = 'ss_lan_host_label';
+  const LAN_UNAVAILABLE_MSG = 'LAN PvP requires http:// or https://. Run: node lan_server.js and open the LAN URL.';
 
   const net = {
     mode: 'offline', // offline | lan-host | lan-guest
@@ -31,6 +32,8 @@
     hostPivotLocked: false,
     guestPivotLocked: false,
     ui: {
+      panel: null,
+      panelToggle: null,
       roomInput: null,
       hostLabelInput: null,
       hostBtn: null,
@@ -47,20 +50,35 @@
       backToMenu: null,
       updateUI: null,
       selectChar: null,
-      selectDeck: null
+      selectDeck: null,
+      selectFightChar: null,
+      fightLockIn: null
     }
   };
 
   let snapshotScheduled = false;
+  let lastUiSnapshotAt = 0;
   let roomListTimer = null;
 
   function isHost() { return net.mode === 'lan-host'; }
   function isGuest() { return net.mode === 'lan-guest'; }
   function isActive() { return isHost() || isGuest(); }
+  function canUseLanApi() {
+    return typeof location !== 'undefined' && (location.protocol === 'http:' || location.protocol === 'https:');
+  }
 
   function setStatus(msg) {
     if (net.ui.status) net.ui.status.textContent = msg || '';
   }
+  function setBattleWaitMessage(msg) {
+    const text = String(msg || '');
+    window.__ssLanWaitMessage = text;
+    const el = document.getElementById('net-wait-indicator');
+    if (!el) return;
+    if (text) { el.style.display = 'block'; el.innerText = text; }
+    else { el.style.display = 'none'; el.innerText = ''; }
+  }
+
 
   function safeJsonClone(v) {
     return JSON.parse(JSON.stringify(v));
@@ -85,6 +103,9 @@
   }
 
   async function fetchJson(url, options) {
+    if (!canUseLanApi()) {
+      throw new Error(LAN_UNAVAILABLE_MSG);
+    }
     const res = await fetch(url, {
       method: options?.method || 'GET',
       headers: { 'Content-Type': 'application/json' },
@@ -179,6 +200,10 @@
 
   async function refreshRoomList() {
     if (!net.ui.roomList) return;
+    if (!canUseLanApi()) {
+      renderRoomList([]);
+      return;
+    }
     try {
       const data = await apiListRooms();
       renderRoomList(data.rooms || []);
@@ -188,6 +213,11 @@
   }
 
   function startRoomListPolling() {
+    if (!canUseLanApi()) {
+      renderRoomList([]);
+      setStatus(LAN_UNAVAILABLE_MSG);
+      return;
+    }
     if (roomListTimer) clearInterval(roomListTimer);
     refreshRoomList().catch(() => {});
     roomListTimer = setInterval(() => {
@@ -257,10 +287,23 @@
   function startPolling() {
     stopPolling();
     pollOnce();
-    net.pollTimer = setInterval(pollOnce, 420);
+    net.pollTimer = setInterval(pollOnce, 160);
   }
 
+  
+  function toggleLanPanel() {
+    const panel = net.ui.panel || document.getElementById('lan-pvp-panel');
+    const toggle = net.ui.panelToggle || document.getElementById('lan-panel-toggle');
+    if (!panel) return false;
+    net.ui.panel = panel;
+    if (toggle) net.ui.panelToggle = toggle;
+    const open = panel.classList.toggle('open');
+    if (toggle) toggle.textContent = open ? '\u25B6' : '\u25C0';
+    return open;
+  }
   function bindUi() {
+    net.ui.panel = document.getElementById('lan-pvp-panel');
+    net.ui.panelToggle = document.getElementById('lan-panel-toggle');
     net.ui.roomInput = document.getElementById('lan-room-code');
     net.ui.hostLabelInput = document.getElementById('lan-host-label');
     net.ui.hostBtn = document.getElementById('lan-host-btn');
@@ -271,6 +314,20 @@
     net.ui.status = document.getElementById('lan-status');
 
     if (!net.ui.hostBtn || !net.ui.joinBtn || !net.ui.leaveBtn) return;
+    if (!canUseLanApi()) {
+      net.ui.hostBtn.disabled = true;
+      net.ui.joinBtn.disabled = true;
+      net.ui.leaveBtn.disabled = true;
+      if (net.ui.refreshBtn) net.ui.refreshBtn.disabled = true;
+    }
+    if (net.ui.panelToggle && net.ui.panelToggle.dataset.bound !== '1') {
+      net.ui.panelToggle.dataset.bound = '1';
+      net.ui.panelToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleLanPanel();
+      });
+    }
 
     if (net.ui.roomInput) {
       net.ui.roomInput.addEventListener('input', () => {
@@ -360,6 +417,12 @@
     sendEvent('selection_update', sel).catch(() => {});
   }
 
+  function sendHostSelectionToGuest() {
+    if (!isHost() || !net.guestConnected) return;
+    const sel = getSelectedForLocalPlayer();
+    sendEvent('host_selection_update', sel).catch(() => {});
+  }
+
   function applyGuestSelectionOnHost(sel) {
     if (!isHost() || !sel) return;
     const nextChar = String(sel.char || '').trim();
@@ -368,11 +431,38 @@
 
     net.guestSelection = { char: nextChar, deckId: nextDeck || null };
 
-    if (typeof window.selectChar === 'function') {
-      try { window.selectChar('ai', nextChar); } catch (e) {}
+    if (typeof window.setFightOpponentPreview === 'function') {
+      try { window.setFightOpponentPreview(nextChar, nextDeck || null); } catch (e) {}
     }
-    if (nextDeck && typeof window.selectDeck === 'function') {
-      try { window.selectDeck('ai', nextDeck); } catch (e) {}
+
+    const selectCharFn = net.original.selectChar || window.selectChar;
+    const selectDeckFn = net.original.selectDeck || window.selectDeck;
+    if (typeof selectCharFn === 'function') {
+      try { selectCharFn('ai', nextChar); } catch (e) {}
+    }
+    if (nextDeck && typeof selectDeckFn === 'function') {
+      try { selectDeckFn('ai', nextDeck); } catch (e) {}
+    }
+  }
+
+
+  function applyHostSelectionOnGuest(sel) {
+    if (!isGuest() || !sel) return;
+    const nextChar = String(sel.char || '').trim();
+    const nextDeck = String(sel.deckId || '').trim();
+    if (!nextChar) return;
+
+    if (typeof window.setFightOpponentPreview === 'function') {
+      try { window.setFightOpponentPreview(nextChar, nextDeck || null); } catch (e) {}
+    }
+
+    const selectCharFn = net.original.selectChar || window.selectChar;
+    const selectDeckFn = net.original.selectDeck || window.selectDeck;
+    if (typeof selectCharFn === 'function') {
+      try { selectCharFn('ai', nextChar); } catch (e) {}
+    }
+    if (nextDeck && typeof selectDeckFn === 'function') {
+      try { selectDeckFn('ai', nextDeck); } catch (e) {}
     }
   }
 
@@ -444,6 +534,9 @@
     }
     if (basePhase === 'exert' && meta.guestExertConfirmed && !meta.hostExertConfirmed) {
       return 'net_wait_exert';
+    }
+    if (basePhase === 'net_wait_exert' && !meta.guestExertConfirmed) {
+      return 'exert';
     }
     if (basePhase === 'flash' && meta.guestFlashSubmitted && !meta.hostFlashSubmitted) {
       return 'net_wait_flash';
@@ -518,6 +611,39 @@
     });
   }
 
+  function clearGuestResolutionVisuals() {
+    document.querySelectorAll('.slot, .card').forEach((el) => {
+      el.style.boxShadow = 'none';
+      el.style.filter = 'none';
+    });
+    document.querySelectorAll('.resolving').forEach((el) => el.classList.remove('resolving'));
+  }
+
+  function applyGuestResolutionVisuals() {
+    clearGuestResolutionVisuals();
+    const idx = Number(window.state?.currentMoment);
+    if (!Number.isFinite(idx) || idx < 0 || idx > 4) return;
+
+    const pSlot = document.querySelector(`#player-timeline .slot:nth-child(${idx + 1})`);
+    const aiSlot = document.querySelector(`#ai-timeline .slot:nth-child(${idx + 1})`);
+    const pCard = document.getElementById(`p-card-mom-${idx + 1}`);
+    const aiCard = document.getElementById(`ai-card-mom-${idx + 1}`);
+
+    const glowTarget = (slot, card) => {
+      const t = card || slot;
+      if (!t) return;
+      t.style.boxShadow = '0 0 20px 8px rgba(255, 255, 255, 0.7)';
+      if (card) {
+        card.style.filter = 'brightness(1.2)';
+      }
+    };
+
+    glowTarget(pSlot, pCard);
+    glowTarget(aiSlot, aiCard);
+    if (pCard) pCard.classList.add('resolving');
+    if (aiCard) aiCard.classList.add('resolving');
+  }
+
   function paintLocalPivotGlow() {
     clearLocalPivotGlow();
     const slots = Array.isArray(window.state?.pivotSlots) ? window.state.pivotSlots : [];
@@ -543,6 +669,9 @@
     if (typeof window.renderAITimeline === 'function') window.renderAITimeline();
     if (typeof window.updateUI === 'function') window.updateUI();
 
+    if (phase === 'resolution') applyGuestResolutionVisuals();
+    else clearGuestResolutionVisuals();
+
     if (phase === 'flash') {
       const f = payload?.meta?.flash || {};
       applyFlashHighlights(f.moment);
@@ -553,12 +682,17 @@
       hideFlashModal();
       clearLocalPivotGlow();
     } else {
+      if (phase === 'net_wait_exert') setBattleWaitMessage('Waiting for opponent to confirm exert...');
+      else if (phase === 'net_wait_lock') setBattleWaitMessage('Waiting for opponent to lock planning...');
+      else if (phase === 'net_wait_flash') setBattleWaitMessage('Waiting for opponent flash decision...');
+      else if (phase !== 'pivot_wait') setBattleWaitMessage('');
       clearFlashHighlights();
       hideFlashModal();
       if (phase !== 'pivot_wait' && phase !== 'net_wait_pivot_lock') clearLocalPivotGlow();
     }
 
     if (phase === 'pivot_wait' || phase === 'net_wait_pivot_lock') {
+      if (phase === 'net_wait_pivot_lock') setBattleWaitMessage('Waiting for opponent to lock pivot...');
       paintLocalPivotGlow();
     }
   }
@@ -933,6 +1067,7 @@
     window.state.ai.statuses.drawLess = 0;
 
     window.state.phase = 'planning';
+    setBattleWaitMessage('');
     net.hostExertConfirmed = false;
     net.guestExertConfirmed = false;
     net.hostPlanningLocked = false;
@@ -961,6 +1096,8 @@
     net.hostExertConfirmed = true;
     if (net.guestExertConfirmed) applyBothExertAndEnterPlanning();
     else {
+      window.state.phase = 'net_wait_exert';
+      setBattleWaitMessage('Waiting for opponent to confirm exert...');
       if (typeof window.updateUI === 'function') window.updateUI();
       scheduleHostSnapshot('host_exert_confirm');
     }
@@ -1074,6 +1211,7 @@
       finalizeHostFlashDecisions();
     } else {
       if (typeof window.log === 'function') window.log('[LAN] Host chose. Waiting for guest Flash decision...');
+      setBattleWaitMessage('Waiting for opponent flash decision...');
       if (typeof window.updateUI === 'function') window.updateUI();
       scheduleHostSnapshot('host_flash_decision');
     }
@@ -1091,6 +1229,7 @@
       hostBeginResolutionNow();
     } else {
       if (typeof window.log === 'function') window.log('[LAN] Host pivot locked. Waiting for guest...');
+      setBattleWaitMessage('Waiting for opponent to lock pivot...');
       if (typeof window.updateUI === 'function') window.updateUI();
       scheduleHostSnapshot('host_pivot_lock');
     }
@@ -1106,6 +1245,7 @@
       hostBeginFlashPhase();
     } else {
       if (typeof window.log === 'function') window.log('[LAN] Host locked. Waiting for guest...');
+      setBattleWaitMessage('Waiting for opponent to lock planning...');
       if (typeof window.updateUI === 'function') window.updateUI();
       scheduleHostSnapshot('host_planning_lock');
     }
@@ -1122,6 +1262,7 @@
     net.guestPivotLocked = false;
 
     window.state.phase = 'flash';
+    setBattleWaitMessage('');
     window.state.pivotSlots = null;
     window.state.aiPivotSlots = null;
     window.state.flashMoment = hostRandInt(5);
@@ -1163,6 +1304,7 @@
     window.state.pivotSlots = null;
     window.state.aiPivotSlots = null;
     window.state.phase = 'resolution';
+    setBattleWaitMessage('');
 
     if (typeof window.log === 'function') window.log('[LAN] Both players locked. Resolving timeline.');
     document.querySelectorAll('button').forEach((b) => { b.disabled = true; });
@@ -1198,6 +1340,8 @@
     if (cs) cs.style.display = 'none';
     if (gs) gs.style.display = 'flex';
 
+    if (typeof window.setBattleLogDefaultCollapsed === 'function') window.setBattleLogDefaultCollapsed();
+
     if (typeof window.log === 'function') {
       window.log('[LAN] Match started. Waiting for host snapshot...');
     }
@@ -1214,6 +1358,7 @@
         net.guestConnected = true;
         setStatus(`Guest joined room ${net.roomCode}.`);
         sendEvent('room_state', { roomCode: net.roomCode, guestConnected: true }).catch(() => {});
+        sendHostSelectionToGuest();
         return;
       }
 
@@ -1229,7 +1374,7 @@
       }
 
       if (type === 'exert_confirm') {
-        if (window.state.phase === 'exert' && !net.guestExertConfirmed) {
+        if ((window.state.phase === 'exert' || window.state.phase === 'net_wait_exert') && !net.guestExertConfirmed) {
           net.guestExertConfirmed = true;
           if (net.hostExertConfirmed) applyBothExertAndEnterPlanning();
           else scheduleHostSnapshot('guest_exert_confirm');
@@ -1284,6 +1429,11 @@
         applyGuestSnapshot(payload);
         return;
       }
+
+      if (type === 'host_selection_update') {
+        applyHostSelectionOnGuest(payload);
+        return;
+      }
     }
   }
 
@@ -1295,6 +1445,8 @@
     if (!net.original.updateUI && typeof window.updateUI === 'function') net.original.updateUI = window.updateUI;
     if (!net.original.selectChar && typeof window.selectChar === 'function') net.original.selectChar = window.selectChar;
     if (!net.original.selectDeck && typeof window.selectDeck === 'function') net.original.selectDeck = window.selectDeck;
+    if (!net.original.selectFightChar && typeof window.selectFightChar === 'function') net.original.selectFightChar = window.selectFightChar;
+    if (!net.original.fightLockIn && typeof window.fightLockIn === 'function') net.original.fightLockIn = window.fightLockIn;
 
     window.EngineRuntime.dispatch = function wrappedDispatch(action) {
       const at = window.EngineRuntime.ActionTypes;
@@ -1326,7 +1478,19 @@
           return { ok: true, skipUIRefresh: true };
         }
         if (t === at.CONFIRM_EXERT) {
-          sendEvent('exert_confirm', {}).catch(() => {});
+          net.guestExertConfirmed = true;
+          if (window.state.phase === 'exert') window.state.phase = 'net_wait_exert';
+          setBattleWaitMessage('Waiting for opponent to confirm exert...');
+          if (typeof window.updateUI === 'function') window.updateUI();
+
+          const sendConfirm = () => sendEvent('exert_confirm', {}).catch(() => {});
+          sendConfirm();
+          // Reliability resend: if one packet is dropped, host still receives confirm.
+          setTimeout(() => {
+            if (!isGuest() || !net.inMatch) return;
+            const ph = window.state?.phase;
+            if (ph === 'exert' || ph === 'net_wait_exert') sendConfirm();
+          }, 900);
           return { ok: true, skipUIRefresh: true };
         }
         if (t === at.PLACE_CARD_FROM_HAND || t === at.RETURN_CARD_TO_HAND || t === at.ADD_BASIC_ACTION || t === at.USE_ABILITY || t === at.TOGGLE_EXERT_CARD) {
@@ -1389,12 +1553,18 @@
         char: net.guestSelection.char || ((typeof window.getSelectedChar === 'function') ? window.getSelectedChar('ai') : null),
         deckId: net.guestSelection.deckId || ((typeof window.getSelectedDeckId === 'function') ? window.getSelectedDeckId('ai') : null)
       };
-
-      if (guestSel.char && typeof window.selectChar === 'function') {
-        try { window.selectChar('ai', guestSel.char); } catch (e) {}
+      if (!guestSel.char) {
+        setStatus('Waiting for guest to choose a fighter.');
+        return;
       }
-      if (guestSel.deckId && typeof window.selectDeck === 'function') {
-        try { window.selectDeck('ai', guestSel.deckId); } catch (e) {}
+
+      const applyAiChar = net.original.selectChar || window.selectChar;
+      const applyAiDeck = net.original.selectDeck || window.selectDeck;
+      if (guestSel.char && typeof applyAiChar === 'function') {
+        try { applyAiChar('ai', guestSel.char); } catch (e) {}
+      }
+      if (guestSel.deckId && typeof applyAiDeck === 'function') {
+        try { applyAiDeck('ai', guestSel.deckId); } catch (e) {}
       }
 
       net.inMatch = true;
@@ -1460,22 +1630,64 @@
 
     window.updateUI = function wrappedUpdateUi() {
       const out = net.original.updateUI.apply(this, arguments);
-      if (isHost() && net.inMatch) scheduleHostSnapshot('update_ui');
+      if (isHost() && net.inMatch) {
+        const ph = window.state?.phase;
+        if (ph === 'resolution' || ph === 'flash' || ph === 'pivot_wait') {
+          const now = Date.now();
+          if (now - lastUiSnapshotAt >= 120) {
+            lastUiSnapshotAt = now;
+            scheduleHostSnapshot('ui_tick');
+          }
+        }
+      }
       return out;
     };
 
     if (net.original.selectChar) {
       window.selectChar = function wrappedSelectChar() {
+        const target = arguments[0];
+        if (isActive() && !net.inMatch && target === 'ai') {
+          if (isHost()) {
+            setStatus('In LAN PvP, opponent selection comes from the guest device.');
+          }
+          return;
+        }
         const out = net.original.selectChar.apply(this, arguments);
         if (isGuest() && !net.inMatch) sendLocalSelectionToHost();
+        if (isHost() && !net.inMatch && target === 'player') sendHostSelectionToGuest();
         return out;
       };
     }
     if (net.original.selectDeck) {
       window.selectDeck = function wrappedSelectDeck() {
+        const target = arguments[0];
+        if (isActive() && !net.inMatch && target === 'ai') {
+          if (isHost()) {
+            setStatus('In LAN PvP, opponent deck comes from the guest device.');
+          }
+          return;
+        }
         const out = net.original.selectDeck.apply(this, arguments);
         if (isGuest() && !net.inMatch) sendLocalSelectionToHost();
+        if (isHost() && !net.inMatch && target === 'player') sendHostSelectionToGuest();
         return out;
+      };
+    }
+    if (net.original.selectFightChar) {
+      window.selectFightChar = function wrappedSelectFightChar() {
+        const out = net.original.selectFightChar.apply(this, arguments);
+        if (isGuest() && !net.inMatch) sendLocalSelectionToHost();
+        if (isHost() && !net.inMatch) sendHostSelectionToGuest();
+        return out;
+      };
+    }
+    if (net.original.fightLockIn) {
+      window.fightLockIn = function wrappedFightLockIn() {
+        if (isGuest() && !net.inMatch) {
+          setStatus('In LAN PvP, just choose your fighter. Host handles match start.');
+          return;
+        }
+        return net.original.fightLockIn.apply(this, arguments);
       };
     }
   }
@@ -1486,6 +1698,7 @@
     window.__ssLanPvpMode = { enabled: false, role: null };
 
     window.Netplay = {
+      toggleLanPanel,
       isActive,
       isHost,
       isGuest,
@@ -1516,4 +1729,33 @@
 
   window.addEventListener('load', init);
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

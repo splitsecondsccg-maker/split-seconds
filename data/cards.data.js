@@ -1,4 +1,4 @@
-// data/cards.data.js
+﻿// data/cards.data.js
 (function(){
   window.SS_CARDS_DATA = {
     // Rogue
@@ -58,7 +58,7 @@
     // Keyword cards (POISON / BLEED)
     // ------------------------
 
-    // Necromancer â€” Poison deck cards
+    // Necromancer - Poison deck cards
     necro_venom_bolt: {
       id: "necro_venom_bolt",
       name: "Venom Bolt",
@@ -100,7 +100,7 @@
       effects: [{type: "poison", value: 6 }]
     },
 
-    // Vampiress â€” Bleed deck cards
+    // Vampiress - Bleed deck cards
     vamp_rending_claw: {
       id: "vamp_rending_claw",
       name: "Rending Claw",
@@ -159,3 +159,5 @@
     ability_palea_2: { id: "ability_palea_2", name: "Glamour Spike", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Consume HYPNOTIZED: opponent draws 1 less next turn.", effect: "puppet_strings", isBasic: true, isAbility: true, requirements: {'all': ['fae', 'hypnotic']} }
   };
 })();
+
+

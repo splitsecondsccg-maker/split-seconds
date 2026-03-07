@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +6,7 @@
     <title>Split Seconds</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="tutorial.css">
+    <link rel="stylesheet" href="ui-hotfix.css">
 </head>
 <body>
 
@@ -83,6 +84,7 @@
         </select>
     </div>
     <div id="lan-pvp-panel" class="lan-pvp-panel">
+        <button id="lan-panel-toggle" type="button" class="lan-panel-toggle" aria-label="Toggle LAN panel">◀</button>
         <div class="lan-pvp-title">LAN PvP (Same WiFi)</div>
         <div class="lan-pvp-row">
             <input id="lan-room-code" type="text" maxlength="8" placeholder="Room code" />
@@ -123,7 +125,7 @@
                         <div class="bar-container"><div class="bar-label" id="ai-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="ai-hp-bar"></div></div><div class="bar-label">HP</div></div>
                         <div class="bar-container"><div class="bar-label" id="ai-stam-label">10/10</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="ai-stam-bar"></div></div><div class="bar-label">ST</div></div>
                     </div>
-                    <div class="armor-box"><span id="ai-armor">3</span></div>
+                    <div class="armor-box"><span class="armor-icon">&#128737;</span><span id="ai-armor">3</span></div>
                 </div>
             </div>
         </div>
@@ -167,13 +169,11 @@
                         <div class="bar-container"><div class="bar-label" id="p-hp-label">40/40</div><div class="v-bar-bg"><div class="v-bar-fill hp-fill" id="p-hp-bar"></div></div><div class="bar-label">HP</div></div>
                         <div class="bar-container"><div class="bar-label" id="p-stam-label">6/6</div><div class="v-bar-bg"><div class="v-bar-fill stam-fill" id="p-stam-bar"></div></div><div class="bar-label">ST</div></div>
                     </div>
-                    <div class="armor-box" style="border-color: #4facfe;"><span id="p-armor">2</span></div>
+                    <div class="armor-box" style="border-color: #4facfe;"><span class="armor-icon">&#128737;</span><span id="p-armor">2</span></div>
                 </div>
             </div>
             <div class="controls" id="action-controls" style="display: flex; gap: 12px; align-items: center; margin-bottom: 5px;">
-                <button class="btn-danger basic-action-btn" onclick="backToMenu()" style="height: 100%;">
-                    <span style="font-size: 20px;">Menu</span><br><b>Menu</b><br><small>Quit</small>
-                </button>
+                <button class="btn-danger basic-action-btn menu-corner-btn" onclick="backToMenu()" style="height: 100%;">☰ Menu</button>
             </div>
             <div class="controls" id="exert-controls" style="display: none; flex-direction: column; gap: 10px; align-items: center; margin-bottom: 5px; background: rgba(255, 71, 87, 0.1); padding: 15px; border: 2px dashed #ff4757; border-radius: 10px;">
                 <h3 style="margin: 0; color: #ff4757; text-transform: uppercase; letter-spacing: 2px;">PHASE 1: EXERTION</h3>
@@ -183,10 +183,9 @@
                     <button id="btn-confirm-exert" class="submit-btn" onclick="confirmExert()" style="background: #ff4757; width: 250px; border-radius: 5px; border: none;">
                         CONFIRM & DRAW
                     </button>
-                    <button class="btn-danger basic-action-btn" onclick="backToMenu()">
-                        <span style="font-size: 18px;">Menu</span><br><b>Menu</b>
-                    </button>                </div>
+                    <button class="btn-danger basic-action-btn" onclick="backToMenu()">☰ Menu</button>                </div>
             </div>
+            <div id="net-wait-indicator" class="net-wait-indicator" style="display:none;"></div>
             <div class="hand" id="player-hand" style="margin-top: 0; margin-bottom: 5px;"></div>
         </div>
 
@@ -335,8 +334,25 @@
                         <div style="width:120px;"><label>Moments</label><input id="ce-moments" type="number" min="0" step="1" /></div>
                         <div style="width:120px;"><label>DMG</label><input id="ce-dmg" type="number" min="0" step="1" /></div>
                     </div>
+                    <div class="db-row ce-effects-row">
+                        <label>Triggered Effects</label>
+                        <div class="ce-effects-builder">
+                            <select id="ce-effect-trigger">
+                                <option value="on_hit">On Hit</option>
+                                <option value="on_block">On Block</option>
+                                <option value="on_parry">On Parry</option>
+                                <option value="on_blocked">On Blocked</option>
+                                <option value="on_parried">On Parried</option>
+                                <option value="on_turn_end">On Turn End</option>
+                            </select>
+                            <select id="ce-effect-type"></select>
+                            <input id="ce-effect-value" type="number" min="1" step="1" value="1" />
+                            <button id="ce-add-effect" type="button" class="db-btn ce-add-effect-btn">+</button>
+                        </div>
+                        <div id="ce-effects-list" class="ce-effects-list"></div>
+                    </div>
                     <div class="db-row db-row-inline">
-                        <div style="flex:1;"><label>Effect (optional)</label><input id="ce-effect" type="text" placeholder="e.g. buff_next_atk_3 / hypnotize" /></div>
+                        <div style="flex:1;"><label>Legacy Effect (optional)</label><input id="ce-effect" type="text" placeholder="Legacy key (optional)" /></div>
                         <div style="width:180px;"><label>Enhancer DMG</label><input id="ce-enhance-dmg" type="number" min="0" step="1" /></div>
                     </div>
                     <div class="db-row">
@@ -406,8 +422,48 @@
     <script src="tutorial.js"></script> 
     <script src="tests.js"></script>
     <script src="netplay.js"></script>
+    <script>
+      (function () {
+        function bindLanToggleBridge() {
+          var panel = document.getElementById('lan-pvp-panel');
+          var toggle = document.getElementById('lan-panel-toggle');
+          if (!panel || !toggle) return;
+          if (toggle.dataset.bound === '1') return;
+          toggle.dataset.bound = '1';
+          toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var usedNetplay = false;
+            try {
+              if (window.Netplay && typeof window.Netplay.toggleLanPanel === 'function') {
+                var result = window.Netplay.toggleLanPanel();
+                if (result === true || result === false) usedNetplay = true;
+              }
+            } catch (_) {}
+            if (!usedNetplay) {
+              var open = panel.classList.toggle('open');
+              toggle.textContent = open ? '▶' : '◀';
+            }
+          });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', bindLanToggleBridge);
+        } else {
+          bindLanToggleBridge();
+        }
+      })();
+    </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
 
 
 

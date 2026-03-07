@@ -1,9 +1,9 @@
-// data/decks.data.js
+﻿// data/decks.data.js
 (function(){
   window.SS_DECKS_DATA = {
     rogue_base: {
       id: "rogue_base",
-      name: "Rogue â€” Classic",
+      name: "Rogue - Classic",
       character: "Rogue",
       description: "Fast, low-cost attacks with spike damage and strong tempo.",
       cards: [
@@ -18,7 +18,7 @@
 
     brute_base: {
       id: "brute_base",
-      name: "Brute â€” Classic",
+      name: "Brute - Classic",
       character: "Mauja",
       description: "Slow, heavy hits and huge payoffs.",
       cards: [
@@ -33,7 +33,7 @@
 
     paladin_base: {
       id: "paladin_base",
-      name: "Paladin â€” Classic",
+      name: "Paladin - Classic",
       character: "Paladin",
       description: "Defense, sustain, and punishing counter-attacks.",
       cards: [
@@ -48,7 +48,7 @@
 
     vampiress_base: {
       id: "vampiress_base",
-      name: "Vampiress â€” Classic",
+      name: "Vampiress - Classic",
       character: "Vampiress",
       description: "Grabs, lifesteal, and stamina disruption.",
       cards: [
@@ -61,10 +61,10 @@
       ]
     },
 
-    // Vampiress â€” Bleed-focused deck
+    // Vampiress - Bleed-focused deck
     vampiress_bleed: {
       id: "vampiress_bleed",
-      name: "Vampiress â€” Hemorrhage",
+      name: "Vampiress - Hemorrhage",
       character: "Vampiress",
       description: "Set up BLEED counters, then land attacks to detonate them.",
       cards: [
@@ -80,7 +80,7 @@
 
     necromancer_base: {
       id: "necromancer_base",
-      name: "Necromancer â€” Classic",
+      name: "Necromancer - Classic",
       character: "Necromancer",
       description: "Status tricks and delayed nukes. Wants to apply any status to fuel the passive.",
       cards: [
@@ -93,10 +93,10 @@
       ]
     },
 
-    // Necromancer â€” Poison-focused deck
+    // Necromancer - Poison-focused deck
     necromancer_poison: {
       id: "necromancer_poison",
-      name: "Necromancer â€” Plague",
+      name: "Necromancer - Plague",
       character: "Necromancer",
       description: "Stack POISON early to bleed HP at end-of-turn and trigger the passive consistently.",
       cards: [
@@ -126,7 +126,7 @@
     },
     ice_djinn_base: {
       id: "ice_djinn_base",
-      name: "Ice Djinn â€” Classic",
+      name: "Ice Djinn - Classic",
       character: "Ice Djinn",
       description: "Control with FREEZE, then burst for big damage.",
       cards: [
@@ -138,3 +138,5 @@
     }
   };
 })();
+
+

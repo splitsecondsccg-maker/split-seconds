@@ -1,4 +1,4 @@
-function renderHand() {
+﻿function renderHand() {
 
     const handEl = document.getElementById('player-hand');
     handEl.innerHTML = '';
@@ -57,12 +57,16 @@ function renderHand() {
 
             div.style.cursor = 'pointer';
             div.onclick = () => toggleExertCard(index);
+            div.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                toggleExertCard(index);
+            }, { passive: false });
 
         }
 
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
-            <div class="card-stats"><span>${card.type === 'enhancer' ? 'ENH' : `â± ${card.moments}`}</span><span>âš¡ ${getMoveCost('player', card)}</span></div>
+            <div class="card-stats"><span>${card.type === 'enhancer' ? '✨ ENH' : `⏱ ${card.moments}`}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
         `;
@@ -76,7 +80,7 @@ function renderHand() {
 
 
 
-// HAND HOVER MANAGER (desktop) â€” avoids hovered card blocking others
+// HAND HOVER MANAGER (desktop) - avoids hovered card blocking others
 let _handHoverBound = false;
 function bindHandHover(){
     if(_handHoverBound) return;
@@ -221,7 +225,15 @@ function touchEnd(e) {
     );
 
     const actionCard = target?.closest(".timeline-card.player-placed");
-    const slot = target?.closest(".slot");
+    let slot = target?.closest(".slot");
+    if (!slot) {
+        // iPad Safari may return overlapping HUD elements; fallback to rect-based slot detection.
+        const slots = Array.from(document.querySelectorAll('#player-timeline .slot'));
+        slot = slots.find((s) => {
+            const r = s.getBoundingClientRect();
+            return touch.clientX >= r.left && touch.clientX <= r.right && touch.clientY >= r.top && touch.clientY <= r.bottom;
+        }) || null;
+    }
 
     if (actionCard) {
         const targetIndex = Number(actionCard.dataset.timelineIndex);
@@ -348,9 +360,9 @@ function renderPlayerTimeline() {
 
             let extraText = '';
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
-            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ›¡ï¸ Block</span>`;
-            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ¤º Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">âœ¨ ${t.type}</span>`;
+            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
+            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${String(t.type || '').toUpperCase()}</span>`;
 
             let icon = getIcon(t.type);
             div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
@@ -380,9 +392,9 @@ function renderAITimeline() {
 
             let extraText = '';
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
-            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ›¡ï¸ Block</span>`;
-            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">ðŸ¤º Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">âœ¨ ${t.type}</span>`;
+            else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
+            else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${String(t.type || '').toUpperCase()}</span>`;
 
             const enhInfo = getEnhancerUiInfo(t);
             let icon = getIcon(t.type);
@@ -473,8 +485,10 @@ function renderAITimeline() {
 
     window.addEventListener('scroll', () => {
         if (!activeKeyword) return;
-        // On scroll, just hide to avoid â€œstaleâ€ position.
+        // On scroll, just hide to avoid stale position.
         hide();
     }, true);
 })();
+
+
 

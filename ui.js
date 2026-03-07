@@ -1,4 +1,4 @@
-﻿function renderHand() {
+function renderHand() {
 
     const handEl = document.getElementById('player-hand');
     handEl.innerHTML = '';
@@ -298,6 +298,12 @@ playerTimeline?.addEventListener('drop', e => {
     e.preventDefault();
     const targetIdx = Number(actionEl.dataset.timelineIndex);
     if (!Number.isFinite(targetIdx)) return;
+    const targetData = (typeof getCardData === 'function') ? getCardData('player', targetIdx) : null;
+    const targetCard = targetData?.card;
+    if (typeof window.enhancerCanTarget === 'function' && !window.enhancerCanTarget(card, targetCard)) {
+        if (typeof alert === 'function') alert('This enhancer cannot be attached to that action type.');
+        return;
+    }
     dispatchPlaceFromHandToMoment(data.index, targetIdx, targetIdx);
 });
 const handZone = document.getElementById('player-hand');

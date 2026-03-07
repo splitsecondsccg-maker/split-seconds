@@ -84,7 +84,7 @@
         </select>
     </div>
     <div id="lan-pvp-panel" class="lan-pvp-panel">
-        <button id="lan-panel-toggle" type="button" class="lan-panel-toggle" aria-label="Toggle LAN panel">◀</button>
+        <button id="lan-panel-toggle" type="button" class="lan-panel-toggle" aria-label="Toggle LAN panel">&#9664;</button>
         <div class="lan-pvp-title">LAN PvP (Same WiFi)</div>
         <div class="lan-pvp-row">
             <input id="lan-room-code" type="text" maxlength="8" placeholder="Room code" />
@@ -173,7 +173,7 @@
                 </div>
             </div>
             <div class="controls" id="action-controls" style="display: flex; gap: 12px; align-items: center; margin-bottom: 5px;">
-                <button class="btn-danger basic-action-btn menu-corner-btn" onclick="backToMenu()" style="height: 100%;">☰ Menu</button>
+                <button class="btn-danger basic-action-btn menu-corner-btn" onclick="backToMenu()" style="height: 100%;">Menu</button>
             </div>
             <div class="controls" id="exert-controls" style="display: none; flex-direction: column; gap: 10px; align-items: center; margin-bottom: 5px; background: rgba(255, 71, 87, 0.1); padding: 15px; border: 2px dashed #ff4757; border-radius: 10px;">
                 <h3 style="margin: 0; color: #ff4757; text-transform: uppercase; letter-spacing: 2px;">PHASE 1: EXERTION</h3>
@@ -183,7 +183,7 @@
                     <button id="btn-confirm-exert" class="submit-btn" onclick="confirmExert()" style="background: #ff4757; width: 250px; border-radius: 5px; border: none;">
                         CONFIRM & DRAW
                     </button>
-                    <button class="btn-danger basic-action-btn" onclick="backToMenu()">☰ Menu</button>                </div>
+                    <button class="btn-danger basic-action-btn" onclick="backToMenu()">Menu</button>                </div>
             </div>
             <div id="net-wait-indicator" class="net-wait-indicator" style="display:none;"></div>
             <div class="hand" id="player-hand" style="margin-top: 0; margin-bottom: 5px;"></div>
@@ -354,6 +354,7 @@
                     <div class="db-row db-row-inline">
                         <div style="flex:1;"><label>Legacy Effect (optional)</label><input id="ce-effect" type="text" placeholder="Legacy key (optional)" /></div>
                         <div style="width:180px;"><label>Enhancer DMG</label><input id="ce-enhance-dmg" type="number" min="0" step="1" /></div>
+                        <div style="width:220px;"><label>Enhancer Targets</label><select id="ce-enhance-targets"><option value="any">Any action</option><option value="attack">Attack only</option><option value="grab">Grab only</option><option value="block">Block only</option><option value="parry">Parry only</option><option value="buff">Buff only</option><option value="utility">Utility only</option></select></div>
                     </div>
                     <div class="db-row">
                         <label>Description</label>
@@ -442,7 +443,7 @@
             } catch (_) {}
             if (!usedNetplay) {
               var open = panel.classList.toggle('open');
-              toggle.textContent = open ? '▶' : '◀';
+              toggle.textContent = open ? '\u25B6' : '\u25C0';
             }
           });
         }
@@ -455,6 +456,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 

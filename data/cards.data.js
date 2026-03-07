@@ -1,4 +1,4 @@
-﻿// data/cards.data.js
+// data/cards.data.js
 (function(){
   window.SS_CARDS_DATA = {
     // Rogue
@@ -7,7 +7,8 @@
     rogue_lunging_dagger:   { id: "rogue_lunging_dagger", name: "Lunging Dagger", type: "attack", cost: 1, moments: 2, dmg: 4, desc: "Sacrifices time for reach." , requirements: {'all': ['assassin']}},
     rogue_cutthroat:        { id: "rogue_cutthroat", name: "Cutthroat", type: "attack", cost: 4, moments: 1, dmg: 6, desc: "Never trust a rogue..." , requirements: {'all': ['assassin']}},
     rogue_kidney_strike:    { id: "rogue_kidney_strike", name: "Kidney Strike", type: "grab", cost: 1, moments: 1, dmg: 3, desc: "Destroys 1 enemy Stamina on hit.", effect: "exhaust_1" , requirements: {'all': ['assassin']}},
-    rogue_sharpen:          { id: "rogue_sharpen", name: "Sharpen", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "+3 DMG to next Attack.", effect: "buff_next_atk_3" },
+    rogue_sharpen:          { id: "rogue_sharpen", name: "Sharpen", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "+3 DMG to next Attack.", effect: "buff_next_atk_3", requirements: {'all': ['assassin']} },
+    rogue_coat_with_sedative:{ id: "rogue_coat_with_sedative", name: "Coat with Sedative", type: "enhancer", cost: 1, moments: 0, dmg: 0, desc: "Enhancer (Attack only). On hit: opponent draws 1 less next turn, and you draw 1.", enhance: { dmg: 0, targets: ["attack"], effects: [{ trigger: "on_hit", type: "draw_less", value: 1 }, { trigger: "on_hit", type: "draw_cards", value: 1 }] }, requirements: {'all': ['assassin']} },
 
     // Brute
     brute_heavy_strike:     { id: "brute_heavy_strike", name: "Heavy Strike", type: "attack", cost: 2, moments: 1, dmg: 3, desc: "Drains stamina, hits hard." , requirements: {'all': ['brute']}},
@@ -48,6 +49,7 @@
 
     // Palea
     palea_fae_whisper:      { id: "palea_fae_whisper", name: "Fae Whisper", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Apply HYPNOTIZED.", effect: "hypnotize", requirements: {'all': ['sorcerer', 'fae']} },
+    palea_blink:            { id: "palea_blink", name: "Blink", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "If opponent resolves an ATTACK this moment: negate it, draw 1, and deal 3 DMG.", effect: "blink", requirements: {'all': ['sorcerer', 'fae']} },
     palea_dont:             { id: "palea_dont", name: "Don't", type: "utility", cost: 1, moments: 1, dmg: 0, desc: "If opponent is HYPNOTIZED: consume it and negate their action in this moment.", effect: "dont", requirements: {'all': ['sorcerer', 'hypnotic']} },
     palea_snap_fingers:     { id: "palea_snap_fingers", name: "Snap Fingers", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Consume HYPNOTIZED: next attack +2 DMG.", effect: "snap_fingers", requirements: {'all': ['sorcerer', 'hypnotic']} },
     palea_puppet_strings:   { id: "palea_puppet_strings", name: "Puppet Strings", type: "buff", cost: 2, moments: 2, dmg: 0, desc: "Consume HYPNOTIZED: opponent draws 1 less next turn.", effect: "puppet_strings", requirements: {'all': ['fae', 'hypnotic']} },

@@ -120,6 +120,17 @@ function getMoveCost(charKey, card) {
     return base + ((card.type === 'attack') ? getAttackTax(charKey) : 0);
 }
 
+function enhancerCanTarget(enhancerCard, targetCard) {
+    if (!enhancerCard || enhancerCard.type !== 'enhancer') return false;
+    if (!targetCard || targetCard.type === 'enhancer') return false;
+    const targets = Array.isArray(enhancerCard?.enhance?.targets)
+        ? enhancerCard.enhance.targets.map(t => String(t || '').toLowerCase()).filter(Boolean)
+        : [];
+    if (!targets.length) return true;
+    return targets.includes(String(targetCard.type || '').toLowerCase());
+}
+window.enhancerCanTarget = enhancerCanTarget;
+
 function getEffectiveArmor(charKey) {
     const c = state?.[charKey];
     if (!c) return 0;

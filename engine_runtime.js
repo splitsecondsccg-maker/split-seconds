@@ -159,6 +159,9 @@
           if (!targetCard || targetCard === "occupied") {
             return { ok: false, error: "Enhancer must target an existing action." };
           }
+          if (typeof window.enhancerCanTarget === "function" && !window.enhancerCanTarget(card, targetCard)) {
+            return { ok: false, error: "This enhancer cannot be attached to that action type." };
+          }
           if (!Array.isArray(targetCard.enhancers)) targetCard.enhancers = [];
 
           s.player.stam -= effectiveCost;

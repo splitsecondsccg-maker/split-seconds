@@ -24,6 +24,7 @@
     effectsList: () => $('ce-effects-list'),
     desc: () => $('ce-desc'),
     enhDmg: () => $('ce-enhance-dmg'),
+    enhTargets: () => $('ce-enhance-targets'),
     status: () => $('ce-status'),
 
     filterType: () => $('ce-filter-type'),
@@ -206,6 +207,8 @@
     populateEffectTypeOptions();
     loadFormEffectsFromCard(card);
     UI.enhDmg().value = Number(card?.enhance?.dmg || 0);
+    const firstTarget = Array.isArray(card?.enhance?.targets) && card.enhance.targets.length ? String(card.enhance.targets[0]).toLowerCase() : 'any';
+    if (UI.enhTargets()) UI.enhTargets().value = firstTarget;
     setStatus(window.isCustomCard && window.isCustomCard(card.id) ? 'Custom override: ON' : 'Built-in card');
   }
 
@@ -238,7 +241,9 @@
     if (type === 'enhancer') {
       out.moments = 0;
       const enhDmg = Math.max(0, Number(UI.enhDmg().value) || 0);
+      const enhTarget = String(UI.enhTargets()?.value || 'any').toLowerCase();
       out.enhance = { dmg: enhDmg };
+      if (enhTarget && enhTarget !== 'any') out.enhance.targets = [enhTarget];
       out.dmg = 0;
     }
 
@@ -770,6 +775,7 @@
   window.openCardEditor = openCardEditor;
   window.closeCardEditor = closeCardEditor;
 })();
+
 
 
 

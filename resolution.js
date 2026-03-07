@@ -1,6 +1,35 @@
-function getEnhancerDamageBonus(action) {
+﻿function getEnhancerDamageBonus(action) {
     if (!action || !Array.isArray(action.enhancers) || action.enhancers.length === 0) return 0;
     return action.enhancers.reduce((sum, enh) => sum + (enh?.enhance?.dmg || 0), 0);
+}
+
+function runEnhancerOnHitEffects(action, sourceKey, targetKey, context) {
+    if (!action || !Array.isArray(action.enhancers) || !action.enhancers.length) return;
+    for (const enh of action.enhancers) {
+        const fxList = enh?.enhance?.effects;
+        if (Array.isArray(fxList)) {
+            for (const fx of fxList) {
+                const trigger = String(fx?.trigger || '').toLowerCase();
+                if (trigger !== 'on_hit') continue;
+                const type = String(fx?.type || '').toLowerCase();
+                const value = Math.max(1, Number(fx?.value) || 1);
+                if (typeof window.tryRunEffectType === 'function') {
+                    const handled = window.tryRunEffectType(type, {
+                        sourceKey,
+                        targetKey,
+                        value,
+                        context: context || {},
+                        card: enh
+                    });
+                    if (handled) continue;
+                }
+                if (typeof applyEffect === 'function') applyEffect(sourceKey, targetKey, type, context || {});
+            }
+            continue;
+        }
+        const legacyKey = String(enh?.enhance?.effect || enh?.effect || '').trim();
+        if (legacyKey && typeof applyEffect === 'function') applyEffect(sourceKey, targetKey, legacyKey, context || {});
+    }
 }
 
 function removeTimelineAction(side, actionCard) {
@@ -46,6 +75,26 @@ function tryResolveDont(sourceKey, targetKey, sourceAction) {
     removeTimelineAction(targetKey, targetAction);
     log(`${sourceKey === 'player' ? 'Player' : 'AI'} uses Don't and negates ${targetKey === 'player' ? 'Player' : 'AI'} action.`);
     spawnFloatingText(targetKey, 'NEGATED', 'float-block');
+    return true;
+}
+function tryResolveBlink(sourceKey, targetKey, sourceAction, targetAction) {
+    if (!sourceAction || sourceAction.type === 'occupied') return false;
+    if (sourceAction.effect !== 'blink') return false;
+    if (!targetAction || targetAction.type !== 'attack') return false;
+
+    removeTimelineAction(targetKey, targetAction);
+    const target = state?.[targetKey];
+    const source = state?.[sourceKey];
+    if (!target || !source) return false;
+
+    target.hp -= 3;
+    target.roundData.lostLife = true;
+    if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
+    spawnFloatingText(targetKey, '-3', 'float-dmg');
+    spawnFloatingText(targetKey, 'BLINKED', 'float-block');
+    log(`${sourceKey === 'player' ? 'Player' : 'AI'} BLINK negates the attack and deals 3 DMG.`);
+    if (typeof drawCards === 'function') drawCards(1, sourceKey);
+    playSound('hit');
     return true;
 }
 function resolveMoment() {
@@ -118,10 +167,18 @@ function resolveMoment() {
 
     let pDmg = 0; let aiDmg = 0;
     let pBlock = false; let aiBlock = false; let pParry = false; let aiParry = false; let pGrab = false; let aiGrab = false;
+    let pActionInterrupted = false;
+    let aiActionInterrupted = false;
 
     if(state.player.statuses.forceBlock && pAction && pAction !== 'occupied') { log("Player is Intimidated! Action fails."); pAction = null; }
     if(state.ai.statuses.forceBlock && aiAction && aiAction !== 'occupied') { log("AI is Intimidated! Action fails."); aiAction = null; }
 
+    const pBlink = tryResolveBlink('player', 'ai', pAction, aiAction);
+    const aiBlink = tryResolveBlink('ai', 'player', aiAction, pAction);
+    if (pBlink || aiBlink) {
+        if (pBlink) { aiActionInterrupted = true; aiAction = null; }
+        if (aiBlink) { pActionInterrupted = true; pAction = null; }
+    }
     if(pAction && pAction !== 'occupied') {
         if(pAction.type === 'attack') {
             let roguePenalty = state.player.statuses.rogueDebuff || 0;
@@ -153,10 +210,6 @@ function resolveMoment() {
 
     let pGrabHit = false;
 let aiGrabHit = false;
-
-// NEW: track interruption so we can cancel the grabbed action's effect
-let pActionInterrupted = false;
-let aiActionInterrupted = false;
 
 if (pGrab) {
   const aiIsBuffLike = aiAction && (aiAction.type === 'buff' || aiAction.type === 'utility');
@@ -317,12 +370,20 @@ const aiContact = aiHit || aiGrabHit;
 
 // Source card triggers (on_hit / on_blocked / on_parried)
 if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
-    if (pContact) runTriggeredCardEffects(pAction, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: { hitLanded: pHit, grabHit: pGrabHit } });
+    if (pContact) {
+        const pHitCtx = { hitLanded: pHit, grabHit: pGrabHit };
+        runTriggeredCardEffects(pAction, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: pHitCtx });
+        runEnhancerOnHitEffects(pAction, 'player', 'ai', pHitCtx);
+    }
     if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
     if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
 }
 if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
-    if (aiContact) runTriggeredCardEffects(aiAction, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: { hitLanded: aiHit, grabHit: aiGrabHit } });
+    if (aiContact) {
+        const aiHitCtx = { hitLanded: aiHit, grabHit: aiGrabHit };
+        runTriggeredCardEffects(aiAction, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: aiHitCtx });
+        runEnhancerOnHitEffects(aiAction, 'ai', 'player', aiHitCtx);
+    }
     if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
     if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
 }
@@ -472,6 +533,9 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         case 'dont':
             // Resolved at moment start by tryResolveDont(). Keep as no-op fallback.
             break;
+        case 'blink':
+            // Resolved at moment start by tryResolveBlink(). Keep as no-op fallback.
+            break;
         case 'snap_fingers':
             if (consumeHypnotized(targetKey, sourceKey, 'Snap Fingers')) {
                 source.statuses.nextAtkMod += 2;
@@ -579,7 +643,7 @@ function nextTurn(isFirstTurn = false) {
     document.getElementById('action-controls').style.display = 'none';
     const exertUI = document.getElementById('exert-controls');
     if (exertUI) exertUI.style.display = 'flex';
-    document.getElementById('btn-confirm-exert').innerText = "Confirm Exert (0⚡)";
+    document.getElementById('btn-confirm-exert').innerText = "Confirm Exert (0 ST)";
 
     const tutorialActive = (typeof isTutorialMode !== 'undefined' && isTutorialMode);
     if (!tutorialActive && !isFirstTurn && state.player.hand.length === 0) {
@@ -718,4 +782,5 @@ function runTriggeredCardEffects(card, triggerName, args) {
         }
     }
 }
+
 

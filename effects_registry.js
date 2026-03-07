@@ -72,6 +72,17 @@ const EffectTypeRegistry = {
       window.applyHypnotizedStatus(sourceKey, targetKey);
     }
   },
+  draw_less: ({ targetKey, value }) => {
+    if (!window.state || !window.state[targetKey]) return;
+    const target = window.state[targetKey];
+    target.statuses.drawLess = Math.max(target.statuses.drawLess || 0, Number(value) || 1);
+  },
+  draw_cards: ({ sourceKey, value }) => {
+    const amount = Math.max(1, Number(value) || 1);
+    if (typeof window.drawCards === "function") {
+      window.drawCards(amount, sourceKey);
+    }
+  },
 };
 
 function tryRunEffectType(typeKey, args) {

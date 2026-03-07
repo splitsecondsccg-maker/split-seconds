@@ -809,6 +809,7 @@
       const data = getCardDataForSide(side, targetIdx);
       const targetCard = data?.card;
       if (!targetCard || targetCard === 'occupied') return false;
+      if (typeof window.enhancerCanTarget === 'function' && !window.enhancerCanTarget(card, targetCard)) return false;
       if (!Array.isArray(targetCard.enhancers)) targetCard.enhancers = [];
 
       st.stam -= effectiveCost;

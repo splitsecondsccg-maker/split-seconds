@@ -1,4 +1,4 @@
-﻿// data/decks.data.js
+// data/decks.data.js
 (function(){
   window.SS_DECKS_DATA = {
     rogue_base: {
@@ -12,7 +12,8 @@
         { cardId: "rogue_lunging_dagger", copies: 3 },
         { cardId: "rogue_cutthroat", copies: 3 },
         { cardId: "rogue_kidney_strike", copies: 4 },
-        { cardId: "rogue_sharpen", copies: 6 }
+        { cardId: "rogue_sharpen", copies: 3 },
+        { cardId: "rogue_coat_with_sedative", copies: 3 }
       ]
     },
 
@@ -115,7 +116,8 @@
       character: "Palea",
       description: "Apply HYPNOTIZED, negate key moments, and amplify attacks with enhancers.",
       cards: [
-        { cardId: "palea_fae_whisper", copies: 4 },
+        { cardId: "palea_fae_whisper", copies: 3 },
+        { cardId: "palea_blink", copies: 2 },
         { cardId: "palea_dont", copies: 3 },
         { cardId: "palea_snap_fingers", copies: 3 },
         { cardId: "palea_puppet_strings", copies: 2 },

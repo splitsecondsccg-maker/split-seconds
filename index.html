@@ -381,26 +381,6 @@
                         <label>Special Logic Notes (optional)</label>
                         <input id="ce-special-notes" type="text" placeholder="Use for unique behavior not fully represented by effects list" />
                     </div>
-                    <div class="ce-stats-box" style="margin-top:12px;">
-                        <div class="ce-stats-title">Character Lab</div>
-                        <div class="db-row db-row-inline">
-                            <div style="flex:1;"><label>Character</label><select id="ce-char-select"></select></div>
-                            <div style="flex:1;"><label>On-screen Name</label><input id="ce-char-display-name" type="text" placeholder="Display name" /></div>
-                        </div>
-                        <div class="db-row db-row-inline">
-                            <div style="width:140px;"><label>Max HP</label><input id="ce-char-max-hp" type="number" min="1" step="1" /></div>
-                            <div style="width:140px;"><label>Max Stamina</label><input id="ce-char-max-stam" type="number" min="1" step="1" /></div>
-                            <div style="width:140px;"><label>Armor</label><input id="ce-char-armor" type="number" min="0" step="1" /></div>
-                        </div>
-                        <div class="db-row db-row-inline">
-                            <div style="flex:1;"><label>Ability 1</label><select id="ce-char-ability1"></select></div>
-                            <div style="flex:1;"><label>Ability 2</label><select id="ce-char-ability2"></select></div>
-                        </div>
-                        <div class="db-actions">
-                            <button id="ce-char-save" class="db-btn">Save Character</button>
-                            <button id="ce-char-reset" class="db-btn db-btn-danger">Remove Character Override</button>
-                        </div>
-                    </div>
                     <div class="db-actions">
                         <button id="ce-btn-new" class="db-btn">New Card</button>
                         <button id="ce-btn-save" class="db-btn">Save</button>
@@ -439,6 +419,87 @@
             </div>
         </div>
     </div>
+    <!-- Character Lab Overlay -->
+    <div id="character-lab-overlay" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center; padding: 22px;">
+        <div id="character-lab-modal" class="ce-modal">
+            <div class="db-header ce-header">
+                <div class="db-title ce-title">Character Lab</div>
+                <button id="ch-btn-close" class="db-close">X</button>
+            </div>
+            <div class="db-body ce-body">
+                <div class="db-left ce-left">
+                    <div class="ce-stats-title">Character</div>
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;"><label>Character</label><select id="ch-char-select"></select></div>
+                        <div style="flex:1;"><label>On-screen Name</label><input id="ch-char-display-name" type="text" placeholder="Display name" /></div>
+                    </div>
+                    <div class="db-row db-row-inline">
+                        <div style="width:140px;"><label>Max HP</label><input id="ch-char-max-hp" type="number" min="1" step="1" /></div>
+                        <div style="width:140px;"><label>Max Stamina</label><input id="ch-char-max-stam" type="number" min="1" step="1" /></div>
+                        <div style="width:140px;"><label>Armor</label><input id="ch-char-armor" type="number" min="0" step="1" /></div>
+                    </div>
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;"><label>Ability 1</label><select id="ch-char-ability1"></select></div>
+                        <div style="flex:1;"><label>Ability 2</label><select id="ch-char-ability2"></select></div>
+                    </div>
+                    <div class="db-actions">
+                        <button id="ch-char-save" class="db-btn">Save Character</button>
+                        <button id="ch-char-reset" class="db-btn db-btn-danger">Remove Character Override</button>
+                    </div>
+                    <div class="ce-stats-title" style="margin-top:14px;">Ability Cards</div>
+                    <div id="ch-ability-list" class="db-card-list ce-card-list"></div>
+                </div>
+
+                <div class="db-right ce-right">
+                    <div class="db-row db-row-inline">
+                        <div style="flex:1;"><label>Ability ID</label><input id="ch-id" type="text" readonly /></div>
+                        <div style="flex:1;"><label>Name</label><input id="ch-name" type="text" /></div>
+                    </div>
+                    <div class="db-row db-row-inline">
+                        <div style="width:150px;"><label>Type</label><select id="ch-type"><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Concentration</option><option value="utility">Utility</option></select></div>
+                        <div style="width:120px;"><label>Cost</label><input id="ch-cost" type="number" min="0" step="1" /></div>
+                        <div style="width:120px;"><label>Moments</label><input id="ch-moments" type="number" min="0" step="1" /></div>
+                        <div style="width:120px;"><label>DMG</label><input id="ch-dmg" type="number" min="0" step="1" /></div>
+                    </div>
+                    <div class="db-row ce-effects-row">
+                        <label>Triggered Effects</label>
+                        <div class="ce-effects-builder">
+                            <select id="ch-effect-trigger">
+                                <option value="on_hit">On Hit</option>
+                                <option value="on_block">On Block</option>
+                                <option value="on_parry">On Parry</option>
+                                <option value="on_blocked">On Blocked</option>
+                                <option value="on_parried">On Parried</option>
+                                <option value="on_resolve">On Resolve</option>
+                                <option value="on_turn_end">On Turn End</option>
+                            </select>
+                            <select id="ch-effect-type"></select>
+                            <select id="ch-effect-target">
+                                <option value="opponent">Target: Opponent</option>
+                                <option value="self">Target: Self</option>
+                            </select>
+                            <input id="ch-effect-value" type="number" min="1" step="1" value="1" />
+                            <button id="ch-add-effect" type="button" class="db-btn ce-add-effect-btn">+</button>
+                        </div>
+                        <div id="ch-effects-list" class="ce-effects-list"></div>
+                    </div>
+                    <div class="db-row">
+                        <label>Description</label>
+                        <input id="ch-desc" type="text" placeholder="Ability text shown in UI" />
+                    </div>
+                    <div class="db-row">
+                        <label>Special Logic Notes (optional)</label>
+                        <input id="ch-special-notes" type="text" placeholder="Use for unique behavior not fully represented by effects list" />
+                    </div>
+                    <div class="db-actions">
+                        <button id="ch-ability-save" class="db-btn">Save Ability</button>
+                        <button id="ch-ability-reset" class="db-btn db-btn-danger">Remove Ability Override</button>
+                    </div>
+                    <div id="ch-status" class="db-hint"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Tutorial overlay lives at the end of body so it can sit above everything -->
     <div id="tutorial-overlay">
         <div id="tutorial-dialogue">
@@ -457,6 +518,7 @@
     <script src="core.js"></script>
     <script src="deck_builder.js"></script>
     <script src="card_editor.js"></script>
+    <script src="character_lab.js"></script>
     <script src="ui.js"></script>
     <script src="game.js"></script>
     <script src="effects_registry.js"></script>
@@ -497,4 +559,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
 

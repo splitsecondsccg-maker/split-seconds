@@ -1088,7 +1088,7 @@ function _startResolutionImpl() {
             for (let i = 0; i < 5; i++) {
                 if (state.player.timeline[i]) {
                     state.player.stam += (state.player.timeline[i].cost || 0);
-                    if (!state.player.timeline[i].isBasic) state.player.hand.push(state.player.timeline[i]);
+                    if (!state.player.timeline[i].isBasic && !state.player.timeline[i].isAbility) state.player.hand.push(state.player.timeline[i]);
                     state.player.timeline[i] = null;
                 }
             }
@@ -1227,7 +1227,7 @@ function _pivotImpl() {
             });
             pData.card.enhancers = [];
         }
-        if (!pData.card.isBasic) state.player.hand.push(pData.card);
+        if (!pData.card.isBasic && !pData.card.isAbility) state.player.hand.push(pData.card);
         for(let i=0; i<momentsFreed; i++) state.player.timeline[startIndex + i] = null; 
     } else {
         state.player.timeline[state.flashMoment] = null;
@@ -1303,7 +1303,7 @@ function handleAIReaction() {
                 });
                 aiLiveCard.enhancers = [];
             }
-            if (!aiLiveCard.isBasic) state.ai.hand.push(aiLiveCard); 
+            if (!aiLiveCard.isBasic && !aiLiveCard.isAbility) state.ai.hand.push(aiLiveCard); 
             for(let i=0; i<momentsFreed; i++) state.ai.timeline[pivotStartIndex + i] = null; 
         } else {
              state.ai.timeline[state.flashMoment] = null;
@@ -1407,6 +1407,7 @@ function handleAIReaction() {
         resolveMoment(); 
     }, 1000); 
 }
+
 
 
 

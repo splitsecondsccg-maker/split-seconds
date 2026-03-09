@@ -241,7 +241,8 @@
           card.enhancers = [];
         }
 
-        if (card.id) s.player.hand.push(card);
+        // Character abilities placed on timeline should refund stamina, but never enter hand.
+        if (card.id && !card.isAbility) s.player.hand.push(card);
 
         return { ok: true };
       }
@@ -495,3 +496,5 @@
     _lastResult: null,
   };
 })();
+
+

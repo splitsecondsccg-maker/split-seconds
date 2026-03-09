@@ -85,6 +85,7 @@
     const db = window.CardsDB || {};
     return Object.values(db)
       .filter(Boolean)
+      .filter(c => !c.isAbility)
       .sort((a,b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
   }
 
@@ -976,7 +977,7 @@
       row.innerHTML = `
         <div class="db-card-info">
           <div class="db-card-title">${c.name} ${isCustom ? '<span style="color:#4facfe;">(Custom)</span>' : ''}</div>
-          <div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG${c.isAbility ? ' | ABILITY' : ''}</div>
+          <div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div>
           ${req ? `<div class="db-card-desc">Req: ${req}</div>` : ''}
         </div>
       `;
@@ -1276,7 +1277,7 @@
   function openCardEditor(){
     bind();
     populateEffectTypeOptions();
-    renderCharacterLabOptions();
+    
     st.open = true;
     clearFilters();
     UI.overlay().style.display = 'flex';
@@ -1294,27 +1295,11 @@
     if (UI.overlay()) UI.overlay().style.display = 'none';
   }
 
-  function openCharacterLab(){
-    openCardEditor();
-    renderCharacterLabOptions();
-    const charSel = UI.charSelect();
-    if (charSel) {
-      try { charSel.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e) {}
-      charSel.focus();
-    }
-    const firstAbility = getAbilityCardsForLab()[0] || null;
-    if (firstAbility) {
-      st.selectedId = firstAbility.id;
-      fillForm(firstAbility);
-      renderAll();
-    }
-    setStatus('Character Lab mode: edit character stats below; ability cards are shown in list as ABILITY.');
-  }
-
   window.openCardEditor = openCardEditor;
-  window.openCharacterLab = openCharacterLab;
   window.closeCardEditor = closeCardEditor;
 })();
+
+
 
 
 

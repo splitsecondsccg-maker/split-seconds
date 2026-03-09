@@ -74,6 +74,7 @@
     ice_frostbind:            { id: "ice_frostbind", name: "Frostbind", type: "attack", cost: 1, moments: 1, dmg: 2, desc: "2 DMG. On hit: FREEZE 1.", effects: [{ trigger: "on_hit", type: "freeze_1_on_hit", value: 1 }], requirements: {'all': ['ice']} },
     sorcerer_spellweave:      { id: "sorcerer_spellweave", name: "Spellweave", type: "enhancer", cost: 1, moments: 0, dmg: 0, desc: "Enhancer: +1 DMG. On hit: draw 1.", enhance: { dmg: 1, effects: [{ trigger: "on_hit", type: "draw_cards", value: 1 }] }, requirements: {'all': ['sorcerer']} },
     spirit_ether_guard:       { id: "spirit_ether_guard", name: "Ether Guard", type: "buff", cost: 1, moments: 1, dmg: 0, desc: "Next turn: +2 Armor.", effects: [{ trigger: "on_resolve", type: "spirit_form", value: 1 }], requirements: {'all': ['spirit']} },
+    spirit_spirit_form:       { id: "spirit_spirit_form", name: "Spirit Form", type: "utility", cost: 2, moments: 3, dmg: 0, desc: "Negate opponent ATTACK and GRAB actions that resolve during this action.", effects: [{ trigger: "on_resolve", type: "spirit_guard", value: 1 }], requirements: {'all': ['spirit']} },
 
     // Keyword cards (POISON / BLEED)
     necro_venom_bolt: {
@@ -132,3 +133,4 @@
     ability_palea_2: { id: "ability_palea_2", name: "Glamour Spike", type: "utility", cost: 0, moments: 1, dmg: 0, desc: "Consume HYPNOTIZED: opponent draws 1 less next turn.", effects: [{ trigger: "on_resolve", type: "puppet_strings", value: 1 }], isBasic: true, isAbility: true, requirements: {'all': ['fae', 'hypnotic']} }
   };
 })();
+

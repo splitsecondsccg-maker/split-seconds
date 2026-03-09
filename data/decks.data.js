@@ -136,7 +136,8 @@
         { cardId: "ice_ice_spear", copies: 4 },
         { cardId: "ice_break_the_ice", copies: 2 },
         { cardId: "ice_ice_wall", copies: 4 }
-      ]    },
+      ]
+    },
     ice_assassin_base: {
       id: "ice_assassin_base",
       name: "Ice Assassin - Classic",
@@ -153,15 +154,25 @@
         { cardId: "ice_cold_wind", copies: 3 },
         { cardId: "ice_break_the_ice", copies: 2 }
       ]
+    },
+
+    ice_brute_base: {
+      id: "ice_brute_base",
+      name: "Ice Brute - Classic",
+      character: "Ice Brute",
+      description: "Heavy brute pressure with freeze punishment and grab payoffs.",
+      cards: [
+        { cardId: "brute_heavy_strike", copies: 3 },
+        { cardId: "brute_cleave", copies: 3 },
+        { cardId: "brute_dev_blow", copies: 2 },
+        { cardId: "brute_suplex", copies: 2 },
+        { cardId: "brute_sunder", copies: 2 },
+        { cardId: "brute_warcry", copies: 2 },
+        { cardId: "ice_cold_wind", copies: 3 },
+        { cardId: "ice_break_the_ice", copies: 3 }
+      ]
     }
   };
 })();
-
-
-
-
-
-
-
 
 

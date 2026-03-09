@@ -127,12 +127,13 @@
     <p>Combat is built around predicting your opponent's exact sequence. The core triangle is simple: <strong>Attacks beat Grabs, Grabs beat Defenses, and Defenses beat Attacks.</strong></p>
     
     <ul>
-        <li><strong>Attacks ⚔️ :</strong> Deal damage to the opponent's HP. They will hit unless Blocked or Parried. Attacks will also completely interrupt and defeat an opponent who is trying to Grab you.</li>
-        <li><strong>Blocks 🛡️ <span class="cost-note">(Cost: 0 ⚡ | Limit: Unlimited)</span>:</strong> Reduces incoming damage. Since they cost nothing, you can fill as many empty slots with Blocks as you want to survive a turn when you are low on Stamina.</li>
-        <li><strong>Parries 🤺 <span class="cost-note">(Cost: 1 ⚡ | Limit: Unlimited)</span>:</strong> Completely negates an incoming Attack. <span class="highlight">If you successfully Parry an Attack, the attacker is staggered and will draw 1 less card at the start of the next round.</span> You can play multiple Parries per turn, provided you have the Stamina.</li>
-        <li><strong>Grabs 🤚 <span class="cost-note">(Limit: Based on cards)</span>:</strong> Grappling moves designed specifically to punish defensive players. <strong>Grabs completely bypass Blocks and Parries.</strong> However, Grabs <em>only</em> resolve if the opponent is actively Blocking or Parrying in that moment! If the opponent is Attacking, or if their slot is simply empty, your Grab completely misses.</li>
-        <li><strong>Empty Slots 🕳️ <span class="cost-note">(Cost: 0 ⚡ | Limit: Unlimited)</span>:</strong> You do not <em>have</em> to fill every moment! Leaving a slot completely blank costs no Stamina. While this leaves you defenseless against Attacks, <strong>it is a brilliant way to make an opponent's Grab completely miss</strong> if you anticipate one and don't have the Stamina to Attack!</li>
-        <li><strong>Class Abilities 🌟 <span class="cost-note">(Limit: Once per turn)</span>:</strong> Unique active skills based on your chosen class. You may only place each specific ability onto the timeline <strong>once per round</strong>.</li>
+        <li><strong>Attacks:</strong> Deal damage to the opponent's HP. They will hit unless Blocked or Parried. Attacks also interrupt and beat an opponent who is trying to Grab you.</li>
+        <li><strong>Blocks <span class="cost-note">(Cost: 0 Stamina | Limit: Unlimited)</span>:</strong> Reduce incoming damage. Since they cost nothing, you can fill many empty slots with Blocks when you are low on Stamina.</li>
+        <li><strong>Grabs <span class="cost-note">(Limit: Based on cards)</span>:</strong> Grappling moves designed to punish defensive players. <strong>Grabs bypass Blocks and Parries</strong>. Grabs also <strong>interrupt Concentration and Utility actions</strong> resolving in that same moment. If the interrupted action had attached Enhancers, those Enhancers are canceled with it for that moment. If the opponent is Attacking, or if their slot is empty, your Grab misses.</li>
+        <li><strong>Empty Slots <span class="cost-note">(Cost: 0 Stamina | Limit: Unlimited)</span>:</strong> You do not have to fill every moment. Leaving a slot blank costs no Stamina and can make an opponent Grab miss if timed correctly.</li>
+        <li><strong>Class Abilities <span class="cost-note">(Limit: Once per turn)</span>:</strong> Unique active skills based on your chosen class. You may only place each specific ability onto the timeline <strong>once per round</strong>.</li>
+        <li><strong>Concentration:</strong> Setup/tech card type (formerly named Buff). Concentration can be interrupted by a Grab in the same moment.</li>
+        <li><strong>Enhancers:</strong> Attach to timeline actions and do not take timeline slots. If the parent action is returned to hand, the Enhancer returns as a separate card.</li>
     </ul>
 
     <div class="example-box">
@@ -183,7 +184,16 @@
     </ul>
 
     <h4>Phase 5: The Clash (Resolution)</h4>
-    <p>The Timeline unlocks and the engine resolves the combat moment by moment, from Moment 1 to Moment 5. Cards placed in the same moment clash against each other based on the Combat System rules above. Once Moment 5 resolves, the round ends and a new Turn begins at Phase 1!</p>
+    <p>The Timeline unlocks and resolves Moment 1 to Moment 5. Actions in the same moment interact by timing priority (below). After Moment 5, the round ends and the next turn begins.</p>
+
+    <h4>Resolution Timing Priority (Same Moment)</h4>
+    <ul>
+        <li><strong>Step 1 - Hard negation/interrupt checks:</strong> effects like <em>Don't</em>, <em>Blink</em>, Parry-vs-Attack, and Grab interruptions are processed first.</li>
+        <li><strong>Step 2 - Damage resolution:</strong> surviving attacks/grabs in that moment resolve damage (attack-vs-attack is simultaneous).</li>
+        <li><strong>Step 3 - Triggered effects:</strong> <code>on_hit</code>, <code>on_blocked</code>/<code>on_parried</code>, defender <code>on_block</code>/<code>on_parry</code>, then <code>on_resolve</code>.</li>
+        <li><strong>Step 4 - Legacy card effect keys:</strong> legacy single-key effects resolve after triggered effects.</li>
+        <li><strong>Important:</strong> If both attacks resolve in the same moment, "next attack" modifiers apply to future attacks, not retroactively to the simultaneous one.</li>
+    </ul>
 
     <div class="example-box" style="border-left-color: #f1c40f;">
         <h4 style="color: #f1c40f;">💡 Advanced Tactical Tips</h4>
@@ -195,3 +205,7 @@
 
 </body>
 </html>
+
+
+
+

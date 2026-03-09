@@ -61,9 +61,17 @@ function consumeHypnotized(targetKey, sourceKey, reason = 'consumed') {
     return true;
 }
 
+function actionHasEffectType(action, effectType) {
+    if (!action || action.type === 'occupied') return false;
+    const key = String(effectType || '').toLowerCase();
+    if (!key) return false;
+    if (String(action.effect || '').toLowerCase() === key) return true; // legacy
+    if (!Array.isArray(action.effects)) return false;
+    return action.effects.some((fx) => String(fx?.type || '').toLowerCase() === key);
+}
 function tryResolveDont(sourceKey, targetKey, sourceAction) {
     if (!sourceAction || sourceAction.type === 'occupied') return false;
-    if (sourceAction.effect !== 'dont') return false;
+    if (!actionHasEffectType(sourceAction, 'dont')) return false;
     const target = state?.[targetKey];
     if (!target || (target.statuses?.hypnotized || 0) <= 0) return false;
     const targetAction = (typeof getActiveCard === 'function')
@@ -79,7 +87,7 @@ function tryResolveDont(sourceKey, targetKey, sourceAction) {
 }
 function tryResolveBlink(sourceKey, targetKey, sourceAction, targetAction) {
     if (!sourceAction || sourceAction.type === 'occupied') return false;
-    if (sourceAction.effect !== 'blink') return false;
+    if (!actionHasEffectType(sourceAction, 'blink')) return false;
     if (!targetAction || targetAction.type !== 'attack') return false;
 
     removeTimelineAction(targetKey, targetAction);
@@ -184,6 +192,7 @@ function resolveMoment() {
             let roguePenalty = state.player.statuses.rogueDebuff || 0;
             pDmg = pAction.dmg + state.player.statuses.nextAtkMod + getEnhancerDamageBonus(pAction) - roguePenalty;
             if (state.player.class === 'Ice Assassin' && (state.ai.statuses?.freeze || 0) >= 5) pDmg += 1;
+            if (pAction.id === 'darkness_night_blade' && (state.ai.hand?.length || 0) === 0) pDmg += 3;
             state.player.statuses.nextAtkMod = 0; state.player.statuses.rogueDebuff = 0;
         }
         if(pAction.type === 'parry') pParry = true;
@@ -202,6 +211,7 @@ function resolveMoment() {
             let roguePenalty = state.ai.statuses.rogueDebuff || 0;
             aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod + getEnhancerDamageBonus(aiAction) - roguePenalty;
             if (state.ai.class === 'Ice Assassin' && (state.player.statuses?.freeze || 0) >= 5) aiDmg += 1;
+            if (aiAction.id === 'darkness_night_blade' && (state.player.hand?.length || 0) === 0) aiDmg += 3;
             state.ai.statuses.nextAtkMod = 0; state.ai.statuses.rogueDebuff = 0;
         }
         if(aiAction.type === 'parry') aiParry = true;
@@ -214,13 +224,13 @@ function resolveMoment() {
 let aiGrabHit = false;
 
 if (pGrab) {
-  const aiIsBuffLike = aiAction && (aiAction.type === 'buff' || aiAction.type === 'utility');
+  const aiIsBuffLike = aiAction && (aiAction.type === 'buff');
 
   if (aiBlock || aiParry) {
     pGrabHit = true;
     log(`Player ${pAction.name} GRABS!`);
   }
-  // NEW: grab also works on buffs/utilities (and interrupts them)
+  // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
   else if (aiIsBuffLike) {
     pGrabHit = true;
     aiActionInterrupted = true;
@@ -237,13 +247,13 @@ if (pGrab) {
     }
 
     if (aiGrab) {
-      const pIsBuffLike = pAction && (pAction.type === 'buff' || pAction.type === 'utility');
+      const pIsBuffLike = pAction && (pAction.type === 'buff');
 
       if (pBlock || pParry) {
         aiGrabHit = true;
         log(`AI ${aiAction.name} GRABS!`);
       }
-      // NEW: grab also works on buffs/utilities (and interrupts them)
+      // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
       else if (pIsBuffLike) {
         aiGrabHit = true;
         pActionInterrupted = true;
@@ -320,6 +330,16 @@ if (pGrab) {
         // BLEED detonation: on being hit by an ATTACK
         if (pAction && pAction.type === 'attack') {
             detonateBleedOnAttackHit('player', 'ai');
+
+            if ((state.ai.statuses?.poisonSkinActive || 0) > 0) {
+                applyPoisonCounters('ai', 'player', 2);
+            }
+            if (state.ai.class === 'Ice Brute') {
+                applyFreezeCounters('ai', 'player', 1);
+            }
+            if (state.ai.class === 'Fae Brute') {
+                applyHypnotizedStatus('ai', 'player');
+            }
         }
 
         // Passives - FIXED ROGUE LOGIC
@@ -336,6 +356,16 @@ if (pGrab) {
         // BLEED detonation: on being hit by an ATTACK
         if (aiAction && aiAction.type === 'attack') {
             detonateBleedOnAttackHit('ai', 'player');
+
+            if ((state.player.statuses?.poisonSkinActive || 0) > 0) {
+                applyPoisonCounters('player', 'ai', 2);
+            }
+            if (state.player.class === 'Ice Brute') {
+                applyFreezeCounters('player', 'ai', 1);
+            }
+            if (state.player.class === 'Fae Brute') {
+                applyHypnotizedStatus('player', 'ai');
+            }
         }
 
         // Passives - FIXED ROGUE LOGIC
@@ -370,6 +400,9 @@ const aiHit = (aiAction && aiAction !== 'occupied' && aiAction.type === 'attack'
 const pContact = pHit || pGrabHit;
 const aiContact = aiHit || aiGrabHit;
 
+const pResolved = !!(pAction && pAction !== 'occupied' && !pActionInterrupted && !(pAction.type === 'attack' && aiParry));
+const aiResolved = !!(aiAction && aiAction !== 'occupied' && !aiActionInterrupted && !(aiAction.type === 'attack' && pParry));
+
 // Source card triggers (on_hit / on_blocked / on_parried)
 if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
     if (pContact) {
@@ -388,6 +421,21 @@ if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
     }
     if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
     if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
+}
+
+if (pResolved) {
+    runTriggeredCardEffects(pAction, 'on_resolve', {
+        sourceKey: 'player',
+        targetKey: 'ai',
+        context: { resolved: true, hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry }
+    });
+}
+if (aiResolved) {
+    runTriggeredCardEffects(aiAction, 'on_resolve', {
+        sourceKey: 'ai',
+        targetKey: 'player',
+        context: { resolved: true, hitLanded: aiHit, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry }
+    });
 }
 
 // Defender triggers (on_block / on_parry) - attributed to the ACTIVE defense card
@@ -491,6 +539,10 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             source.stam = Math.min(source.maxStam, source.stam + 1); log(`${sourceKey} recovers 1 Stamina!`); break;
         case 'gain_stam_2':
             source.stam = Math.min(source.maxStam, source.stam + 2); log(`${sourceKey} recovers 2 Stamina!`); break;
+        case 'poison_skin':
+            source.statuses.poisonSkinNextTurn = 1;
+            log(`${sourceKey} prepares Poison Skin for next turn.`);
+            break;
         case 'buff_next_atk_3':
             source.statuses.nextAtkMod += 3; log(`${sourceKey} empowers next attack (+3 DMG)`); break;
         case 'buff_next_atk_5':
@@ -566,9 +618,21 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         case 'freeze_1_on_hit':
             if(context.hitLanded) { applyFreezeCounters(sourceKey, targetKey, 1); }
             break;
+        case 'freeze_2_on_hit':
+            if(context.hitLanded || context.grabHit) { applyFreezeCounters(sourceKey, targetKey, 2); }
+            break;
         case 'cold_wind':
             applyFreezeCounters(sourceKey, targetKey, 1);
             drawCards(1, sourceKey);
+            break;
+        case 'frost_hug':
+            if (context.grabHit && (target.statuses.freeze || 0) >= 10) {
+                target.hp -= 5;
+                target.roundData.lostLife = true;
+                if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
+                spawnFloatingText(targetKey, '-5', 'float-dmg');
+                log(`${sourceKey}'s Frost Hug gains +5 DMG!`);
+            }
             break;
         case 'break_the_ice':
             if(context.grabHit) {
@@ -641,9 +705,14 @@ function nextTurn(isFirstTurn = false) {
         }
         if ((state.ai.statuses.armorNextTurn || 0) > 0) {
             state.ai.statuses.bonusArmor += state.ai.statuses.armorNextTurn;
-            log(`AI gains +${state.ai.statuses.armorNextTurn} Armor this turn.`);
+            log('AI gains +' + state.ai.statuses.armorNextTurn + ' Armor this turn.');
             state.ai.statuses.armorNextTurn = 0;
         }
+
+        state.player.statuses.poisonSkinActive = (state.player.statuses.poisonSkinNextTurn || 0) > 0 ? 1 : 0;
+        state.ai.statuses.poisonSkinActive = (state.ai.statuses.poisonSkinNextTurn || 0) > 0 ? 1 : 0;
+        state.player.statuses.poisonSkinNextTurn = 0;
+        state.ai.statuses.poisonSkinNextTurn = 0;
     }
 
     if (typeof window.aiLearnFromRound === 'function') window.aiLearnFromRound();
@@ -727,6 +796,7 @@ function normalizeTriggerName(t) {
     if (s === 'upon block' || s === 'on block' || s === 'block' || s === 'on_block') return 'on_block';
     if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
     if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
+    if (s === 'on resolve' || s === 'resolve' || s === 'on_resolve') return 'on_resolve';
     if (s === 'on get blocked' || s === 'on_blocked' || s === 'upon being blocked') return 'on_blocked';
     if (s === 'on get parried' || s === 'on_parried' || s === 'upon being parried') return 'on_parried';
     return s.replace(/\s+/g, '_');
@@ -744,24 +814,24 @@ function normalizeEffectEntry(entry) {
         const trigger = normalizeTriggerName(tr);
         if (Array.isArray(a)) {
             const [type, value] = a;
-            return { trigger, type: String(type).toLowerCase(), value: Number(value) || 0 };
+            return { trigger, type: String(type).toLowerCase(), target: 'opponent', value: Number(value) || 0 };
         }
         if (typeof a === 'string') {
-            return { trigger, type: a.toLowerCase(), value: Number(b) || 0 };
+            return { trigger, type: a.toLowerCase(), target: 'opponent', value: Number(b) || 0 };
         }
         return null;
     }
 
     if (typeof entry === 'object') {
         const trigger = normalizeTriggerName(entry.trigger);
-        if (entry.type) return { trigger, type: String(entry.type).toLowerCase(), value: Number(entry.value) || 0 };
+        if (entry.type) return { trigger, type: String(entry.type).toLowerCase(), target: String(entry.target || 'opponent').toLowerCase(), value: Number(entry.value) || 0 };
         if (entry.effect) {
             if (Array.isArray(entry.effect)) {
                 const [type, value] = entry.effect;
-                return { trigger, type: String(type).toLowerCase(), value: Number(value) || 0 };
+                return { trigger, type: String(type).toLowerCase(), target: 'opponent', value: Number(value) || 0 };
             }
             if (typeof entry.effect === 'object' && entry.effect.type) {
-                return { trigger, type: String(entry.effect.type).toLowerCase(), value: Number(entry.effect.value) || 0 };
+                return { trigger, type: String(entry.effect.type).toLowerCase(), target: String(entry.effect.target || 'opponent').toLowerCase(), value: Number(entry.effect.value) || 0 };
             }
         }
     }
@@ -780,10 +850,11 @@ function runTriggeredCardEffects(card, triggerName, args) {
         if ((e.value || 0) <= 0) continue;
 
         // Effect-type registry (preferred)
+        const effectTargetKey = ((String(e.target || 'opponent').toLowerCase() === 'self' || String(e.target || 'opponent').toLowerCase() === 'source') ? args.sourceKey : args.targetKey);
         if (typeof window.tryRunEffectType === 'function') {
             const handled = window.tryRunEffectType(e.type, {
                 sourceKey: args.sourceKey,
-                targetKey: args.targetKey,
+                targetKey: effectTargetKey,
                 value: e.value,
                 context: args.context || {},
                 card
@@ -793,10 +864,11 @@ function runTriggeredCardEffects(card, triggerName, args) {
 
         // Fallback: allow legacy applyEffect keys as type names
         if (typeof applyEffect === 'function') {
-            applyEffect(args.sourceKey, args.targetKey, e.type, args.context || {});
+            applyEffect(args.sourceKey, effectTargetKey, e.type, args.context || {});
         }
     }
 }
+
 
 
 

@@ -91,7 +91,9 @@ const getBaseStatuses = () => ({
     bleed: 0,           // persistent counters (NOT cleared end of turn)
     poison: 0,          // persistent counters (NOT cleared end of turn)
     hypnotized: 0,      // non-stackable; persists until losing life
-    exhausted: 0       // NOT stackable; cleared at start of turn; reduces stamina regen by 1
+    exhausted: 0,       // NOT stackable; cleared at start of turn; reduces stamina regen by 1
+    poisonSkinNextTurn: 0,
+    poisonSkinActive: 0
 });
 
 const KEYWORD_DEFS = {
@@ -433,14 +435,9 @@ function renderDeckPickers(){
 window.renderDeckPickers = renderDeckPickers;
 
 
-// (Random opponent preview ticker intentionally removed)
-
 function computeFightRosterCols(n){
-    if(n <= 8) return 4;
-    if(n <= 12) return 5;
-    if(n <= 18) return 6;
-    if(n <= 24) return 7;
-    return 8;
+    // Keep roster at 3 rows to avoid an overly wide strip.
+    return Math.max(3, Math.ceil((n || 1) / 3));
 }
 
 function buildFightRoster(){
@@ -467,7 +464,6 @@ function buildFightRoster(){
         span.innerText = getCharacterLabel(name);
         btn.appendChild(span);
 
-        // Same tooltip behavior as TCG view (hover reveals premise).
         const t = document.createElement('div');
         t.className = 'pitch-tooltip';
         const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
@@ -477,7 +473,6 @@ function buildFightRoster(){
         el.appendChild(btn);
     });
 }
-
 
 
 // ------------------------
@@ -1131,6 +1126,14 @@ if((statuses.hypnotized || 0) > 0) {
     html += `<div class="status-badge status-hypnotized">${formatKeywords('HYPNOTIZED')}</div>`;
     count++;
 }
+if((statuses.poisonSkinNextTurn || 0) > 0) {
+    html += `<div class="status-badge status-buff">Poison Skin (Next Turn)</div>`;
+    count++;
+}
+if((statuses.poisonSkinActive || 0) > 0) {
+    html += `<div class="status-badge status-buff">Poison Skin (Active)</div>`;
+    count++;
+}
     if(statuses.drawOnBlock) { html += `<div class="status-badge status-buff">Draw on Block</div>`; count++; }
     if(statuses.stamOnBlock) { html += `<div class="status-badge status-buff">Stamina on Block</div>`; count++; }
     
@@ -1238,25 +1241,6 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

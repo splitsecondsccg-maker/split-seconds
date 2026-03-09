@@ -80,6 +80,30 @@
       defaultDeckId: "ice_assassin_base",
       abilityIds: { 1: "ability_ice_assassin_1", 2: "ability_ice_assassin_2" }
     },
+    "Ice Brute": {
+      class: "brute",
+      talents: ["ice"],
+      maxHp: 40,
+      maxStam: 5,
+      armor: 2,
+      passiveDesc: "When you lose life from an opponent ATTACK, they gain FREEZE 1.",
+      premise: "A heavy bruiser that punishes enemy aggression by freezing attackers, then cashes out with crushing grabs.",
+      deckIds: ["ice_brute_base"],
+      defaultDeckId: "ice_brute_base",
+      abilityIds: { 1: "ability_ice_brute_1", 2: "ability_ice_brute_2" }
+    },
+    "Fae Brute": {
+      class: "brute",
+      talents: ["fae", "hypnotic"],
+      maxHp: 40,
+      maxStam: 5,
+      armor: 2,
+      passiveDesc: "When you lose life from an opponent ATTACK, they become HYPNOTIZED.",
+      premise: "A brute wrapped in fae hypnosis magic: punish aggression, then force awkward timing windows.",
+      deckIds: ["brute_base"],
+      defaultDeckId: "brute_base",
+      abilityIds: { 1: "ability_brute_1", 2: "ability_brute_2" }
+    },
     "Ice Djinn": {
       class: "spirit",
       talents: ["ice", "sorcerer"],
@@ -102,7 +126,9 @@
     Necromancer: "necromancer.png",
     "Ice Djinn": "ice_djinn.png",
     Palea: "palea.png",
-    "Ice Assassin": "rogue.png"
+    "Ice Assassin": "ice_assassin.png",
+    "Ice Brute": "ice_brute.png",
+    "Fae Brute": "poom.png"
   };
 
   window.SS_PROFICIENCY_ICONS = {
@@ -122,5 +148,3 @@
     spirit: "SPIRIT"
   };
 })();
-
-

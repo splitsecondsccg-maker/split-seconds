@@ -16,18 +16,30 @@
     cost: () => $('ce-cost'),
     moments: () => $('ce-moments'),
     dmg: () => $('ce-dmg'),
-    effect: () => $('ce-effect'),
     effectTrigger: () => $('ce-effect-trigger'),
     effectType: () => $('ce-effect-type'),
+    effectTarget: () => $('ce-effect-target'),
     effectValue: () => $('ce-effect-value'),
     addEffectBtn: () => $('ce-add-effect'),
     effectsList: () => $('ce-effects-list'),
     desc: () => $('ce-desc'),
+    specialNotes: () => $('ce-special-notes'),
     enhDmg: () => $('ce-enhance-dmg'),
     enhTargets: () => $('ce-enhance-targets'),
+    reqToken: () => $('ce-req-token'),
+    reqAddAll: () => $('ce-req-add-all'),
+    reqNewOr: () => $('ce-req-new-or'),
+    reqOrGroup: () => $('ce-req-or-group'),
+    reqAddOr: () => $('ce-req-add-or'),
+    reqPreview: () => $('ce-req-preview'),
+    reqAll: () => $('ce-req-all'),
+    reqAny: () => $('ce-req-any'),
     status: () => $('ce-status'),
     charSelect: () => $('ce-char-select'),
     charDisplayName: () => $('ce-char-display-name'),
+    charMaxHp: () => $('ce-char-max-hp'),
+    charMaxStam: () => $('ce-char-max-stam'),
+    charArmor: () => $('ce-char-armor'),
     charAbility1: () => $('ce-char-ability1'),
     charAbility2: () => $('ce-char-ability2'),
 
@@ -65,14 +77,14 @@
       keyword: '',
       prof: ''
     },
-    formEffects: []
+    formEffects: [],
+    reqBuilder: { all: [], any: [] }
   };
 
   function allEditableCards(){
     const db = window.CardsDB || {};
     return Object.values(db)
       .filter(Boolean)
-      .filter(c => !c.isAbility)
       .sort((a,b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
   }
 
@@ -89,6 +101,7 @@
     if (s === 'upon block' || s === 'on block' || s === 'block' || s === 'on_block') return 'on_block';
     if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
     if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
+    if (s === 'on resolve' || s === 'resolve' || s === 'on_resolve') return 'on_resolve';
     if (s === 'on get blocked' || s === 'on_blocked' || s === 'upon being blocked') return 'on_blocked';
     if (s === 'on get parried' || s === 'on_parried' || s === 'upon being parried') return 'on_parried';
     return s.replace(/\s+/g, '_');
@@ -98,26 +111,26 @@
     if (!entry) return null;
     if (Array.isArray(entry)) {
       const [tr, a, b] = entry;
-      const trigger = normalizeTriggerName(tr);
+      const trigger = normalizeTriggerName(tr) || 'on_resolve';
       if (Array.isArray(a)) {
         const [type, value] = a;
-        return { trigger, type: String(type || '').toLowerCase(), value: Math.max(1, Number(value) || 1) };
+        return { trigger, type: String(type || '').toLowerCase(), target: 'opponent', value: Math.max(1, Number(value) || 1) };
       }
       if (typeof a === 'string') {
-        return { trigger, type: a.toLowerCase(), value: Math.max(1, Number(b) || 1) };
+        return { trigger, type: a.toLowerCase(), target: 'opponent', value: Math.max(1, Number(b) || 1) };
       }
       return null;
     }
     if (typeof entry === 'object') {
-      const trigger = normalizeTriggerName(entry.trigger);
-      if (entry.type) return { trigger, type: String(entry.type || '').toLowerCase(), value: Math.max(1, Number(entry.value) || 1) };
+      const trigger = normalizeTriggerName(entry.trigger) || 'on_resolve';
+      if (entry.type) return { trigger, type: String(entry.type || '').toLowerCase(), target: String(entry.target || 'opponent').toLowerCase(), value: Math.max(1, Number(entry.value) || 1) };
       if (entry.effect) {
         if (Array.isArray(entry.effect)) {
           const [type, value] = entry.effect;
-          return { trigger, type: String(type || '').toLowerCase(), value: Math.max(1, Number(value) || 1) };
+          return { trigger, type: String(type || '').toLowerCase(), target: 'opponent', value: Math.max(1, Number(value) || 1) };
         }
         if (typeof entry.effect === 'object' && entry.effect.type) {
-          return { trigger, type: String(entry.effect.type || '').toLowerCase(), value: Math.max(1, Number(entry.effect.value) || 1) };
+          return { trigger, type: String(entry.effect.type || '').toLowerCase(), target: String(entry.effect.target || 'opponent').toLowerCase(), value: Math.max(1, Number(entry.effect.value) || 1) };
         }
       }
     }
@@ -131,9 +144,32 @@
       on_parry: 'On Parry',
       on_blocked: 'On Blocked',
       on_parried: 'On Parried',
+      on_resolve: 'On Resolve',
       on_turn_end: 'On Turn End'
     };
     return map[key] || key;
+  }
+
+  function targetLabel(key){
+    const k = String(key || 'opponent').toLowerCase();
+    if (k === 'self' || k === 'source') return 'Self';
+    return 'Opponent';
+  }
+
+  function effectLabel(key){
+    const k = String(key || '').toLowerCase();
+    const map = {
+      draw_less: 'Draw 1 Less Next Turn',
+      draw_cards: 'Draw Cards',
+      gain_stam_1: 'Gain Stamina',
+      gain_stam_2: 'Gain Stamina',
+      freeze: 'Freeze',
+      bleed: 'Bleed',
+      poison: 'Poison',
+      hypnotize: 'Hypnotize',
+      hypnotized: 'Hypnotize'
+    };
+    return map[k] || String(key || '').toUpperCase();
   }
 
   function renderEffectsEditor(){
@@ -145,7 +181,7 @@
     }
     el.innerHTML = st.formEffects.map((fx, idx) => `
       <div class="ce-effect-pill">
-        <span><b>${triggerLabel(fx.trigger)}</b> -> ${String(fx.type || '').toUpperCase()} ${Number(fx.value || 0)}</span>
+        <span><b>${triggerLabel(fx.trigger)}</b> -> ${targetLabel(fx.target)}: ${effectLabel(fx.type)} ${Number(fx.value || 0)}</span>
         <button type="button" class="db-btn db-btn-danger" data-remove-effect="${idx}">x</button>
       </div>
     `).join('');
@@ -164,29 +200,42 @@
     const el = UI.effectType();
     if (!el) return;
     const types = Object.keys(window.EffectTypeRegistry || {}).sort();
-    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted'];
+    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards'];
     const merged = [...new Set([...(types.length ? types : fallback), ...fallback])].sort();
     const current = String(el.value || '').toLowerCase();
-    el.innerHTML = merged.map((t) => `<option value="${t}">${t.toUpperCase()}</option>`).join('');
+    el.innerHTML = merged.map((t) => `<option value=\"${t}\">${effectLabel(t)}</option>`).join('');
     if (current && merged.includes(current)) el.value = current;
   }
 
   function loadFormEffectsFromCard(card){
     const out = [];
-    if (Array.isArray(card?.effects)) {
-      for (const rawFx of card.effects) {
+    const fxSource = [];
+    if (Array.isArray(card?.effects)) fxSource.push(...card.effects);
+    if (Array.isArray(card?.enhance?.effects)) fxSource.push(...card.enhance.effects);
+
+    if (fxSource.length) {
+      for (const rawFx of fxSource) {
         const fx = normalizeEffectEntry(rawFx);
         if (!fx || !fx.trigger || !fx.type) continue;
         out.push(fx);
       }
     }
+    // Backward compatibility: if a legacy single effect exists, expose it as On Resolve.
+    if (!out.length && card?.effect) {
+      out.push({
+        trigger: 'on_resolve',
+        type: String(card.effect).toLowerCase(),
+        target: 'opponent',
+        value: 1
+      });
+    }
     st.formEffects = out;
     renderEffectsEditor();
   }
-
   function addCurrentEffectFromBuilder(){
     const trigger = normalizeTriggerName(UI.effectTrigger()?.value || 'on_hit');
     const type = String(UI.effectType()?.value || '').trim().toLowerCase();
+    const target = String(UI.effectTarget()?.value || 'opponent').trim().toLowerCase();
     const value = Math.max(1, Number(UI.effectValue()?.value) || 1);
 
     if (!trigger || !type) {
@@ -194,10 +243,334 @@
       return;
     }
 
-    st.formEffects.push({ trigger, type, value });
+    st.formEffects.push({ trigger, type, target, value });
     renderEffectsEditor();
     setStatus('Effect added. Save card to apply.');
   }
+  function parseReqList(raw){
+    return String(raw || '')
+      .split(',')
+      .map(x => x.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  function reqTokenize(raw){
+    const s = String(raw || '').toLowerCase();
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if (/\s/.test(ch)) { i += 1; continue; }
+      if (ch === '"' || ch === "'") {
+        const quote = ch;
+        i += 1;
+        const start = i;
+        while (i < s.length && s[i] !== quote) i += 1;
+        const word = s.slice(start, i).trim();
+        if (word) out.push({ t: 'word', v: word });
+        if (i < s.length) i += 1;
+        continue;
+      }
+      if (ch === '(' || ch === ')') {
+        out.push({ t: ch, v: ch });
+        i += 1;
+        continue;
+      }
+      if (ch === ',') {
+        out.push({ t: 'and', v: 'and' });
+        i += 1;
+        continue;
+      }
+      if (ch === '|') {
+        if (s[i + 1] === '|') i += 1;
+        out.push({ t: 'or', v: 'or' });
+        i += 1;
+        continue;
+      }
+      if (ch === '&') {
+        if (s[i + 1] === '&') i += 1;
+        out.push({ t: 'and', v: 'and' });
+        i += 1;
+        continue;
+      }
+      const m = s.slice(i).match(/^[a-z0-9_-]+/);
+      if (m) {
+        const word = m[0];
+        if (word === 'and') out.push({ t: 'and', v: 'and' });
+        else if (word === 'or') out.push({ t: 'or', v: 'or' });
+        else out.push({ t: 'word', v: word });
+        i += word.length;
+        continue;
+      }
+      i += 1;
+    }
+    return out;
+  }
+
+  function parseReqExprToDnf(raw){
+    const tokens = reqTokenize(raw);
+    if (!tokens.length) return [];
+    let p = 0;
+    const peek = () => tokens[p] || null;
+    const take = (t) => {
+      const tk = peek();
+      if (tk && tk.t === t) { p += 1; return tk; }
+      return null;
+    };
+    const dnfWord = (w) => [[w]];
+    const dnfOr = (a, b) => [...a, ...b];
+    const dnfAnd = (a, b) => {
+      const out = [];
+      for (const ca of a) {
+        for (const cb of b) out.push([...ca, ...cb]);
+      }
+      return out;
+    };
+
+    function parseFactor(){
+      const tk = peek();
+      if (!tk) return [];
+      if (take('(')) {
+        const inner = parseExpr();
+        take(')');
+        return inner;
+      }
+      if (tk.t === 'word') {
+        p += 1;
+        return dnfWord(tk.v);
+      }
+      return [];
+    }
+
+    function parseTerm(){
+      let left = parseFactor();
+      if (!left.length) return left;
+      while (true) {
+        if (!take('and')) break;
+        const right = parseFactor();
+        if (!right.length) break;
+        left = dnfAnd(left, right);
+      }
+      return left;
+    }
+
+    function parseExpr(){
+      let left = parseTerm();
+      if (!left.length) return left;
+      while (true) {
+        if (!take('or')) break;
+        const right = parseTerm();
+        if (!right.length) break;
+        left = dnfOr(left, right);
+      }
+      return left;
+    }
+
+    const dnf = parseExpr();
+    return dnf
+      .map(clause => [...new Set(clause.map(x => String(x || '').trim().toLowerCase()).filter(Boolean))])
+      .filter(clause => clause.length);
+  }
+
+  function reqObjectToDnf(req){
+    if (!req || typeof req !== 'object') return [];
+    const all = Array.isArray(req.all)
+      ? [...new Set(req.all.map(x => String(x || '').toLowerCase()).filter(Boolean))]
+      : [];
+    const any = Array.isArray(req.any)
+      ? req.any
+          .map(g => Array.isArray(g?.all) ? [...new Set(g.all.map(x => String(x || '').toLowerCase()).filter(Boolean))] : [])
+          .filter(g => g.length)
+      : [];
+    if (!all.length && !any.length) return [];
+    if (!any.length) return [all];
+    return any.map(g => [...new Set([...all, ...g])]);
+  }
+
+  function dnfToReqObject(dnf){
+    const clauses = (dnf || [])
+      .map(c => [...new Set((c || []).map(x => String(x || '').toLowerCase()).filter(Boolean))])
+      .filter(c => c.length);
+    if (!clauses.length) return null;
+    if (clauses.length === 1) return { all: clauses[0] };
+
+    let common = [...clauses[0]];
+    for (let i = 1; i < clauses.length; i += 1) {
+      const set = new Set(clauses[i]);
+      common = common.filter(x => set.has(x));
+      if (!common.length) break;
+    }
+
+    const reduced = clauses.map(c => c.filter(x => !common.includes(x)));
+    if (reduced.some(c => c.length === 0)) {
+      return common.length ? { all: common } : null;
+    }
+
+    const out = {};
+    if (common.length) out.all = common;
+    out.any = reduced.map(c => ({ all: c }));
+    return out;
+  }
+
+  function combineReqWithAnd(aReq, bReq){
+    const a = reqObjectToDnf(aReq);
+    const b = reqObjectToDnf(bReq);
+    if (!a.length) return dnfToReqObject(b);
+    if (!b.length) return dnfToReqObject(a);
+    const out = [];
+    for (const ca of a) {
+      for (const cb of b) out.push([...ca, ...cb]);
+    }
+    return dnfToReqObject(out);
+  }
+
+  function requirementsToForm(req){
+    if (!req || typeof req !== 'object') return { all: '', any: '' };
+    const all = Array.isArray(req.all)
+      ? req.all.map(x => String(x || '').toLowerCase()).filter(Boolean).join(', ')
+      : '';
+    const any = Array.isArray(req.any)
+      ? req.any
+          .map(group => {
+            const parts = Array.isArray(group?.all)
+              ? group.all.map(x => String(x || '').toLowerCase()).filter(Boolean)
+              : [];
+            if (!parts.length) return '';
+            return parts.length > 1 ? `(${parts.join(' and ')})` : parts[0];
+          })
+          .filter(Boolean)
+          .join(' or ')
+      : '';
+    return { all, any };
+  }
+
+  function getRequirementUniverse(){
+    const out = new Set();
+    const icons = window.ProficiencyIcons || {};
+    Object.keys(icons).forEach((k) => out.add(String(k).toLowerCase()));
+    const cards = Object.values(window.CardsDB || {});
+    for (const card of cards) {
+      const req = card?.requirements;
+      if (Array.isArray(req?.all)) req.all.forEach((k) => out.add(String(k).toLowerCase()));
+      if (Array.isArray(req?.any)) {
+        req.any.forEach((g) => {
+          if (Array.isArray(g?.all)) g.all.forEach((k) => out.add(String(k).toLowerCase()));
+        });
+      }
+    }
+    return [...out].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  }
+
+  function setReqBuilderFromRequirements(req){
+    const all = Array.isArray(req?.all)
+      ? [...new Set(req.all.map((k) => String(k || '').toLowerCase()).filter(Boolean))]
+      : [];
+    const any = Array.isArray(req?.any)
+      ? req.any
+          .map((g) => Array.isArray(g?.all) ? [...new Set(g.all.map((k) => String(k || '').toLowerCase()).filter(Boolean))] : [])
+          .filter((g) => g.length)
+      : [];
+    st.reqBuilder = { all, any };
+  }
+
+  function reqBuilderToRequirements(){
+    const all = [...new Set((st.reqBuilder?.all || []).map((k) => String(k || '').toLowerCase()).filter(Boolean))];
+    const any = (st.reqBuilder?.any || [])
+      .map((g) => [...new Set((g || []).map((k) => String(k || '').toLowerCase()).filter(Boolean))])
+      .filter((g) => g.length)
+      .map((g) => ({ all: g }));
+    if (!all.length && !any.length) return null;
+    const out = {};
+    if (all.length) out.all = all;
+    if (any.length) out.any = any;
+    return out;
+  }
+
+  function syncReqHiddenInputsFromBuilder(){
+    if (UI.reqAll()) UI.reqAll().value = (st.reqBuilder?.all || []).join(', ');
+    if (UI.reqAny()) {
+      const groups = (st.reqBuilder?.any || []).map((g) => (g.length > 1 ? `(${g.join(' and ')})` : g[0] || '')).filter(Boolean);
+      UI.reqAny().value = groups.join(' or ');
+    }
+  }
+
+  function renderReqBuilder(){
+    const tokenEl = UI.reqToken();
+    const orGroupEl = UI.reqOrGroup();
+    const previewEl = UI.reqPreview();
+    if (!tokenEl || !orGroupEl || !previewEl) return;
+
+    const tokens = getRequirementUniverse();
+    const currentToken = String(tokenEl.value || '');
+    tokenEl.innerHTML = tokens.map((t) => `<option value="${t}">${t}</option>`).join('');
+    if (currentToken && tokens.includes(currentToken)) tokenEl.value = currentToken;
+
+    const groups = st.reqBuilder?.any || [];
+    orGroupEl.innerHTML = groups.map((_, idx) => `<option value="${idx}">OR Group ${idx + 1}</option>`).join('');
+    if (!groups.length) orGroupEl.innerHTML = '<option value="">No OR groups</option>';
+
+    const allChips = (st.reqBuilder?.all || []).map((k, idx) =>
+      `<span class="ce-chip ce-req-chip">ALL: ${k} <button type="button" data-req-remove="all" data-idx="${idx}">x</button></span>`
+    ).join('');
+
+    const anyChips = groups.map((g, gi) => {
+      const chips = g.map((k, ki) =>
+        `<span class="ce-chip ce-req-chip">OR${gi + 1}: ${k} <button type="button" data-req-remove="or" data-group="${gi}" data-idx="${ki}">x</button></span>`
+      ).join('');
+      return chips;
+    }).join('');
+
+    previewEl.innerHTML = allChips + anyChips || '<div class="ce-empty">No requirements.</div>';
+
+    previewEl.querySelectorAll('button[data-req-remove]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = String(btn.getAttribute('data-req-remove') || '');
+        const idx = Number(btn.getAttribute('data-idx'));
+        if (mode === 'all') {
+          if (Number.isFinite(idx) && idx >= 0 && idx < st.reqBuilder.all.length) st.reqBuilder.all.splice(idx, 1);
+        } else if (mode === 'or') {
+          const gi = Number(btn.getAttribute('data-group'));
+          if (!Number.isFinite(gi) || gi < 0 || gi >= st.reqBuilder.any.length) return;
+          if (Number.isFinite(idx) && idx >= 0 && idx < st.reqBuilder.any[gi].length) st.reqBuilder.any[gi].splice(idx, 1);
+          st.reqBuilder.any = st.reqBuilder.any.filter((g) => g.length);
+        }
+        syncReqHiddenInputsFromBuilder();
+        renderReqBuilder();
+      });
+    });
+  }
+
+  function requirementsFromForm(){
+    const fromBuilder = reqBuilderToRequirements();
+    if (fromBuilder) return fromBuilder;
+
+    const allRaw = String(UI.reqAll()?.value || '').trim();
+    const anyRaw = String(UI.reqAny()?.value || '').trim();
+
+    let allReq = null;
+    if (allRaw) {
+      const hasLogicAll = /(\(|\)|\bor\b|\band\b|\|\||&&|\|)/i.test(allRaw);
+      allReq = hasLogicAll ? dnfToReqObject(parseReqExprToDnf(allRaw)) : { all: parseReqList(allRaw) };
+    }
+    let anyReq = null;
+
+    if (anyRaw) {
+      const hasLogic = /(\(|\)|\bor\b|\band\b|\|\||&&|\|)/i.test(anyRaw);
+      if (hasLogic) {
+        anyReq = dnfToReqObject(parseReqExprToDnf(anyRaw));
+      } else {
+        const groups = anyRaw
+          .split('|')
+          .map(chunk => parseReqList(chunk))
+          .filter(arr => arr.length)
+          .map(arr => ({ all: arr }));
+        if (groups.length) anyReq = { any: groups };
+      }
+    }
+
+    return combineReqWithAnd(allReq, anyReq);
+  }
+
   function fillForm(card){
     if (!card) return;
     UI.id().value = card.id || '';
@@ -206,13 +579,16 @@
     UI.cost().value = Number(card.cost || 0);
     UI.moments().value = Number(card.moments || 0);
     UI.dmg().value = Number(card.dmg || 0);
-    UI.effect().value = card.effect || '';
     UI.desc().value = card.desc || '';
+    if (UI.specialNotes()) UI.specialNotes().value = card.specialNotes || card.specialDesc || '';
     populateEffectTypeOptions();
     loadFormEffectsFromCard(card);
     UI.enhDmg().value = Number(card?.enhance?.dmg || 0);
     const firstTarget = Array.isArray(card?.enhance?.targets) && card.enhance.targets.length ? String(card.enhance.targets[0]).toLowerCase() : 'any';
     if (UI.enhTargets()) UI.enhTargets().value = firstTarget;
+    setReqBuilderFromRequirements(card?.requirements);
+    syncReqHiddenInputsFromBuilder();
+    renderReqBuilder();
     setStatus(window.isCustomCard && window.isCustomCard(card.id) ? 'Custom override: ON' : 'Built-in card');
   }
 
@@ -228,19 +604,25 @@
       cost: Math.max(0, Number(UI.cost().value) || 0),
       moments: Math.max(0, Number(UI.moments().value) || 0),
       dmg: Math.max(0, Number(UI.dmg().value) || 0),
-      desc: String(UI.desc().value || '').trim()
+      desc: String(UI.desc().value || '').trim(),
     };
 
-    const effect = String(UI.effect().value || '').trim();
-    if (effect) out.effect = effect;
+    const specialNotes = String(UI.specialNotes()?.value || '').trim();
+    if (specialNotes) out.specialNotes = specialNotes;
 
-    if (Array.isArray(st.formEffects) && st.formEffects.length) {
-      out.effects = st.formEffects.map((fx) => ({
-        trigger: normalizeTriggerName(fx.trigger),
-        type: String(fx.type || '').toLowerCase(),
-        value: Math.max(1, Number(fx.value) || 1)
-      }));
-    }
+    const normalizedEffects = Array.isArray(st.formEffects) && st.formEffects.length
+      ? st.formEffects.map((fx) => ({
+          trigger: normalizeTriggerName(fx.trigger),
+          type: String(fx.type || '').toLowerCase(),
+          target: String(fx.target || 'opponent').toLowerCase(),
+          value: Math.max(1, Number(fx.value) || 1)
+        }))
+      : [];
+
+    if (normalizedEffects.length && type !== 'enhancer') out.effects = normalizedEffects;
+
+    const req = requirementsFromForm();
+    if (req) out.requirements = req;
 
     if (type === 'enhancer') {
       out.moments = 0;
@@ -248,12 +630,13 @@
       const enhTarget = String(UI.enhTargets()?.value || 'any').toLowerCase();
       out.enhance = { dmg: enhDmg };
       if (enhTarget && enhTarget !== 'any') out.enhance.targets = [enhTarget];
+      if (normalizedEffects.length) out.enhance.effects = normalizedEffects;
+      if (out.effects) delete out.effects;
       out.dmg = 0;
     }
 
     return out;
   }
-
   function getCustomCardsMap(){
     if (typeof window.loadCustomCardsMap === 'function') return window.loadCustomCardsMap() || {};
     return {};
@@ -385,8 +768,31 @@
 
   function cardMatchesSearch(card, q){
     if (!q) return true;
-    const hay = `${card.id || ''} ${card.name || ''} ${card.type || ''} ${card.desc || ''} ${card.effect || ''}`.toLowerCase();
+    const fxText = Array.isArray(card.effects)
+      ? card.effects
+          .map((fx) =>
+            String((fx && fx.trigger) || '') + ' ' +
+            String((fx && fx.type) || '') + ' ' +
+            String((fx && fx.target) || '') + ' ' +
+            String((fx && fx.value) || '')
+          )
+          .join(' ')
+      : '';
+    const hay = (
+      String(card.id || '') + ' ' +
+      String(card.name || '') + ' ' +
+      String(card.type || '') + ' ' +
+      String(card.desc || '') + ' ' +
+      fxText
+    ).toLowerCase();
     return hay.includes(q);
+  }
+
+  function getCardEffectList(card){
+    const out = [];
+    if (Array.isArray(card?.effects)) out.push(...card.effects);
+    if (Array.isArray(card?.enhance?.effects)) out.push(...card.enhance.effects);
+    return out;
   }
 
   function filterCards(cards){
@@ -418,7 +824,9 @@
       if (dmgMin !== null && dmg < dmgMin) return false;
       if (dmgMax !== null && dmg > dmgMax) return false;
       if (keyword) {
-        const text = `${card.desc || ''} ${card.effect || ''} ${card.name || ''}`.toLowerCase();
+        const allFx = getCardEffectList(card);
+        const fxText = allFx.length ? allFx.map((fx) => String((fx && fx.trigger) || '') + ' ' + String((fx && fx.type) || '') + ' ' + String((fx && fx.target) || '') + ' ' + String((fx && fx.value) || '')).join(' ') : '';
+        const text = (String(card.desc || '') + ' ' + fxText + ' ' + String(card.name || '')).toLowerCase();
         if (!text.includes(keyword)) return false;
       }
 
@@ -459,17 +867,21 @@
 
   function extractKeywords(card){
     const out = [];
-    const text = `${card.desc || ''} ${card.effect || ''}`;
+    const allFx = getCardEffectList(card);
+    const fxText = allFx.length ? allFx.map((fx) => String((fx && fx.trigger) || '') + ' ' + String((fx && fx.type) || '')).join(' ') : '';
+    const text = String(card.desc || '') + ' ' + fxText;
 
     const hardKeywords = ['EXHAUSTED','FREEZE','BLEED','POISON','HYPNOTIZED','PARRY','BLOCK','GRAB','ATTACK'];
     for (const kw of hardKeywords) {
       if (new RegExp(`\\b${kw}\\b`, 'i').test(text)) out.push(kw);
     }
-
-    const fx = String(card.effect || '').trim().toLowerCase();
-    if (fx) {
-      const parts = fx.split('_').filter(x => x && !/^\d+$/.test(x));
-      for (const p of parts) out.push(`fx:${p}`);
+    if (Array.isArray(card.effects)) {
+      for (const e of card.effects) {
+        const fx = String(e?.type || '').trim().toLowerCase();
+        if (!fx) continue;
+        const parts = fx.split('_').filter(x => x && !/^\d+$/.test(x));
+        for (const p of parts) out.push(`fx:${p}`);
+      }
     }
     return out;
   }
@@ -564,7 +976,7 @@
       row.innerHTML = `
         <div class="db-card-info">
           <div class="db-card-title">${c.name} ${isCustom ? '<span style="color:#4facfe;">(Custom)</span>' : ''}</div>
-          <div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div>
+          <div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG${c.isAbility ? ' | ABILITY' : ''}</div>
           ${req ? `<div class="db-card-desc">Req: ${req}</div>` : ''}
         </div>
       `;
@@ -657,6 +1069,9 @@
     const ab1 = String(c?.abilityIds?.[1] || c?.abilityIds?.['1'] || '');
     const ab2 = String(c?.abilityIds?.[2] || c?.abilityIds?.['2'] || '');
     if (UI.charDisplayName()) UI.charDisplayName().value = display;
+    if (UI.charMaxHp()) UI.charMaxHp().value = Number(c.maxHp || 40);
+    if (UI.charMaxStam()) UI.charMaxStam().value = Number(c.maxStam || 6);
+    if (UI.charArmor()) UI.charArmor().value = Number(c.armor || 0);
     if (UI.charAbility1() && ab1) UI.charAbility1().value = ab1;
     if (UI.charAbility2() && ab2) UI.charAbility2().value = ab2;
   }
@@ -670,6 +1085,9 @@
 
     const patch = {
       displayName: String(UI.charDisplayName()?.value || charName).trim(),
+      maxHp: Math.max(1, Number(UI.charMaxHp()?.value) || 40),
+      maxStam: Math.max(1, Number(UI.charMaxStam()?.value) || 6),
+      armor: Math.max(0, Number(UI.charArmor()?.value) || 0),
       abilityIds: {
         1: String(UI.charAbility1()?.value || '').trim(),
         2: String(UI.charAbility2()?.value || '').trim()
@@ -713,6 +1131,30 @@
     UI.filterKeyword()?.addEventListener('input', refresh);
     UI.filterProf()?.addEventListener('input', refresh);
     UI.addEffectBtn()?.addEventListener('click', addCurrentEffectFromBuilder);
+    UI.reqAddAll()?.addEventListener('click', () => {
+      const token = String(UI.reqToken()?.value || '').trim().toLowerCase();
+      if (!token) return;
+      if (!st.reqBuilder.all.includes(token)) st.reqBuilder.all.push(token);
+      syncReqHiddenInputsFromBuilder();
+      renderReqBuilder();
+    });
+    UI.reqNewOr()?.addEventListener('click', () => {
+      st.reqBuilder.any.push([]);
+      syncReqHiddenInputsFromBuilder();
+      renderReqBuilder();
+      if (UI.reqOrGroup()) UI.reqOrGroup().value = String(Math.max(0, st.reqBuilder.any.length - 1));
+    });
+    UI.reqAddOr()?.addEventListener('click', () => {
+      const token = String(UI.reqToken()?.value || '').trim().toLowerCase();
+      if (!token) return;
+      if (!st.reqBuilder.any.length) st.reqBuilder.any.push([]);
+      let gi = Number(UI.reqOrGroup()?.value);
+      if (!Number.isFinite(gi) || gi < 0 || gi >= st.reqBuilder.any.length) gi = 0;
+      if (!st.reqBuilder.any[gi].includes(token)) st.reqBuilder.any[gi].push(token);
+      syncReqHiddenInputsFromBuilder();
+      renderReqBuilder();
+      if (UI.reqOrGroup()) UI.reqOrGroup().value = String(gi);
+    });
     UI.charSelect()?.addEventListener('change', loadSelectedCharacterLab);
     $("ce-char-save")?.addEventListener('click', saveCharacterLab);
     $("ce-char-reset")?.addEventListener('click', resetCharacterLab);
@@ -852,26 +1294,27 @@
     if (UI.overlay()) UI.overlay().style.display = 'none';
   }
 
+  function openCharacterLab(){
+    openCardEditor();
+    renderCharacterLabOptions();
+    const charSel = UI.charSelect();
+    if (charSel) {
+      try { charSel.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e) {}
+      charSel.focus();
+    }
+    const firstAbility = getAbilityCardsForLab()[0] || null;
+    if (firstAbility) {
+      st.selectedId = firstAbility.id;
+      fillForm(firstAbility);
+      renderAll();
+    }
+    setStatus('Character Lab mode: edit character stats below; ability cards are shown in list as ABILITY.');
+  }
+
   window.openCardEditor = openCardEditor;
+  window.openCharacterLab = openCharacterLab;
   window.closeCardEditor = closeCardEditor;
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

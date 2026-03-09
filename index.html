@@ -74,6 +74,7 @@
         <button onclick="startTutorial()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.2em; background-color: #f1c40f; color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">PLAY TUTORIAL</button>
         <button onclick="openDeckBuilder()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(79,172,254,0.15); color: #4facfe; font-weight: bold; border: 1px solid #4facfe; border-radius: 8px; cursor: pointer; margin-left: 10px;">DECK BUILDER</button>
         <button onclick="openCardEditor()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(46,204,113,0.15); color: #2ecc71; font-weight: bold; border: 1px solid #2ecc71; border-radius: 8px; cursor: pointer; margin-left: 10px;">CARD LAB</button>
+        <button onclick="openCharacterLab()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(230,126,34,0.15); color: #e67e22; font-weight: bold; border: 1px solid #e67e22; border-radius: 8px; cursor: pointer; margin-left: 10px;">CHARACTER LAB</button>
     </div>
             <div id="ai-difficulty-picker" style="margin: 10px 0 14px; display:flex; align-items:center; justify-content:center; gap:10px;">
         <label for="ai-difficulty-select" style="font-weight: bold; color: #f1c40f;">AI Difficulty</label>
@@ -255,7 +256,7 @@
                                 <option value="attack">Attack</option>
                                 <option value="grab">Grab</option>
                                 <option value="block">Block</option>
-                                <option value="buff">Buff</option>
+                                <option value="buff">Concentration</option>
                                 <option value="utility">Utility</option>
                                 <option value="enhancer">Enhancer</option>
                             </select>
@@ -304,7 +305,7 @@
                     </div>
 
                     <div class="ce-filter-grid">
-                        <div><label>Type</label><select id="ce-filter-type"><option value="">All</option><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Buff</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
+                        <div><label>Type</label><select id="ce-filter-type"><option value="">All</option><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Concentration</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
                         <div><label>Cost Min</label><input id="ce-filter-cost-min" type="number" min="0" step="1" /></div>
                         <div><label>Cost Max</label><input id="ce-filter-cost-max" type="number" min="0" step="1" /></div>
                         <div><label>Mom Min</label><input id="ce-filter-mom-min" type="number" min="0" step="1" /></div>
@@ -329,7 +330,7 @@
                         <div style="flex:1;"><label>Name</label><input id="ce-name" type="text" /></div>
                     </div>
                     <div class="db-row db-row-inline">
-                        <div style="width:150px;"><label>Type</label><select id="ce-type"><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Buff</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
+                        <div style="width:150px;"><label>Type</label><select id="ce-type"><option value="attack">Attack</option><option value="grab">Grab</option><option value="block">Block</option><option value="parry">Parry</option><option value="buff">Concentration</option><option value="utility">Utility</option><option value="enhancer">Enhancer</option></select></div>
                         <div style="width:120px;"><label>Cost</label><input id="ce-cost" type="number" min="0" step="1" /></div>
                         <div style="width:120px;"><label>Moments</label><input id="ce-moments" type="number" min="0" step="1" /></div>
                         <div style="width:120px;"><label>DMG</label><input id="ce-dmg" type="number" min="0" step="1" /></div>
@@ -343,28 +344,53 @@
                                 <option value="on_parry">On Parry</option>
                                 <option value="on_blocked">On Blocked</option>
                                 <option value="on_parried">On Parried</option>
+                                <option value="on_resolve">On Resolve</option>
                                 <option value="on_turn_end">On Turn End</option>
                             </select>
                             <select id="ce-effect-type"></select>
+                            <select id="ce-effect-target">
+                                <option value="opponent">Target: Opponent</option>
+                                <option value="self">Target: Self</option>
+                            </select>
                             <input id="ce-effect-value" type="number" min="1" step="1" value="1" />
                             <button id="ce-add-effect" type="button" class="db-btn ce-add-effect-btn">+</button>
                         </div>
                         <div id="ce-effects-list" class="ce-effects-list"></div>
                     </div>
-                    <div class="db-row db-row-inline">
-                        <div style="flex:1;"><label>Legacy Effect (optional)</label><input id="ce-effect" type="text" placeholder="Legacy key (optional)" /></div>
-                        <div style="width:180px;"><label>Enhancer DMG</label><input id="ce-enhance-dmg" type="number" min="0" step="1" /></div>
-                        <div style="width:220px;"><label>Enhancer Targets</label><select id="ce-enhance-targets"><option value="any">Any action</option><option value="attack">Attack only</option><option value="grab">Grab only</option><option value="block">Block only</option><option value="parry">Parry only</option><option value="buff">Buff only</option><option value="utility">Utility only</option></select></div>
+                    <div class="db-row db-row-inline"><div style="width:180px;"><label>Enhancer DMG</label><input id="ce-enhance-dmg" type="number" min="0" step="1" /></div>
+                        <div style="width:220px;"><label>Enhancer Targets</label><select id="ce-enhance-targets"><option value="any">Any action</option><option value="attack">Attack only</option><option value="grab">Grab only</option><option value="block">Block only</option><option value="parry">Parry only</option><option value="buff">Concentration only</option><option value="utility">Utility only</option></select></div>
+                    </div>
+                    <div class="db-row ce-req-row">
+                        <label>Requirements Builder</label>
+                        <div class="ce-req-builder">
+                            <select id="ce-req-token"></select>
+                            <button id="ce-req-add-all" type="button" class="db-btn">Add To ALL</button>
+                            <button id="ce-req-new-or" type="button" class="db-btn">New OR Group</button>
+                            <select id="ce-req-or-group"></select>
+                            <button id="ce-req-add-or" type="button" class="db-btn">Add To OR Group</button>
+                        </div>
+                        <div id="ce-req-preview" class="ce-req-preview"></div>
+                        <input id="ce-req-all" type="hidden" />
+                        <input id="ce-req-any" type="hidden" />
                     </div>
                     <div class="db-row">
                         <label>Description</label>
                         <input id="ce-desc" type="text" placeholder="Card text shown in UI" />
+                    </div>
+                    <div class="db-row">
+                        <label>Special Logic Notes (optional)</label>
+                        <input id="ce-special-notes" type="text" placeholder="Use for unique behavior not fully represented by effects list" />
                     </div>
                     <div class="ce-stats-box" style="margin-top:12px;">
                         <div class="ce-stats-title">Character Lab</div>
                         <div class="db-row db-row-inline">
                             <div style="flex:1;"><label>Character</label><select id="ce-char-select"></select></div>
                             <div style="flex:1;"><label>On-screen Name</label><input id="ce-char-display-name" type="text" placeholder="Display name" /></div>
+                        </div>
+                        <div class="db-row db-row-inline">
+                            <div style="width:140px;"><label>Max HP</label><input id="ce-char-max-hp" type="number" min="1" step="1" /></div>
+                            <div style="width:140px;"><label>Max Stamina</label><input id="ce-char-max-stam" type="number" min="1" step="1" /></div>
+                            <div style="width:140px;"><label>Armor</label><input id="ce-char-armor" type="number" min="0" step="1" /></div>
                         </div>
                         <div class="db-row db-row-inline">
                             <div style="flex:1;"><label>Ability 1</label><select id="ce-char-ability1"></select></div>
@@ -471,23 +497,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

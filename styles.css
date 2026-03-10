@@ -2744,7 +2744,7 @@ body {
 .ladder-hud-track,
 .ladder-transition-track {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 8px;
 }
 .ladder-step {
@@ -2826,4 +2826,38 @@ body {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+.ladder-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: radial-gradient(ellipse at center, rgba(30,16,42,0.74), rgba(0,0,0,0.88));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ladder-intro-card {
+  width: min(640px, 92vw);
+  background: linear-gradient(180deg, rgba(32,22,47,0.98), rgba(12,8,20,0.96));
+  border: 1px solid rgba(193,127,255,0.7);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.58);
+}
+.ladder-intro-card h2 {
+  margin: 0 0 6px;
+  color: #f1c40f;
+  letter-spacing: 1px;
+}
+.ladder-intro-card p {
+  margin: 0 0 12px;
+  color: #ddd3ef;
+}
+.ladder-intro-track .ladder-step.current {
+  animation: ladderPulse 1.2s ease-in-out infinite;
+}
+@keyframes ladderPulse {
+  0%, 100% { transform: translateX(0px); box-shadow: 0 0 10px rgba(241,196,15,0.25); }
+  50% { transform: translateX(3px); box-shadow: 0 0 16px rgba(241,196,15,0.5); }
 }

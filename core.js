@@ -297,6 +297,7 @@ function resetLadderRun(){
     const hud = document.getElementById('ladder-hud');
     if (hud) hud.style.display = 'none';
     hideLadderTransition();
+    hideLadderIntro();
 }
 
 function isLadderRunning(){
@@ -404,17 +405,37 @@ function hideLadderTransition(){
     if (el) el.style.display = 'none';
 }
 
+function hideLadderIntro(){
+    const el = document.getElementById('ladder-intro');
+    if (el) el.style.display = 'none';
+}
+
+function showLadderIntro(){
+    const wrap = document.getElementById('ladder-intro');
+    const track = document.getElementById('ladder-intro-track');
+    const beginBtn = document.getElementById('ladder-intro-begin');
+    const cancelBtn = document.getElementById('ladder-intro-cancel');
+    if (!wrap || !track || !beginBtn || !cancelBtn) return;
+    renderLadderTrackInto(track);
+    beginBtn.disabled = false;
+    cancelBtn.disabled = false;
+    wrap.style.display = 'flex';
+}
+
 function showLadderTransition(title, subtitle, canContinue){
     const wrap = document.getElementById('ladder-transition');
     const titleEl = document.getElementById('ladder-transition-title');
     const subEl = document.getElementById('ladder-transition-subtitle');
     const nextBtn = document.getElementById('ladder-next-btn');
+    const exitBtn = document.getElementById('ladder-exit-btn');
     const track = document.getElementById('ladder-transition-track');
 
     if (!wrap || !titleEl || !subEl || !nextBtn || !track) return;
     titleEl.textContent = String(title || 'Ladder');
     subEl.textContent = String(subtitle || '');
     nextBtn.style.display = canContinue ? 'inline-flex' : 'none';
+    nextBtn.disabled = false;
+    if (exitBtn) exitBtn.disabled = false;
     renderLadderTrackInto(track);
     wrap.style.display = 'flex';
 }
@@ -448,7 +469,7 @@ function startLadderGame(){
     ladderRun = buildLadderRun(selectedPlayer, selectedPlayerDeckId);
     if (!applyLadderStepSelection()) return;
     hideLadderTransition();
-    startGame({ fromLadder: true });
+    showLadderIntro();
 }
 
 function ladderContinue(){
@@ -456,6 +477,18 @@ function ladderContinue(){
     if (!applyLadderStepSelection()) return;
     hideLadderTransition();
     startGame({ fromLadder: true });
+}
+
+function ladderBeginFromIntro(){
+    if (!isLadderRunning()) return;
+    if (!applyLadderStepSelection()) return;
+    hideLadderIntro();
+    startGame({ fromLadder: true });
+}
+
+function ladderCancelIntro(){
+    hideLadderIntro();
+    resetLadderRun();
 }
 
 function handleBattleOutcome(playerWon){
@@ -497,6 +530,8 @@ function handleBattleOutcome(playerWon){
 
 window.startLadderGame = startLadderGame;
 window.ladderContinue = ladderContinue;
+window.ladderBeginFromIntro = ladderBeginFromIntro;
+window.ladderCancelIntro = ladderCancelIntro;
 window.handleBattleOutcome = handleBattleOutcome;
 
 // ------------------------
@@ -1097,6 +1132,7 @@ function startGame(opts = {}) {
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
     hideLadderTransition();
+    hideLadderIntro();
     state.aiDifficulty = aiDifficulty;
     
     // Build the decks and stats from registries (cards / decks / characters)

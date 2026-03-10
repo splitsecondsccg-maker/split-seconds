@@ -97,7 +97,8 @@
       bleed: 'Bleed',
       poison: 'Poison',
       hypnotize: 'Hypnotize',
-      hypnotized: 'Hypnotize'
+      hypnotized: 'Hypnotize',
+      puppet_reflect_attacks: 'Reflect Enemy Attacks'
     };
     return map[k] || String(key || '').toUpperCase();
   }

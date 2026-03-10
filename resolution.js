@@ -46,10 +46,22 @@ function removeTimelineAction(side, actionCard) {
     return true;
 }
 
-function consumeHypnotized(targetKey, sourceKey, reason = 'consumed') {
+function consumeHypnotized(targetKey, sourceKey, reason = 'consumed', options = {}) {
     const target = state?.[targetKey];
-    if (!target || (target.statuses?.hypnotized || 0) <= 0) return false;
-    target.statuses.hypnotized = 0;
+    if (!target) return false;
+
+    let consumed = false;
+    if ((target.statuses?.hypnotized || 0) > 0) {
+        target.statuses.hypnotized = 0;
+        consumed = true;
+    } else if (options && options.allowPostHitConsume && target.roundData?.hypnotizedConsumeWindow) {
+        // HYPNOTIZED was removed by this same hit; allow one consume cash-out.
+        target.roundData.hypnotizedConsumeWindow = false;
+        consumed = true;
+    }
+    if (!consumed) return false;
+
+    if (target.roundData) target.roundData.hypnotizedConsumeWindow = false;
     log(`${targetKey === 'player' ? 'Player' : 'AI'} loses HYPNOTIZED (${reason}).`);
     spawnFloatingText(targetKey, 'HYPNOTIZED LOST', 'float-block');
 
@@ -126,6 +138,25 @@ function tryResolveSpiritGuard(guardKey, targetKey, guardAction, targetAction) {
     playSound('block');
     return true;
 }
+function ensurePuppetReflectActive(sourceKey, targetKey, activeCard) {
+    if (!activeCard || activeCard === 'occupied') return false;
+    if (!actionHasEffectType(activeCard, 'puppet_reflect_attacks')) return false;
+    if (activeCard._puppetReflectReady) return true;
+    if (activeCard._puppetReflectChecked) return false;
+
+    activeCard._puppetReflectChecked = true;
+    const consumed = consumeHypnotized(targetKey, sourceKey, 'Puppet Strings');
+    if (!consumed) {
+        log(`${sourceKey === 'player' ? 'Player' : 'AI'} Puppet Strings fizzles (target is not HYPNOTIZED).`);
+        return false;
+    }
+
+    activeCard._puppetReflectReady = true;
+    log(`${sourceKey === 'player' ? 'Player' : 'AI'} Puppet Strings is active: enemy attacks are reflected.`);
+    spawnFloatingText(sourceKey, 'STRINGS UP', 'float-block');
+    return true;
+}
+
 function getResolvingAttackAction(action, active) {
     if (action && action !== 'occupied' && action.type === 'attack') return action;
     if (active && active.type === 'attack' && active.resolveEachMoment) return active;
@@ -270,6 +301,11 @@ function resolveMoment() {
     }
     const pAttackAction = getResolvingAttackAction(pAction, pActive);
     const aiAttackAction = getResolvingAttackAction(aiAction, aiActive);
+    const pPuppetReflectActive = ensurePuppetReflectActive('player', 'ai', pActive);
+    const aiPuppetReflectActive = ensurePuppetReflectActive('ai', 'player', aiActive);
+    let pAttackTargetKey = 'ai';
+    let aiAttackTargetKey = 'player';
+
     if(pAction && pAction !== 'occupied') {
         if(pAction.type === 'parry') pParry = true;
         if(pAction.type === 'grab') { pGrab = true; pDmg = computeGrabDamageForMoment('player', 'ai', pAction); }
@@ -295,17 +331,25 @@ function resolveMoment() {
 let aiGrabHit = false;
 
 if (pGrab) {
-  const aiIsBuffLike = aiAction && (aiAction.type === 'buff');
+  const aiBuffAction = ((aiActive && aiActive.type === 'buff') ? aiActive : (aiAction && aiAction.type === 'buff' ? aiAction : null));
+  const aiIsSpecialPerMomentBuff = !!(aiBuffAction && actionHasEffectType(aiBuffAction, 'puppet_reflect_attacks'));
 
   if (aiBlock || aiParry) {
     pGrabHit = true;
     log(`Player ${pAction.name} GRABS!`);
   }
   // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
-  else if (aiIsBuffLike) {
+  else if (aiBuffAction) {
     pGrabHit = true;
     aiActionInterrupted = true;
-    log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiAction.name}!`);
+    if (!aiIsSpecialPerMomentBuff) {
+      removeTimelineAction('ai', aiBuffAction);
+      aiAction = null;
+      aiActive = getActiveCard('ai', state.currentMoment);
+      log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiBuffAction.name}!`);
+    } else {
+      log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, but its per-moment effect persists.`);
+    }
   }
   else if (aiAttackAction) {
     pDmg = 0;
@@ -318,17 +362,25 @@ if (pGrab) {
     }
 
     if (aiGrab) {
-      const pIsBuffLike = pAction && (pAction.type === 'buff');
+      const pBuffAction = ((pActive && pActive.type === 'buff') ? pActive : (pAction && pAction.type === 'buff' ? pAction : null));
+      const pIsSpecialPerMomentBuff = !!(pBuffAction && actionHasEffectType(pBuffAction, 'puppet_reflect_attacks'));
 
       if (pBlock || pParry) {
         aiGrabHit = true;
         log(`AI ${aiAction.name} GRABS!`);
       }
       // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
-      else if (pIsBuffLike) {
+      else if (pBuffAction) {
         aiGrabHit = true;
         pActionInterrupted = true;
-        log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pAction.name}!`);
+        if (!pIsSpecialPerMomentBuff) {
+          removeTimelineAction('player', pBuffAction);
+          pAction = null;
+          pActive = getActiveCard('player', state.currentMoment);
+          log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pBuffAction.name}!`);
+        } else {
+          log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, but its per-moment effect persists.`);
+        }
       }
       else if (pAttackAction) {
         aiDmg = 0;
@@ -391,25 +443,40 @@ if (pGrab) {
     if(pDmg > 0) pDmg = Math.max(0, pDmg - (state.ai.statuses.dmgReduction || 0));
     if(aiDmg > 0) aiDmg = Math.max(0, aiDmg - (state.player.statuses.dmgReduction || 0));
 
+    // 2. Puppet Strings reflection retargets attack damage while active.
+    if (aiAttackAction && aiDmg > 0 && pPuppetReflectActive) {
+        aiAttackTargetKey = 'ai';
+        spawnFloatingText('ai', 'REFLECT', 'float-block');
+        log('Player Puppet Strings reflects AI attack.');
+    }
+    if (pAttackAction && pDmg > 0 && aiPuppetReflectActive) {
+        pAttackTargetKey = 'player';
+        spawnFloatingText('player', 'REFLECT', 'float-block');
+        log('AI Puppet Strings reflects Player attack.');
+    }
+
     // 3. Apply Final Damage ONCE (Attack vs Attack resolves simultaneously here)
     if(pDmg > 0) {
-        state.ai.hp -= pDmg; state.ai.roundData.lostLife = true;
-        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss('ai', 'life loss');
-        log(`Player hits for ${pDmg}!`); spawnFloatingText('ai', `-${pDmg}`, 'float-dmg');
+        const pHitTarget = pAttackTargetKey;
+        state[pHitTarget].hp -= pDmg; state[pHitTarget].roundData.lostLife = true;
+        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(pHitTarget, 'life loss');
+        if (pHitTarget === 'ai') log(`Player hits for ${pDmg}!`);
+        else log(`Player is hit by reflected damage for ${pDmg}!`);
+        spawnFloatingText(pHitTarget, `-${pDmg}`, 'float-dmg');
         if(pActive && pActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
         if (pAttackAction) {
-            detonateBleedOnAttackHit('player', 'ai');
+            detonateBleedOnAttackHit('player', pHitTarget);
 
-            if ((state.ai.statuses?.poisonSkinActive || 0) > 0) {
-                applyPoisonCounters('ai', 'player', 2);
+            if ((state[pHitTarget].statuses?.poisonSkinActive || 0) > 0) {
+                applyPoisonCounters(pHitTarget, 'player', 2);
             }
-            if (state.ai.class === 'Ice Brute') {
-                applyFreezeCounters('ai', 'player', 1);
+            if (state[pHitTarget].class === 'Ice Brute') {
+                applyFreezeCounters(pHitTarget, 'player', 1);
             }
-            if (state.ai.class === 'Fae Brute') {
-                applyHypnotizedStatus('ai', 'player');
+            if (state[pHitTarget].class === 'Fae Brute') {
+                applyHypnotizedStatus(pHitTarget, 'player');
             }
         }
 
@@ -419,23 +486,26 @@ if (pGrab) {
     }
 
     if(aiDmg > 0) {
-        state.player.hp -= aiDmg; state.player.roundData.lostLife = true;
-        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss('player', 'life loss');
-        log(`AI hits for ${aiDmg}!`); spawnFloatingText('player', `-${aiDmg}`, 'float-dmg');
+        const aiHitTarget = aiAttackTargetKey;
+        state[aiHitTarget].hp -= aiDmg; state[aiHitTarget].roundData.lostLife = true;
+        if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(aiHitTarget, 'life loss');
+        if (aiHitTarget === 'player') log(`AI hits for ${aiDmg}!`);
+        else log(`AI is hit by reflected damage for ${aiDmg}!`);
+        spawnFloatingText(aiHitTarget, `-${aiDmg}`, 'float-dmg');
         if(aiActive && aiActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
         if (aiAttackAction) {
-            detonateBleedOnAttackHit('ai', 'player');
+            detonateBleedOnAttackHit('ai', aiHitTarget);
 
-            if ((state.player.statuses?.poisonSkinActive || 0) > 0) {
-                applyPoisonCounters('player', 'ai', 2);
+            if ((state[aiHitTarget].statuses?.poisonSkinActive || 0) > 0) {
+                applyPoisonCounters(aiHitTarget, 'ai', 2);
             }
-            if (state.player.class === 'Ice Brute') {
-                applyFreezeCounters('player', 'ai', 1);
+            if (state[aiHitTarget].class === 'Ice Brute') {
+                applyFreezeCounters(aiHitTarget, 'ai', 1);
             }
-            if (state.player.class === 'Fae Brute') {
-                applyHypnotizedStatus('player', 'ai');
+            if (state[aiHitTarget].class === 'Fae Brute') {
+                applyHypnotizedStatus(aiHitTarget, 'ai');
             }
         }
 
@@ -480,18 +550,18 @@ const aiHitSource = (aiAction && aiAction !== 'occupied') ? aiAction : aiAttackA
 
 if (pHitSource && pHitSource !== 'occupied' && !pActionInterrupted) {
     if (pContact) {
-        const pHitCtx = { hitLanded: pHit, grabHit: pGrabHit };
-        runTriggeredCardEffects(pHitSource, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: pHitCtx });
-        runEnhancerOnHitEffects(pHitSource, 'player', 'ai', pHitCtx);
+        const pHitCtx = { hitLanded: pHit, grabHit: pGrabHit, hitTargetKey: pAttackTargetKey };
+        runTriggeredCardEffects(pHitSource, 'on_hit', { sourceKey: 'player', targetKey: pAttackTargetKey, context: pHitCtx });
+        runEnhancerOnHitEffects(pHitSource, 'player', pAttackTargetKey, pHitCtx);
     }
     if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
     if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
 }
 if (aiHitSource && aiHitSource !== 'occupied' && !aiActionInterrupted) {
     if (aiContact) {
-        const aiHitCtx = { hitLanded: aiHit, grabHit: aiGrabHit };
-        runTriggeredCardEffects(aiHitSource, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: aiHitCtx });
-        runEnhancerOnHitEffects(aiHitSource, 'ai', 'player', aiHitCtx);
+        const aiHitCtx = { hitLanded: aiHit, grabHit: aiGrabHit, hitTargetKey: aiAttackTargetKey };
+        runTriggeredCardEffects(aiHitSource, 'on_hit', { sourceKey: 'ai', targetKey: aiAttackTargetKey, context: aiHitCtx });
+        runEnhancerOnHitEffects(aiHitSource, 'ai', aiAttackTargetKey, aiHitCtx);
     }
     if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
     if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
@@ -683,12 +753,15 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         case 'blink':
             // Resolved at moment start by tryResolveBlink(). Keep as no-op fallback.
             break;
-        case 'snap_fingers':
+        case 'snap_fingers': {
+            const bonus = Math.max(1, Number(context.effectValue || 2));
             if (consumeHypnotized(targetKey, sourceKey, 'Snap Fingers')) {
-                source.statuses.nextAtkMod += 2;
-                log(`${sourceKey} snaps fingers: next attack +2 DMG.`);
+                source.statuses.nextAtkMod += bonus;
+                if (typeof drawCards === 'function') drawCards(1, sourceKey);
+                log(`${sourceKey} snaps fingers: next attack +${bonus} DMG and draws 1.`);
             }
             break;
+        }
         case 'puppet_strings':
             if (consumeHypnotized(targetKey, sourceKey, 'Puppet Strings')) {
                 target.statuses.drawLess = Math.max(target.statuses.drawLess || 0, 1);
@@ -696,8 +769,11 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                 log(`${sourceKey} pulls the strings: ${targetKey} draws 1 less next turn.`);
             }
             break;
+        case 'puppet_reflect_attacks':
+            // Resolved by ensurePuppetReflectActive() while this action stays active.
+            break;
         case 'fae_needle':
-            if ((context.hitLanded || context.grabHit) && consumeHypnotized(targetKey, sourceKey, 'Fae Needle')) {
+            if ((context.hitLanded || context.grabHit) && consumeHypnotized(targetKey, sourceKey, 'Fae Needle', { allowPostHitConsume: true })) {
                 target.hp -= 2;
                 target.roundData.lostLife = true;
                 if (typeof clearHypnotizedOnLifeLoss === 'function') clearHypnotizedOnLifeLoss(targetKey, 'life loss');
@@ -944,8 +1020,9 @@ function runTriggeredCardEffects(card, triggerName, args) {
 
         // Effect-type registry (preferred)
         const effectTargetKey = ((String(e.target || 'opponent').toLowerCase() === 'self' || String(e.target || 'opponent').toLowerCase() === 'source') ? args.sourceKey : args.targetKey);
-        const effectContext = args.context || {};
+        const effectContext = Object.assign({}, args.context || {});
         if (!effectContext.cardId) effectContext.cardId = card.id;
+        effectContext.effectValue = Number(e.value) || 0;
         if (typeof window.tryRunEffectType === 'function') {
             const handled = window.tryRunEffectType(e.type, {
                 sourceKey: args.sourceKey,

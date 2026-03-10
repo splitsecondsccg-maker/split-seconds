@@ -265,7 +265,7 @@
       },
       {
         "cardId": "palea_dont",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "palea_snap_fingers",
@@ -284,6 +284,10 @@
         "copies": 3
       },
       {
+        "cardId": "palea_grand_refrain",
+        "copies": 2
+      },
+      {
         "cardId": "mesmer_snare",
         "copies": 2
       },
@@ -298,10 +302,6 @@
       {
         "cardId": "palea_mind_meltdown",
         "copies": 2
-      },
-      {
-        "cardId": "palea_silken_thought",
-        "copies": 1
       }
     ]
   },

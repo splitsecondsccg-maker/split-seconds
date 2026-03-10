@@ -138,7 +138,13 @@ function isMultiMomentActiveCard(card) {
     if (moments <= 1) return false;
     if (card.resolveEachMoment) return true;
     if (card.type === 'block' && typeof card.currentBlock === 'number') return true;
-    if (Array.isArray(card.effects) && card.effects.some((fx) => String(fx?.type || '').toLowerCase() === 'spirit_guard')) return true;
+    if (
+        Array.isArray(card.effects) &&
+        card.effects.some((fx) => {
+            const t = String(fx?.type || '').toLowerCase();
+            return t === 'spirit_guard' || t === 'puppet_reflect_attacks';
+        })
+    ) return true;
     return false;
 }
 window.isMultiMomentActiveCard = isMultiMomentActiveCard;
@@ -202,6 +208,8 @@ function clearHypnotizedOnLifeLoss(targetKey, reason = 'lost life') {
     const target = state?.[targetKey];
     if (!target) return false;
     if ((target.statuses.hypnotized || 0) <= 0) return false;
+    // One-time window so consume-on-hit effects can still cash out this same hit.
+    if (target.roundData) target.roundData.hypnotizedConsumeWindow = true;
     target.statuses.hypnotized = 0;
     if (typeof spawnFloatingText === 'function') spawnFloatingText(targetKey, `HYPNOTIZED LOST`, 'float-hypnotized');
     if (typeof log === 'function') log(`${targetKey === 'player' ? 'Player' : 'AI'} loses HYPNOTIZED (${reason}).`);
@@ -1345,6 +1353,7 @@ function renderAbilities() {
             const ability = getAbilityCard(state[char].class, i);
             if (!ability) continue;
             const costDisplay = (char === 'player') ? getMoveCost('player', ability) : (ability.cost || 0);
+            const typeLabel = String(ability.type || 'utility').toUpperCase();
             
             container.innerHTML += `
                 <div class="ability-wrapper">
@@ -1353,6 +1362,7 @@ function renderAbilities() {
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
                         <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
+                        Type: <b style="color:#ffd166;">${typeLabel}</b><br>
                         Cost: ${costDisplay} ST | Time: ${ability.moments} MOM<br>
                         ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}</span><br>` : ''}
                         <i>${formatKeywords(ability.desc)}</i>

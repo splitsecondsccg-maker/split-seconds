@@ -737,15 +737,22 @@
   "palea_fae_whisper": {
     "id": "palea_fae_whisper",
     "name": "Fae Whisper",
-    "type": "buff",
+    "type": "attack",
     "cost": 1,
     "moments": 1,
-    "dmg": 0,
-    "desc": "Apply HYPNOTIZED.",
+    "dmg": 2,
+    "desc": "2 DMG. On hit: draw 1, then opponent draws 1 less next turn.",
     "effects": [
       {
-        "trigger": "on_resolve",
-        "type": "hypnotize",
+        "trigger": "on_hit",
+        "type": "draw_cards",
+        "target": "self",
+        "value": 1
+      },
+      {
+        "trigger": "on_hit",
+        "type": "draw_less",
+        "target": "opponent",
         "value": 1
       }
     ],
@@ -804,15 +811,15 @@
     "id": "palea_snap_fingers",
     "name": "Snap Fingers",
     "type": "buff",
-    "cost": 1,
+    "cost": 0,
     "moments": 1,
     "dmg": 0,
-    "desc": "Consume HYPNOTIZED: next attack +2 DMG.",
+    "desc": "Consume HYPNOTIZED: next attack +3 DMG and draw 1.",
     "effects": [
       {
         "trigger": "on_resolve",
         "type": "snap_fingers",
-        "value": 1
+        "value": 3
       }
     ],
     "requirements": {
@@ -826,14 +833,14 @@
     "id": "palea_puppet_strings",
     "name": "Puppet Strings",
     "type": "buff",
-    "cost": 2,
-    "moments": 2,
+    "cost": 3,
+    "moments": 3,
     "dmg": 0,
-    "desc": "Consume HYPNOTIZED: opponent draws 1 less next turn.",
+    "desc": "Consume HYPNOTIZED: during this action, all enemy ATTACKS hit themselves instead.",
     "effects": [
       {
         "trigger": "on_resolve",
-        "type": "puppet_strings",
+        "type": "puppet_reflect_attacks",
         "value": 1
       }
     ],

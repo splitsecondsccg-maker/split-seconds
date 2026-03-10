@@ -83,6 +83,9 @@
         window.drawCards(amount, sourceKey);
       }
     },
+    puppet_reflect_attacks: () => {
+      // Resolved by resolveMoment() while the utility action is active.
+    },
     blood_frenzy_draw: ({ sourceKey, targetKey, value }) => {
       const source = window.state?.[sourceKey];
       const target = window.state?.[targetKey];
@@ -159,7 +162,7 @@
     consume_hypnotized_burst: ({ sourceKey, targetKey, value, context }) => {
       if (!(context && (context.hitLanded || context.grabHit))) return;
       if (typeof window.consumeHypnotized !== "function") return;
-      const consumed = window.consumeHypnotized(targetKey, sourceKey, "burst");
+      const consumed = window.consumeHypnotized(targetKey, sourceKey, "burst", { allowPostHitConsume: true });
       if (!consumed) return;
       const bonus = Math.max(1, Number(value) || 1);
       const target = window.state?.[targetKey];
@@ -179,7 +182,7 @@
     consume_hypnotized_burst_draw: ({ sourceKey, targetKey, value, context }) => {
       if (!(context && (context.hitLanded || context.grabHit))) return;
       if (typeof window.consumeHypnotized !== "function") return;
-      const consumed = window.consumeHypnotized(targetKey, sourceKey, "burst draw");
+      const consumed = window.consumeHypnotized(targetKey, sourceKey, "burst draw", { allowPostHitConsume: true });
       if (!consumed) return;
       const bonus = Math.max(1, Number(value) || 1);
       const target = window.state?.[targetKey];

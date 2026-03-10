@@ -2718,3 +2718,112 @@ body {
 
 
 
+
+
+/* === Ladder Mode === */
+.ladder-hud {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  width: 170px;
+  background: rgba(8, 8, 18, 0.72);
+  border: 1px solid rgba(193, 127, 255, 0.65);
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 35;
+  backdrop-filter: blur(4px);
+}
+.ladder-hud-title {
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #e8c9ff;
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.ladder-hud-track,
+.ladder-transition-track {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ladder-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.04);
+}
+.ladder-step .ladder-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.35);
+  background-size: cover;
+  background-position: center;
+  flex: 0 0 auto;
+}
+.ladder-step .ladder-meta {
+  line-height: 1.15;
+  min-width: 0;
+}
+.ladder-step .ladder-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f5f5f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ladder-step .ladder-diff {
+  font-size: 10px;
+  color: #a9b6d3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ladder-step.done {
+  border-color: rgba(46, 204, 113, 0.9);
+  background: rgba(46, 204, 113, 0.12);
+}
+.ladder-step.current {
+  border-color: rgba(241, 196, 15, 0.95);
+  background: rgba(241, 196, 15, 0.16);
+  box-shadow: 0 0 14px rgba(241,196,15,0.25);
+}
+.ladder-step.failed {
+  border-color: rgba(255, 94, 98, 0.92);
+  background: rgba(255, 94, 98, 0.14);
+}
+.ladder-transition {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: radial-gradient(ellipse at center, rgba(23,18,34,0.66), rgba(0,0,0,0.86));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ladder-transition-card {
+  width: min(560px, 92vw);
+  background: linear-gradient(180deg, rgba(28,22,41,0.96), rgba(13,10,22,0.96));
+  border: 1px solid rgba(193,127,255,0.65);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+}
+.ladder-transition-card h2 {
+  margin: 0 0 6px;
+  color: #f1c40f;
+}
+.ladder-transition-card p {
+  margin: 0 0 12px;
+  color: #d7d2e8;
+}
+.ladder-transition-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}

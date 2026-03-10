@@ -535,7 +535,11 @@ if (aiAction && aiAction.effect && !aiActionInterrupted) {
 }
 updateUI();
     if(state.player.hp <= 0 || state.ai.hp <= 0) {
-        setTimeout(() => alert(state.player.hp <= 0 ? "You Lose!" : "You Win!"), 500);
+        const playerWon = state.ai.hp <= 0 && state.player.hp > 0;
+        setTimeout(() => {
+            if (typeof window.handleBattleOutcome === 'function') window.handleBattleOutcome(playerWon);
+            else alert(playerWon ? "You Win!" : "You Lose!");
+        }, 500);
         return;
     }
 

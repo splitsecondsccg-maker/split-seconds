@@ -284,6 +284,25 @@ const __deckChoiceMemory = { player: {}, ai: {} };
 let __fightPhase = 'player';        // 'player' | 'ai'
 let __fightPlayerLocked = false;
 let __fightAiChosen = false;
+
+const LADDER_DIFFICULTIES = ['normal', 'normal', 'hard', 'hard', 'pro', 'pro'];
+let ladderRun = null;
+
+function hasActiveLanSession(){
+    return !!(window.__ssLanPvpMode && window.__ssLanPvpMode.enabled);
+}
+
+function resetLadderRun(){
+    ladderRun = null;
+    const hud = document.getElementById('ladder-hud');
+    if (hud) hud.style.display = 'none';
+    hideLadderTransition();
+}
+
+function isLadderRunning(){
+    return !!(ladderRun && ladderRun.active && ladderRun.status === 'running');
+}
+
 // We intentionally do NOT animate/random-preview the opponent.
 // If the player enters combat without choosing an opponent, we randomize in startGame().
 
@@ -303,6 +322,182 @@ function pickRandomOpponent(excludeName){
     return chars[Math.floor(Math.random() * chars.length)];
 }
 
+function buildLadderRun(playerChar, playerDeckId){
+    const pool = getAllCharacters().filter(c => c !== playerChar);
+    for(let i = pool.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+
+    const picked = pool.slice(0, 6);
+    while (picked.length < 6) picked.push(pool[picked.length % Math.max(1, pool.length)] || playerChar);
+
+    const steps = LADDER_DIFFICULTIES.map((difficulty, i) => {
+        const opp = picked[i];
+        return {
+            index: i,
+            opponent: opp,
+            difficulty,
+            deckId: (typeof pickRandomDeckIdForCharacter === 'function') ? pickRandomDeckIdForCharacter(opp) : null,
+            result: 'pending'
+        };
+    });
+
+    return {
+        active: true,
+        status: 'running',
+        current: 0,
+        playerChar,
+        playerDeckId,
+        steps
+    };
+}
+
+function ladderStepCss(step, idx){
+    if (!step) return '';
+    if (step.result === 'won') return 'done';
+    if (step.result === 'lost') return 'failed';
+    if (isLadderRunning() && idx === ladderRun.current) return 'current';
+    return '';
+}
+
+function ladderStepHtml(step, idx){
+    const img = (window.charImages && window.charImages[step.opponent]) ? window.charImages[step.opponent] : '';
+    const name = getCharacterLabel(step.opponent);
+    const diff = String(step.difficulty || '').toUpperCase();
+    const css = ladderStepCss(step, idx);
+    return `
+        <div class="ladder-step ${css}">
+            <div class="ladder-avatar" style="background-image:url('${img}');"></div>
+            <div class="ladder-meta">
+                <div class="ladder-name">${idx + 1}. ${name}</div>
+                <div class="ladder-diff">${diff}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLadderTrackInto(el){
+    if (!el) return;
+    if (!ladderRun || !Array.isArray(ladderRun.steps) || ladderRun.steps.length === 0) {
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML = ladderRun.steps.map((step, idx) => ladderStepHtml(step, idx)).join('');
+}
+
+function renderLadderHud(){
+    const hud = document.getElementById('ladder-hud');
+    const track = document.getElementById('ladder-hud-track');
+    if (!hud || !track) return;
+
+    if (!isLadderRunning()) {
+        hud.style.display = 'none';
+        return;
+    }
+    hud.style.display = 'block';
+    renderLadderTrackInto(track);
+}
+
+function hideLadderTransition(){
+    const el = document.getElementById('ladder-transition');
+    if (el) el.style.display = 'none';
+}
+
+function showLadderTransition(title, subtitle, canContinue){
+    const wrap = document.getElementById('ladder-transition');
+    const titleEl = document.getElementById('ladder-transition-title');
+    const subEl = document.getElementById('ladder-transition-subtitle');
+    const nextBtn = document.getElementById('ladder-next-btn');
+    const track = document.getElementById('ladder-transition-track');
+
+    if (!wrap || !titleEl || !subEl || !nextBtn || !track) return;
+    titleEl.textContent = String(title || 'Ladder');
+    subEl.textContent = String(subtitle || '');
+    nextBtn.style.display = canContinue ? 'inline-flex' : 'none';
+    renderLadderTrackInto(track);
+    wrap.style.display = 'flex';
+}
+
+function applyLadderStepSelection(){
+    if (!isLadderRunning()) return false;
+    const step = ladderRun.steps?.[ladderRun.current];
+    if (!step) return false;
+
+    selectedPlayer = ladderRun.playerChar;
+    selectedPlayerDeckId = ladderRun.playerDeckId || selectedPlayerDeckId;
+
+    selectedAI = step.opponent;
+    selectedAIDeckId = step.deckId || ((typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(selectedAI) : null);
+
+    __fightAiChosen = true;
+
+    if (typeof window.setAIDifficulty === 'function') window.setAIDifficulty(step.difficulty);
+    const aiSel = document.getElementById('ai-difficulty-select');
+    if (aiSel) aiSel.value = step.difficulty;
+    return true;
+}
+
+function startLadderGame(){
+    if (hasActiveLanSession()) {
+        alert('Ladder Mode is offline vs AI only. Leave LAN PvP first.');
+        return;
+    }
+
+    ensureValidDeckSelection('player');
+    ladderRun = buildLadderRun(selectedPlayer, selectedPlayerDeckId);
+    if (!applyLadderStepSelection()) return;
+    hideLadderTransition();
+    startGame({ fromLadder: true });
+}
+
+function ladderContinue(){
+    if (!isLadderRunning()) return;
+    if (!applyLadderStepSelection()) return;
+    hideLadderTransition();
+    startGame({ fromLadder: true });
+}
+
+function handleBattleOutcome(playerWon){
+    const won = !!playerWon;
+
+    if (!ladderRun) {
+        setTimeout(() => alert(won ? 'You Win!' : 'You Lose!'), 200);
+        return;
+    }
+
+    const step = ladderRun.steps?.[ladderRun.current];
+    if (!step) {
+        resetLadderRun();
+        return;
+    }
+
+    if (won) {
+        step.result = 'won';
+        if (ladderRun.current >= ladderRun.steps.length - 1) {
+            ladderRun.active = false;
+            ladderRun.status = 'complete';
+            renderLadderHud();
+            showLadderTransition('LADDER COMPLETE', 'You conquered all 6 opponents.', false);
+            return;
+        }
+
+        ladderRun.current += 1;
+        renderLadderHud();
+        const next = ladderRun.steps[ladderRun.current];
+        showLadderTransition('VICTORY', `Next: ${getCharacterLabel(next.opponent)} (${String(next.difficulty).toUpperCase()})`, true);
+    } else {
+        step.result = 'lost';
+        ladderRun.active = false;
+        ladderRun.status = 'failed';
+        renderLadderHud();
+        showLadderTransition('LADDER FAILED', `You fell on fight ${ladderRun.current + 1} of ${ladderRun.steps.length}.`, false);
+    }
+}
+
+window.startLadderGame = startLadderGame;
+window.ladderContinue = ladderContinue;
+window.handleBattleOutcome = handleBattleOutcome;
 
 // ------------------------
 // Deck selection helpers
@@ -411,7 +606,7 @@ function renderDeckPickerInto(containerId, target){
         if(locked) btn.classList.add('locked');
         btn.disabled = locked;
 
-        btn.innerText = getDeckName(id).replace(/^(.*?)(?:—|-)\s*/, ''); // keep it short
+        btn.innerText = getDeckName(id).replace(/^(.*?)(?:\u2014|-)\s*/, ''); // keep it short
         btn.onclick = (e) => {
             e.stopPropagation();
             selectDeck(target, id);
@@ -875,7 +1070,7 @@ function applyBattleMetaFromState() {
 }
 
 window.applyBattleMetaFromState = applyBattleMetaFromState;
-function startGame() {
+function startGame(opts = {}) {
     // Fighting View convenience:
     // - If player didn't press LOCK IN, we treat their current pick as locked.
     // - If opponent wasn't chosen yet, we randomize it from remaining characters.
@@ -901,6 +1096,7 @@ function startGame() {
 
     music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
+    hideLadderTransition();
     state.aiDifficulty = aiDifficulty;
     
     // Build the decks and stats from registries (cards / decks / characters)
@@ -940,6 +1136,7 @@ function startGame() {
     };
 
     applyBattleMetaFromState();
+    renderLadderHud();
 
 
     clearBattleLog();
@@ -949,6 +1146,7 @@ function startGame() {
 }
 
 function backToMenu() {
+    resetLadderRun();
     music.battle.pause(); music.battle.currentTime = 0; music.select.play().catch(e=>console.log("Select BGM blocked"));
     document.getElementById('game-screen').style.display = 'none'; document.getElementById('char-select-screen').style.display = 'flex';
 }
@@ -1145,7 +1343,7 @@ if((statuses.exhausted || 0) > 0) {
 if((statuses.freeze || 0) > 0) {
     const fr = statuses.freeze;
     const taxed = fr >= 10;
-    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' · Attacks +1 ST' : ''}</div>`;
+    html += `<div class="status-badge status-debuff">${formatKeywords('FREEZE')} (${fr})${taxed ? ' - Attacks +1 ST' : ''}</div>`;
     count++;
 }
 if((statuses.bleed || 0) > 0) {

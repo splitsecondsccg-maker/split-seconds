@@ -107,10 +107,28 @@
         </div>
         <div id="lan-status" class="lan-status">Offline</div>
     </div>
+<div style="display:flex; gap:12px; align-items:center; justify-content:center;">
 <button class="submit-btn" onclick="startGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px;">ENTER COMBAT</button>
+<button class="submit-btn" onclick="startLadderGame()" style="font-size: 20px; padding: 15px 40px; border-radius: 8px; background: linear-gradient(135deg,#8e44ad,#5e2f8a); border-color:#c39bd3;">START LADDER</button>
+</div>
     </div>
 
     <div id="game-screen">
+        <div id="ladder-hud" class="ladder-hud" style="display:none;">
+            <div class="ladder-hud-title">KOMBAT LADDER</div>
+            <div id="ladder-hud-track" class="ladder-hud-track"></div>
+        </div>
+        <div id="ladder-transition" class="ladder-transition" style="display:none;">
+            <div class="ladder-transition-card">
+                <h2 id="ladder-transition-title">LADDER</h2>
+                <p id="ladder-transition-subtitle"></p>
+                <div id="ladder-transition-track" class="ladder-transition-track"></div>
+                <div class="ladder-transition-actions">
+                    <button id="ladder-next-btn" class="submit-btn" onclick="ladderContinue()">NEXT FIGHT</button>
+                    <button id="ladder-exit-btn" class="btn-danger basic-action-btn" onclick="backToMenu()">EXIT</button>
+                </div>
+            </div>
+        </div>
                 <div class="top-bar">
             <div class="stats-area battle-hero enemy-hero" id="ai-stats">
                 <div class="hero-panel hero-panel-left">

@@ -394,7 +394,7 @@
         const events = [];
         if (burnedCount > 0) {
           events.push({ type: "LOG", payload: { message: `Player burned ${burnedCount} card(s) for ${actualStamGained} Stamina.` } });
-          events.push({ type: "FLOAT_TEXT", payload: { target: "player", text: `+${actualStamGained} ⚡`, cssClass: "float-heal" } });
+          events.push({ type: "FLOAT_TEXT", payload: { target: "player", text: `+${actualStamGained} âš¡`, cssClass: "float-heal" } });
         }
 
         let aiBurned = 0;
@@ -406,7 +406,7 @@
         }
         if (aiBurned > 0) {
           events.push({ type: "LOG", payload: { message: `AI burned ${aiBurned} card(s) for Stamina.` } });
-          events.push({ type: "FLOAT_TEXT", payload: { target: "ai", text: `+${aiBurned} ⚡`, cssClass: "float-heal" } });
+          events.push({ type: "FLOAT_TEXT", payload: { target: "ai", text: `+${aiBurned} âš¡`, cssClass: "float-heal" } });
         }
 
         const pDraw = Math.max(0, 2 - (s.player.statuses.drawLess || 0));
@@ -422,6 +422,10 @@
 
         s.player.statuses.drawLess = 0;
         s.ai.statuses.drawLess = 0;
+
+        // Keep last-turn timelines visible during Exert, then clear on confirm.
+        s.player.timeline = [null, null, null, null, null];
+        s.ai.timeline = [null, null, null, null, null];
 
         s.phase = "planning";
         events.push({ type: "EXERT_CONFIRMED", payload: {} });
@@ -466,7 +470,7 @@
     });
     on("EXERT_SELECTION_CHANGED", (e) => {
       const btn = document.getElementById("btn-confirm-exert");
-      if (btn) btn.innerText = `Confirm Exert (+${e.payload.selectedCount}⚡)`;
+      if (btn) btn.innerText = `Confirm Exert (+${e.payload.selectedCount}âš¡)`;
     });
     on("EXERT_CONFIRMED", () => {
       document.body.classList.remove("exert-mode");

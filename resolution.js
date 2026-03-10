@@ -83,6 +83,10 @@ function tryResolveDont(sourceKey, targetKey, sourceAction) {
     removeTimelineAction(targetKey, targetAction);
     log(`${sourceKey === 'player' ? 'Player' : 'AI'} uses Don't and negates ${targetKey === 'player' ? 'Player' : 'AI'} action.`);
     spawnFloatingText(targetKey, 'NEGATED', 'float-block');
+    if (typeof drawCards === 'function') {
+        drawCards(1, sourceKey);
+        log(`${sourceKey === 'player' ? 'Player' : 'AI'} gains tempo and draws 1.`);
+    }
     return true;
 }
 function tryResolveBlink(sourceKey, targetKey, sourceAction, targetAction) {
@@ -104,6 +108,72 @@ function tryResolveBlink(sourceKey, targetKey, sourceAction, targetAction) {
     if (typeof drawCards === 'function') drawCards(1, sourceKey);
     playSound('hit');
     return true;
+}
+function tryResolveSpiritGuard(guardKey, targetKey, guardAction, targetAction) {
+    if (!guardAction || guardAction.type === 'occupied') return false;
+    if (!actionHasEffectType(guardAction, 'spirit_guard')) return false;
+    if (!targetAction || targetAction === 'occupied') return false;
+    const t = String(targetAction.type || '').toLowerCase();
+    if (t !== 'attack' && t !== 'grab') return false;
+
+    removeTimelineAction(targetKey, targetAction);
+    log(`${guardKey === 'player' ? 'Player' : 'AI'} Spirit Form negates ${targetKey === 'player' ? 'Player' : 'AI'} ${t.toUpperCase()}.`);
+    spawnFloatingText(targetKey, 'NEGATED', 'float-block');
+    if (typeof applyFreezeCounters === 'function') {
+        applyFreezeCounters(guardKey, targetKey, 1);
+        log(`${guardKey === 'player' ? 'Player' : 'AI'} Spirit Form applies FREEZE 1.`);
+    }
+    playSound('block');
+    return true;
+}
+function getResolvingAttackAction(action, active) {
+    if (action && action !== 'occupied' && action.type === 'attack') return action;
+    if (active && active.type === 'attack' && active.resolveEachMoment) return active;
+    return null;
+}
+
+function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
+    if (!attackCard) return 0;
+    const source = state[sourceKey];
+    const target = state[targetKey];
+    if (!source || !target) return 0;
+
+    const perMoment = !!attackCard.resolveEachMoment;
+    const baseDmg = perMoment ? Math.max(0, Number(attackCard.perMomentDmg || attackCard.dmg || 0)) : Number(attackCard.dmg || 0);
+    let dmg = baseDmg + getEnhancerDamageBonus(attackCard);
+
+    if (!perMoment || !attackCard._modsConsumedThisAction) {
+        let roguePenalty = source.statuses.rogueDebuff || 0;
+        dmg += source.statuses.nextAtkMod - roguePenalty;
+        source.statuses.nextAtkMod = 0;
+        source.statuses.rogueDebuff = 0;
+        attackCard._modsConsumedThisAction = true;
+    }
+
+    if (source.class === 'Ice Assassin' && (target.statuses?.freeze || 0) >= 5) dmg += 1;
+    if (attackCard.id === 'darkness_night_blade' && (target.hand?.length || 0) === 0) dmg += 3;
+    if (attackCard.id === 'rogue_execution_window' && (target.hand?.length || 0) <= 1) dmg += 3;
+    if (attackCard.id === 'paladin_armor_judgment') {
+        const effectiveArmor = Math.max(0, (source.armor || 0) + (source.statuses?.bonusArmor || 0) - (source.statuses?.armorDebuff || 0));
+        if (effectiveArmor >= 6) dmg += 3;
+    }
+    if (attackCard.id === 'ice_assassin_shatter_step' && (target.statuses?.freeze || 0) >= 3) dmg += 2;
+    if (attackCard.id === 'ice_djinn_absolute_zero' && (target.statuses?.freeze || 0) >= 6) dmg += 4;
+    return Math.max(0, dmg);
+}
+
+function computeGrabDamageForMoment(sourceKey, targetKey, grabCard) {
+    if (!grabCard) return 0;
+    const source = state[sourceKey];
+    const target = state[targetKey];
+    if (!source || !target) return 0;
+
+    let dmg = Number(grabCard.dmg || 0) + Number(source.statuses?.nextGrabMod || 0) + getEnhancerDamageBonus(grabCard);
+    source.statuses.nextGrabMod = 0;
+
+    if (grabCard.id === 'brute_venom_crush' && (target.statuses?.poison || 0) >= 4) dmg += 3;
+    if (grabCard.id === 'ice_brute_shatter_grab' && (target.statuses?.freeze || 0) >= 6) dmg += 4;
+    return Math.max(0, dmg);
 }
 function resolveMoment() {
     if (state.currentMoment > 4) {
@@ -181,23 +251,30 @@ function resolveMoment() {
     if(state.player.statuses.forceBlock && pAction && pAction !== 'occupied') { log("Player is Intimidated! Action fails."); pAction = null; }
     if(state.ai.statuses.forceBlock && aiAction && aiAction !== 'occupied') { log("AI is Intimidated! Action fails."); aiAction = null; }
 
-    const pBlink = tryResolveBlink('player', 'ai', pAction, aiAction);
-    const aiBlink = tryResolveBlink('ai', 'player', aiAction, pAction);
+    const pResolvingAttackNow = getResolvingAttackAction(pAction, pActive);
+    const aiResolvingAttackNow = getResolvingAttackAction(aiAction, aiActive);
+    const pBlink = tryResolveBlink('player', 'ai', pAction, aiResolvingAttackNow || aiAction);
+    const aiBlink = tryResolveBlink('ai', 'player', aiAction, pResolvingAttackNow || pAction);
     if (pBlink || aiBlink) {
         if (pBlink) { aiActionInterrupted = true; aiAction = null; }
         if (aiBlink) { pActionInterrupted = true; pAction = null; }
     }
-    if(pAction && pAction !== 'occupied') {
-        if(pAction.type === 'attack') {
-            let roguePenalty = state.player.statuses.rogueDebuff || 0;
-            pDmg = pAction.dmg + state.player.statuses.nextAtkMod + getEnhancerDamageBonus(pAction) - roguePenalty;
-            if (state.player.class === 'Ice Assassin' && (state.ai.statuses?.freeze || 0) >= 5) pDmg += 1;
-            if (pAction.id === 'darkness_night_blade' && (state.ai.hand?.length || 0) === 0) pDmg += 3;
-            state.player.statuses.nextAtkMod = 0; state.player.statuses.rogueDebuff = 0;
-        }
-        if(pAction.type === 'parry') pParry = true;
-        if(pAction.type === 'grab') { pGrab = true; pDmg = (pAction.dmg || 0) + state.player.statuses.nextGrabMod + getEnhancerDamageBonus(pAction); state.player.statuses.nextGrabMod = 0; }
+
+    const pSpiritGuard = tryResolveSpiritGuard('player', 'ai', pActive, aiAction);
+    const aiSpiritGuard = tryResolveSpiritGuard('ai', 'player', aiActive, pAction);
+    if (pSpiritGuard || aiSpiritGuard) {
+        if (pSpiritGuard) { aiActionInterrupted = true; aiAction = null; }
+        if (aiSpiritGuard) { pActionInterrupted = true; pAction = null; }
+        pActive = getActiveCard('player', state.currentMoment);
+        aiActive = getActiveCard('ai', state.currentMoment);
     }
+    const pAttackAction = getResolvingAttackAction(pAction, pActive);
+    const aiAttackAction = getResolvingAttackAction(aiAction, aiActive);
+    if(pAction && pAction !== 'occupied') {
+        if(pAction.type === 'parry') pParry = true;
+        if(pAction.type === 'grab') { pGrab = true; pDmg = computeGrabDamageForMoment('player', 'ai', pAction); }
+    }
+    if (!pGrab && pAttackAction) pDmg = computeAttackDamageForMoment('player', 'ai', pAttackAction);
 
     if (pActive && pActive.type === 'block') pBlock = true;
 
@@ -207,16 +284,10 @@ function resolveMoment() {
         if (!aiAction.paidUpfront) aiAction.paidCost = costToPay;
         state.ai.stam = Math.max(0, state.ai.stam - costToPay);
     }
-        if(aiAction.type === 'attack') {
-            let roguePenalty = state.ai.statuses.rogueDebuff || 0;
-            aiDmg = aiAction.dmg + state.ai.statuses.nextAtkMod + getEnhancerDamageBonus(aiAction) - roguePenalty;
-            if (state.ai.class === 'Ice Assassin' && (state.player.statuses?.freeze || 0) >= 5) aiDmg += 1;
-            if (aiAction.id === 'darkness_night_blade' && (state.player.hand?.length || 0) === 0) aiDmg += 3;
-            state.ai.statuses.nextAtkMod = 0; state.ai.statuses.rogueDebuff = 0;
-        }
         if(aiAction.type === 'parry') aiParry = true;
-        if(aiAction.type === 'grab') { aiGrab = true; aiDmg = (aiAction.dmg || 0) + state.ai.statuses.nextGrabMod + getEnhancerDamageBonus(aiAction); state.ai.statuses.nextGrabMod = 0; }
+        if(aiAction.type === 'grab') { aiGrab = true; aiDmg = computeGrabDamageForMoment('ai', 'player', aiAction); }
     }
+    if (!aiGrab && aiAttackAction) aiDmg = computeAttackDamageForMoment('ai', 'player', aiAttackAction);
 
     if (aiActive && aiActive.type === 'block') aiBlock = true;
 
@@ -236,7 +307,7 @@ if (pGrab) {
     aiActionInterrupted = true;
     log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiAction.name}!`);
   }
-  else if (aiAction && aiAction.type === 'attack') {
+  else if (aiAttackAction) {
     pDmg = 0;
     log("Player Grab interrupted!");
   }
@@ -259,7 +330,7 @@ if (pGrab) {
         pActionInterrupted = true;
         log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pAction.name}!`);
       }
-      else if (pAction && pAction.type === 'attack') {
+      else if (pAttackAction) {
         aiDmg = 0;
         log("AI Grab interrupted!");
       }
@@ -269,8 +340,8 @@ if (pGrab) {
       }
     }
 
-    if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = 1; if (state.player.class === 'Ice Djinn') applyFreezeCounters('player', 'ai', 2); }
-    if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = 1; if (state.ai.class === 'Ice Djinn') applyFreezeCounters('ai', 'player', 2); }
+    if(pParry && aiDmg > 0 && !aiGrab) { aiDmg = 0; log(`Player PARRIES!`); spawnFloatingText('player', 'PARRY', 'float-block'); playSound('block'); state.ai.statuses.drawLess = (state.ai.statuses.drawLess || 0) + 1; if (state.player.class === 'Ice Djinn') applyFreezeCounters('player', 'ai', 2); }
+    if(aiParry && pDmg > 0 && !pGrab) { pDmg = 0; log(`AI PARRIES!`); spawnFloatingText('ai', 'PARRY', 'float-block'); playSound('block'); state.player.statuses.drawLess = (state.player.statuses.drawLess || 0) + 1; if (state.ai.class === 'Ice Djinn') applyFreezeCounters('ai', 'player', 2); }
 
     // --- FIXED ARMOR LOGIC: Now safely catches ALL active blocks properly ---
     if(pBlock && aiDmg > 0 && !aiGrab) {
@@ -328,7 +399,7 @@ if (pGrab) {
         if(pActive && pActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
-        if (pAction && pAction.type === 'attack') {
+        if (pAttackAction) {
             detonateBleedOnAttackHit('player', 'ai');
 
             if ((state.ai.statuses?.poisonSkinActive || 0) > 0) {
@@ -354,7 +425,7 @@ if (pGrab) {
         if(aiActive && aiActive.moments >= 3) { playSound('heavy_impact'); } else playSound('hit');
 
         // BLEED detonation: on being hit by an ATTACK
-        if (aiAction && aiAction.type === 'attack') {
+        if (aiAttackAction) {
             detonateBleedOnAttackHit('ai', 'player');
 
             if ((state.player.statuses?.poisonSkinActive || 0) > 0) {
@@ -391,11 +462,11 @@ if (pGrab) {
     }
 
 // 4. Trigger Effects (decoupled, data-driven)
-const pAttemptedAttack = !!(pAction && pAction !== 'occupied' && pAction.type === 'attack' && (pAction.dmg || 0) > 0 && !pGrab);
-const aiAttemptedAttack = !!(aiAction && aiAction !== 'occupied' && aiAction.type === 'attack' && (aiAction.dmg || 0) > 0 && !aiGrab);
+const pAttemptedAttack = !!(pAttackAction && !pGrab && (pAttackAction.dmg || pAttackAction.perMomentDmg || 0) > 0);
+const aiAttemptedAttack = !!(aiAttackAction && !aiGrab && (aiAttackAction.dmg || aiAttackAction.perMomentDmg || 0) > 0);
 
-const pHit = (pAction && pAction !== 'occupied' && pAction.type === 'attack' && pDmg > 0);
-const aiHit = (aiAction && aiAction !== 'occupied' && aiAction.type === 'attack' && aiDmg > 0);
+const pHit = !!(pAttackAction && !pGrab && pDmg > 0);
+const aiHit = !!(aiAttackAction && !aiGrab && aiDmg > 0);
 
 const pContact = pHit || pGrabHit;
 const aiContact = aiHit || aiGrabHit;
@@ -404,23 +475,26 @@ const pResolved = !!(pAction && pAction !== 'occupied' && !pActionInterrupted &&
 const aiResolved = !!(aiAction && aiAction !== 'occupied' && !aiActionInterrupted && !(aiAction.type === 'attack' && pParry));
 
 // Source card triggers (on_hit / on_blocked / on_parried)
-if (pAction && pAction !== 'occupied' && !pActionInterrupted) {
+const pHitSource = (pAction && pAction !== 'occupied') ? pAction : pAttackAction;
+const aiHitSource = (aiAction && aiAction !== 'occupied') ? aiAction : aiAttackAction;
+
+if (pHitSource && pHitSource !== 'occupied' && !pActionInterrupted) {
     if (pContact) {
         const pHitCtx = { hitLanded: pHit, grabHit: pGrabHit };
-        runTriggeredCardEffects(pAction, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: pHitCtx });
-        runEnhancerOnHitEffects(pAction, 'player', 'ai', pHitCtx);
+        runTriggeredCardEffects(pHitSource, 'on_hit', { sourceKey: 'player', targetKey: 'ai', context: pHitCtx });
+        runEnhancerOnHitEffects(pHitSource, 'player', 'ai', pHitCtx);
     }
-    if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
-    if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pAction, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
+    if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
+    if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
 }
-if (aiAction && aiAction !== 'occupied' && !aiActionInterrupted) {
+if (aiHitSource && aiHitSource !== 'occupied' && !aiActionInterrupted) {
     if (aiContact) {
         const aiHitCtx = { hitLanded: aiHit, grabHit: aiGrabHit };
-        runTriggeredCardEffects(aiAction, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: aiHitCtx });
-        runEnhancerOnHitEffects(aiAction, 'ai', 'player', aiHitCtx);
+        runTriggeredCardEffects(aiHitSource, 'on_hit', { sourceKey: 'ai', targetKey: 'player', context: aiHitCtx });
+        runEnhancerOnHitEffects(aiHitSource, 'ai', 'player', aiHitCtx);
     }
-    if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
-    if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiAction, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
+    if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
+    if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
 }
 
 if (pResolved) {
@@ -526,6 +600,12 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
                 spawnFloatingText(targetKey, '-1', 'float-dmg');
             }
             break;
+        case 'draw_blood':
+            if (context.hitLanded || context.grabHit) {
+                source.statuses.nextAtkMod += 1;
+                log(`${sourceKey} Draw Blood: next attack gains +1 DMG.`);
+            }
+            break;
         case 'heal_2':
             source.hp = Math.min(source.maxHp, source.hp + 2); log(`${sourceKey} heals 2!`);
             spawnFloatingText(sourceKey, '+2', 'float-heal'); playSound('heal'); break;
@@ -562,7 +642,16 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             if(context.grabHit) { target.stam = Math.max(0, target.stam - 1); log(`${sourceKey} EXHAUSTS 1 of ${targetKey}'s stamina!`); source.roundData.appliedStatus = true; } break;
         case 'sunder':
             target.statuses.armorDebuff += 2; log(`${targetKey}'s armor is SUNDERED!`); source.roundData.appliedStatus = true; break;
+        case 'consume_hypnotized':
+            context.consumedHypnotized = consumeHypnotized(targetKey, sourceKey, 'Hypnotic Gaze');
+            if (!context.consumedHypnotized) log(`${sourceKey} tried to consume HYPNOTIZED, but none was present.`);
+            break;
         case 'steal_stam':
+            const requireConsume = !!context.requiresHypnotizedConsume || context.cardId === 'vamp_hypnotic_gaze';
+            if (requireConsume && !context.consumedHypnotized) {
+                log(`${sourceKey} fails to steal stamina without consuming HYPNOTIZED.`);
+                break;
+            }
             if(target.stam > 0) { target.stam--; source.stam = Math.min(source.maxStam, source.stam + 1); log(`${sourceKey} STOLE 1 Stamina!`); }
             else { log(`${sourceKey} tried to steal stamina, but ${targetKey} is exhausted!`); } break;
         case 'meditate':
@@ -575,7 +664,7 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             if(sourceKey === 'player') drawCards(1, 'player'); log(`${targetKey} is SCARED! Must block next turn.`);
             source.roundData.appliedStatus = true; break;
         case 'siphon_soul':
-            if(context.hitLanded) {
+            if(context.hitLanded || context.grabHit) {
                 source.statuses.nextAtkMod += 3;
                 log(`${sourceKey} Siphons Soul! Next attack gains +3 DMG.`);
             }
@@ -613,7 +702,7 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             }
             break;
         case 'chiller':
-            if(context.hitLanded) { target.statuses.stamPenalty += 1; log(`${targetKey} is CHILLED! Stamina recovery heavily reduced.`); source.roundData.appliedStatus = true; }
+            if(context.hitLanded || context.grabHit) { target.statuses.stamPenalty += 1; log(`${targetKey} is CHILLED! Stamina recovery heavily reduced.`); source.roundData.appliedStatus = true; }
             break;
         case 'freeze_1_on_hit':
             if(context.hitLanded) { applyFreezeCounters(sourceKey, targetKey, 1); }
@@ -664,6 +753,9 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
         case 'spirit_form':
             source.statuses.armorNextTurn = (source.statuses.armorNextTurn || 0) + 2;
             log(`${sourceKey} will gain +2 Armor next turn.`);
+            break;
+        case 'spirit_guard':
+            // Passive while the multi-moment action is active; resolved in tryResolveSpiritGuard().
             break;
     }
 }
@@ -719,9 +811,6 @@ function nextTurn(isFirstTurn = false) {
 
     state.player.roundData = { lostLife: false, appliedStatus: false };
     state.ai.roundData = { lostLife: false, appliedStatus: false };
-    state.player.timeline = [null, null, null, null, null];
-    state.ai.timeline = [null, null, null, null, null];
-    document.querySelectorAll('.player-placed').forEach(e => e.remove());
 
     // Toggle UI for Exert Phase
     document.getElementById('action-controls').style.display = 'none';
@@ -851,12 +940,14 @@ function runTriggeredCardEffects(card, triggerName, args) {
 
         // Effect-type registry (preferred)
         const effectTargetKey = ((String(e.target || 'opponent').toLowerCase() === 'self' || String(e.target || 'opponent').toLowerCase() === 'source') ? args.sourceKey : args.targetKey);
+        const effectContext = args.context || {};
+        if (!effectContext.cardId) effectContext.cardId = card.id;
         if (typeof window.tryRunEffectType === 'function') {
             const handled = window.tryRunEffectType(e.type, {
                 sourceKey: args.sourceKey,
                 targetKey: effectTargetKey,
                 value: e.value,
-                context: args.context || {},
+                context: effectContext,
                 card
             });
             if (handled) continue;
@@ -864,10 +955,30 @@ function runTriggeredCardEffects(card, triggerName, args) {
 
         // Fallback: allow legacy applyEffect keys as type names
         if (typeof applyEffect === 'function') {
-            applyEffect(args.sourceKey, effectTargetKey, e.type, args.context || {});
+            applyEffect(args.sourceKey, effectTargetKey, e.type, effectContext);
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

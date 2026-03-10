@@ -1067,6 +1067,10 @@
     window.state.player.statuses.drawLess = 0;
     window.state.ai.statuses.drawLess = 0;
 
+    // Keep last-turn timelines visible during Exert; clear only when both confirm.
+    window.state.player.timeline = [null, null, null, null, null];
+    window.state.ai.timeline = [null, null, null, null, null];
+
     window.state.phase = 'planning';
     setBattleWaitMessage('');
     net.hostExertConfirmed = false;

@@ -1055,8 +1055,11 @@ function getCardData(side, momentIndex) {
 }
 
 function generateCardHTML(card) {
+    const classes = ['card'];
+    if (card?.type === 'enhancer') classes.push('enhancer-card');
+    if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(card)) classes.push('multi-active-card');
     return `
-        <div class="card" style="width: 100%; height: 100%; margin: 0; box-sizing: border-box; cursor: default;">
+        <div class="${classes.join(' ')}" style="width: 100%; height: 100%; margin: 0; box-sizing: border-box; cursor: default;">
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
             <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${card.cost}</span></div>
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
@@ -1407,6 +1410,7 @@ function handleAIReaction() {
         resolveMoment(); 
     }, 1000); 
 }
+
 
 
 

@@ -168,7 +168,8 @@
       bleed: 'Bleed',
       poison: 'Poison',
       hypnotize: 'Hypnotize',
-      hypnotized: 'Hypnotize'
+      hypnotized: 'Hypnotize',
+      spirit_guard: 'Spirit Guard (Negate Attack/Grab in Window)'
     };
     return map[k] || String(key || '').toUpperCase();
   }
@@ -201,7 +202,7 @@
     const el = UI.effectType();
     if (!el) return;
     const types = Object.keys(window.EffectTypeRegistry || {}).sort();
-    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards'];
+    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards', 'spirit_guard', 'discard_random', 'consume_bleed_damage', 'consume_hypnotized_burst', 'consume_hypnotized_burst_draw'];
     const merged = [...new Set([...(types.length ? types : fallback), ...fallback])].sort();
     const current = String(el.value || '').toLowerCase();
     el.innerHTML = merged.map((t) => `<option value=\"${t}\">${effectLabel(t)}</option>`).join('');
@@ -1298,6 +1299,8 @@
   window.openCardEditor = openCardEditor;
   window.closeCardEditor = closeCardEditor;
 })();
+
+
 
 
 

@@ -132,6 +132,16 @@ function enhancerCanTarget(enhancerCard, targetCard) {
     return targets.includes(String(targetCard.type || '').toLowerCase());
 }
 window.enhancerCanTarget = enhancerCanTarget;
+function isMultiMomentActiveCard(card) {
+    if (!card) return false;
+    const moments = Number(card.moments || 1);
+    if (moments <= 1) return false;
+    if (card.resolveEachMoment) return true;
+    if (card.type === 'block' && typeof card.currentBlock === 'number') return true;
+    if (Array.isArray(card.effects) && card.effects.some((fx) => String(fx?.type || '').toLowerCase() === 'spirit_guard')) return true;
+    return false;
+}
+window.isMultiMomentActiveCard = isMultiMomentActiveCard;
 
 function getEffectiveArmor(charKey) {
     const c = state?.[charKey];
@@ -1013,8 +1023,34 @@ function updateUI() {
 
     document.getElementById('ai-hp-bar').style.height = `${(state.ai.hp / state.ai.maxHp) * 100}%`;
     document.getElementById('ai-hp-label').innerText = `${state.ai.hp}/${state.ai.maxHp}`;
-    document.getElementById('ai-stam-bar').style.height = `${(state.ai.stam / state.ai.maxStam) * 100}%`;
-    document.getElementById('ai-stam-label').innerText = `${state.ai.stam}/${state.ai.maxStam}`;
+    // LAN PvP fog-of-war: do not reveal opponent stamina changes during hidden planning phases.
+    let shownAiStam = state.ai.stam;
+    const lanMode = !!(window.__ssLanPvpMode && window.__ssLanPvpMode.enabled);
+    const hiddenNetPhase =
+        state.phase === 'exert' ||
+        state.phase === 'planning' ||
+        state.phase === 'pivot_wait' ||
+        state.phase === 'flash' ||
+        state.phase === 'net_wait_lock' ||
+        state.phase === 'net_wait_exert' ||
+        state.phase === 'net_wait_flash' ||
+        state.phase === 'net_wait_pivot_lock';
+    if (lanMode) {
+        if (!window.__ssLanOpponentStamFog) window.__ssLanOpponentStamFog = { active: false, stam: null };
+        const fog = window.__ssLanOpponentStamFog;
+        if (hiddenNetPhase) {
+            if (!fog.active) {
+                fog.active = true;
+                fog.stam = Number(state.ai.stam || 0);
+            }
+            shownAiStam = Number(fog.stam || 0);
+        } else {
+            fog.active = false;
+            fog.stam = null;
+        }
+    }
+    document.getElementById('ai-stam-bar').style.height = `${(shownAiStam / state.ai.maxStam) * 100}%`;
+    document.getElementById('ai-stam-label').innerText = `${shownAiStam}/${state.ai.maxStam}`;
 
     const waitEl = document.getElementById('net-wait-indicator');
     if (waitEl) {
@@ -1241,6 +1277,7 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
+
 
 
 

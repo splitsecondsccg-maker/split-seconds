@@ -123,7 +123,7 @@
     const el = UI.effectType();
     if (!el) return;
     const types = Object.keys(window.EffectTypeRegistry || {}).sort();
-    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards'];
+    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards', 'discard_random', 'consume_bleed_damage', 'consume_hypnotized_burst', 'consume_hypnotized_burst_draw'];
     const merged = [...new Set([...(types.length ? types : fallback), ...fallback])].sort();
     const current = String(el.value || '').toLowerCase();
     el.innerHTML = merged.map((t) => `<option value="${t}">${effectLabel(t)}</option>`).join('');
@@ -334,3 +334,4 @@
   window.openCharacterLab = openCharacterLab;
   window.closeCharacterLab = closeCharacterLab;
 })();
+

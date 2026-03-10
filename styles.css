@@ -206,6 +206,27 @@ body {
     box-shadow: 0 0 12px rgba(176, 132, 255, 0.45), 0 4px 6px rgba(0,0,0,0.6);
 }
 .card.enhancer-card .card-stats { color: #d5b9ff; }
+.card.multi-active-card {
+    background: linear-gradient(135deg, #145d64, #1f3f4f);
+    border-color: #58d4d4;
+    box-shadow: 0 0 12px rgba(88, 212, 212, 0.40), 0 4px 6px rgba(0,0,0,0.6);
+}
+.card.multi-active-card .card-stats { color: #9ef0ea; }
+.card.multi-active-card::after {
+    content: 'MULTI-ACTIVE';
+    position: absolute;
+    top: -10px;
+    left: -8px;
+    background: linear-gradient(135deg, #35c9c9, #1f8f9a);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+}
 .card.enhancer-card::before {
     content: 'ENHANCER';
     position: absolute;
@@ -230,6 +251,15 @@ body {
 .slot { flex: 1; background: rgba(0, 0, 0, 0.5); border: 2px dashed #7f8c8d; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #555; transition: background 0.2s; }
 .timeline-card { position: absolute; height: calc(100% - 30px); top: 15px; background: linear-gradient(135deg, #2980b9, #2c3e50); border: 2px solid #3498db; border-radius: 8px; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; box-shadow: 0 6px 12px rgba(0,0,0,0.7); z-index: 10; font-size: 12px; text-align: center; transition: all 0.3s ease; }
 .card-desc-timeline { font-size: 10px; color: #bdc3c7; font-style: italic; margin-top: 2px; }
+.timeline-card.multi-active-card {
+    border-color: #58d4d4;
+    box-shadow: 0 0 16px rgba(88, 212, 212, 0.60), 0 6px 12px rgba(0,0,0,0.7);
+    background-image:
+      linear-gradient(135deg, #1e4d63, #243a50),
+      repeating-linear-gradient(45deg, rgba(88,212,212,0.15), rgba(88,212,212,0.15) 8px, rgba(88,212,212,0.05) 8px, rgba(88,212,212,0.05) 16px);
+    background-blend-mode: screen;
+}
+
 .timeline-card.has-enhancer {
     border-color: #c09dff;
     box-shadow: 0 0 16px rgba(176, 132, 255, 0.65), 0 6px 12px rgba(0,0,0,0.7);
@@ -2685,4 +2715,6 @@ body {
 
 /* Brace balance fix */
 }
+
+
 

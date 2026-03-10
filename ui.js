@@ -14,6 +14,7 @@ function renderHand() {
         const div = document.createElement('div');
         div.className = 'card';
         if (card.type === 'enhancer') div.classList.add('enhancer-card');
+        if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(card)) div.classList.add('multi-active-card');
 
         // fan positioning
         const angle = (index - center) * fanSpread;
@@ -357,6 +358,7 @@ function renderPlayerTimeline() {
             let div = document.createElement('div'); div.className = 'timeline-card player-placed'; div.id = `p-card-mom-${i+1}`;
             div.dataset.timelineIndex = String(i);
             if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
+            if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(t)) div.classList.add('multi-active-card');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
             
             const enhInfo = getEnhancerUiInfo(t);
@@ -394,6 +396,7 @@ function renderAITimeline() {
             let div = document.createElement('div'); div.className = 'timeline-card ai-placed ai-timeline-card'; div.id = `ai-card-mom-${i+1}`;
             div.dataset.timelineIndex = String(i);
             if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
+            if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(t)) div.classList.add('multi-active-card');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
 
             let extraText = '';
@@ -495,6 +498,7 @@ function renderAITimeline() {
         hide();
     }, true);
 })();
+
 
 
 

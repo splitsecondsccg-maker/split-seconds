@@ -1330,6 +1330,12 @@ function updateUI() {
 }
 
 function renderAbilities() {
+    const setPassiveSuppressed = (side, suppressed) => {
+        const anchor = document.getElementById(side === 'player' ? 'p-portrait-anchor' : 'ai-portrait-anchor');
+        if (!anchor) return;
+        anchor.classList.toggle('hide-passive-tooltip', !!suppressed);
+    };
+
     ['player', 'ai'].forEach(char => {
         const container = document.getElementById(`${char}-ability-container`);
         if (!container) return;
@@ -1354,6 +1360,12 @@ function renderAbilities() {
                 </div>
             `;
         }
+
+        const wrappers = container.querySelectorAll('.ability-wrapper');
+        wrappers.forEach((w) => {
+            w.addEventListener('mouseenter', () => setPassiveSuppressed(char, true));
+            w.addEventListener('mouseleave', () => setPassiveSuppressed(char, false));
+        });
     });
 }
 

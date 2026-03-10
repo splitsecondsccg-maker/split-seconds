@@ -2861,3 +2861,10 @@ body {
   0%, 100% { transform: translateX(0px); box-shadow: 0 0 10px rgba(241,196,15,0.25); }
   50% { transform: translateX(3px); box-shadow: 0 0 16px rgba(241,196,15,0.5); }
 }
+
+/* Hide passive tooltip while hovering ability tooltip */
+.portrait-container.hide-passive-tooltip .portrait-tooltip {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

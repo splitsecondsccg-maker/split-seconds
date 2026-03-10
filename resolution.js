@@ -3,33 +3,58 @@ function getEnhancerDamageBonus(action) {
     return action.enhancers.reduce((sum, enh) => sum + (enh?.enhance?.dmg || 0), 0);
 }
 
-function runEnhancerOnHitEffects(action, sourceKey, targetKey, context) {
+function getEnhancerAttackReductionAura(action) {
+    if (!action || !Array.isArray(action.enhancers) || !action.enhancers.length) return 0;
+    let reduction = 0;
+    for (const enh of action.enhancers) {
+        const fxList = enh?.enhance?.effects;
+        if (!Array.isArray(fxList)) continue;
+        for (const fx of fxList) {
+            const type = String(fx?.type || '').toLowerCase();
+            if (type !== 'protective_aura') continue;
+            reduction += Math.max(1, Number(fx?.value) || 2);
+        }
+    }
+    return Math.max(0, reduction);
+}
+
+function runEnhancerTriggeredEffects(action, triggerName, sourceKey, targetKey, context) {
     if (!action || !Array.isArray(action.enhancers) || !action.enhancers.length) return;
+    const triggerKey = String(triggerName || '').toLowerCase();
     for (const enh of action.enhancers) {
         const fxList = enh?.enhance?.effects;
         if (Array.isArray(fxList)) {
             for (const fx of fxList) {
                 const trigger = String(fx?.trigger || '').toLowerCase();
-                if (trigger !== 'on_hit') continue;
+                if (trigger !== triggerKey) continue;
                 const type = String(fx?.type || '').toLowerCase();
                 const value = Math.max(1, Number(fx?.value) || 1);
+                const effectTargetKey = ((String(fx?.target || 'opponent').toLowerCase() === 'self' || String(fx?.target || 'opponent').toLowerCase() === 'source') ? sourceKey : targetKey);
+                const effectContext = Object.assign({}, context || {});
+                effectContext.effectValue = value;
                 if (typeof window.tryRunEffectType === 'function') {
                     const handled = window.tryRunEffectType(type, {
                         sourceKey,
-                        targetKey,
+                        targetKey: effectTargetKey,
                         value,
-                        context: context || {},
+                        context: effectContext,
                         card: enh
                     });
                     if (handled) continue;
                 }
-                if (typeof applyEffect === 'function') applyEffect(sourceKey, targetKey, type, context || {});
+                if (typeof applyEffect === 'function') applyEffect(sourceKey, effectTargetKey, type, effectContext);
             }
             continue;
         }
         const legacyKey = String(enh?.enhance?.effect || enh?.effect || '').trim();
-        if (legacyKey && typeof applyEffect === 'function') applyEffect(sourceKey, targetKey, legacyKey, context || {});
+        if (legacyKey && typeof applyEffect === 'function' && triggerKey === 'on_hit') {
+            applyEffect(sourceKey, targetKey, legacyKey, context || {});
+        }
     }
+}
+
+function runEnhancerOnHitEffects(action, sourceKey, targetKey, context) {
+    runEnhancerTriggeredEffects(action, 'on_hit', sourceKey, targetKey, context);
 }
 
 function removeTimelineAction(side, actionCard) {
@@ -325,6 +350,18 @@ function resolveMoment() {
     }
     if (!aiGrab && aiAttackAction) aiDmg = computeAttackDamageForMoment('ai', 'player', aiAttackAction);
 
+    // Protective Aura enhancer: while active, enemy attacks during this duration deal less damage.
+    const pAuraReduction = getEnhancerAttackReductionAura(pActive);
+    const aiAuraReduction = getEnhancerAttackReductionAura(aiActive);
+    if (aiAttackAction && aiDmg > 0 && pAuraReduction > 0) {
+        aiDmg = Math.max(0, aiDmg - pAuraReduction);
+        log('Player Protective Aura reduces AI attack by ' + pAuraReduction + '.');
+    }
+    if (pAttackAction && pDmg > 0 && aiAuraReduction > 0) {
+        pDmg = Math.max(0, pDmg - aiAuraReduction);
+        log('AI Protective Aura reduces Player attack by ' + aiAuraReduction + '.');
+    }
+
     if (aiActive && aiActive.type === 'block') aiBlock = true;
 
     let pGrabHit = false;
@@ -552,7 +589,7 @@ if (pHitSource && pHitSource !== 'occupied' && !pActionInterrupted) {
     if (pContact) {
         const pHitCtx = { hitLanded: pHit, grabHit: pGrabHit, hitTargetKey: pAttackTargetKey };
         runTriggeredCardEffects(pHitSource, 'on_hit', { sourceKey: 'player', targetKey: pAttackTargetKey, context: pHitCtx });
-        runEnhancerOnHitEffects(pHitSource, 'player', pAttackTargetKey, pHitCtx);
+        runEnhancerTriggeredEffects(pHitSource, 'on_hit', 'player', pAttackTargetKey, pHitCtx);
     }
     if (aiBlock && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_blocked', { sourceKey: 'player', targetKey: 'ai', context: { targetBlocked: true } });
     if (aiParry && pAttemptedAttack) runTriggeredCardEffects(pHitSource, 'on_parried', { sourceKey: 'player', targetKey: 'ai', context: { targetParried: true } });
@@ -561,25 +598,29 @@ if (aiHitSource && aiHitSource !== 'occupied' && !aiActionInterrupted) {
     if (aiContact) {
         const aiHitCtx = { hitLanded: aiHit, grabHit: aiGrabHit, hitTargetKey: aiAttackTargetKey };
         runTriggeredCardEffects(aiHitSource, 'on_hit', { sourceKey: 'ai', targetKey: aiAttackTargetKey, context: aiHitCtx });
-        runEnhancerOnHitEffects(aiHitSource, 'ai', aiAttackTargetKey, aiHitCtx);
+        runEnhancerTriggeredEffects(aiHitSource, 'on_hit', 'ai', aiAttackTargetKey, aiHitCtx);
     }
     if (pBlock && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_blocked', { sourceKey: 'ai', targetKey: 'player', context: { targetBlocked: true } });
     if (pParry && aiAttemptedAttack) runTriggeredCardEffects(aiHitSource, 'on_parried', { sourceKey: 'ai', targetKey: 'player', context: { targetParried: true } });
 }
 
 if (pResolved) {
+    const pResolveCtx = { resolved: true, hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry };
     runTriggeredCardEffects(pAction, 'on_resolve', {
         sourceKey: 'player',
         targetKey: 'ai',
-        context: { resolved: true, hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry }
+        context: pResolveCtx
     });
+    runEnhancerTriggeredEffects(pAction, 'on_resolve', 'player', 'ai', pResolveCtx);
 }
 if (aiResolved) {
+    const aiResolveCtx = { resolved: true, hitLanded: aiHit, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry };
     runTriggeredCardEffects(aiAction, 'on_resolve', {
         sourceKey: 'ai',
         targetKey: 'player',
-        context: { resolved: true, hitLanded: aiHit, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry }
+        context: aiResolveCtx
     });
+    runEnhancerTriggeredEffects(aiAction, 'on_resolve', 'ai', 'player', aiResolveCtx);
 }
 
 // Defender triggers (on_block / on_parry) - attributed to the ACTIVE defense card

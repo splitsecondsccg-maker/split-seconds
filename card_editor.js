@@ -162,6 +162,7 @@
     const map = {
       draw_less: 'Draw 1 Less Next Turn',
       draw_cards: 'Draw Cards',
+      protective_aura: 'Protective Aura (-DMG)',
       gain_stam_1: 'Gain Stamina',
       gain_stam_2: 'Gain Stamina',
       freeze: 'Freeze',

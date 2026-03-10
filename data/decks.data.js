@@ -493,15 +493,15 @@
       },
       {
         "cardId": "brute_earthshatter",
-        "copies": 1
-      },
-      {
-        "cardId": "mesmer_snare",
         "copies": 2
       },
       {
+        "cardId": "mesmer_snare",
+        "copies": 3
+      },
+      {
         "cardId": "hypnotic_false_command",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "palea_puppet_strings",
@@ -509,24 +509,16 @@
       },
       {
         "cardId": "palea_fae_needle",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "fae_mirror_prank",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "palea_fae_edge",
         "copies": 1
       },
-      {
-        "cardId": "fae_brute_trance_hook",
-        "copies": 3
-      },
-      {
-        "cardId": "fae_brute_dreambreaker",
-        "copies": 2
-      }
     ]
   }
 };

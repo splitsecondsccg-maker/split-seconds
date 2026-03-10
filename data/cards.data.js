@@ -259,7 +259,7 @@
     "type": "attack",
     "cost": 1,
     "moments": 1,
-    "dmg": 2,
+    "dmg": 3,
     "desc": "Reliable weapon swing.",
     "requirements": {
       "all": [
@@ -961,22 +961,25 @@
   },
   "warrior_shield_discipline": {
     "id": "warrior_shield_discipline",
-    "name": "Shield Discipline",
-    "type": "buff",
+    "name": "Protective Aura",
+    "type": "enhancer",
     "cost": 1,
-    "moments": 1,
+    "moments": 0,
     "dmg": 0,
-    "desc": "Reduce incoming damage by 3 this moment.",
-    "effects": [
-      {
-        "trigger": "on_resolve",
-        "type": "reduce_dmg_3",
-        "value": 1
-      }
-    ],
+    "desc": "Enhancer: Opponent attacks during this duration have -2 DMG.",
+    "enhance": {
+      "effects": [
+        {
+          "trigger": "on_resolve",
+          "type": "protective_aura",
+          "target": "opponent",
+          "value": 2
+        }
+      ]
+    },
     "requirements": {
       "all": [
-        "warrior"
+        "light"
       ]
     }
   },

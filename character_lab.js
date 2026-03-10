@@ -98,7 +98,8 @@
       poison: 'Poison',
       hypnotize: 'Hypnotize',
       hypnotized: 'Hypnotize',
-      puppet_reflect_attacks: 'Reflect Enemy Attacks'
+      puppet_reflect_attacks: 'Reflect Enemy Attacks',
+      protective_aura: 'Protective Aura (-DMG)'
     };
     return map[k] || String(key || '').toUpperCase();
   }

@@ -132,7 +132,8 @@ const TUT = {
     lungingDagger: { id: 'r3', uniqueId: 'tut_lunge', name: 'Lunging Dagger', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Wind-up, then strike.' },
     kidneyStrike: { id: 'r4', uniqueId: 'tut_grab', name: 'Kidney Strike', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Grab: beats Block, loses to Attack.' },
     sharpen: { id: 'r5', uniqueId: 'tut_sharpen', name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: '+3 DMG to next Attack.', effect: 'buff_next_atk_3' },
-    arcaneAmp: { id: 'palea_arcane_amp', uniqueId: 'tut_arcane_amp', name: 'Arcane Amp', type: 'enhancer', cost: 1, moments: 0, dmg: 0, desc: 'Enhancer: attached action gains +2 DMG.', enhance: { dmg: 2 } }
+    arcaneAmp: { id: 'palea_arcane_amp', uniqueId: 'tut_arcane_amp', name: 'Arcane Amp', type: 'enhancer', cost: 1, moments: 0, dmg: 0, desc: 'Enhancer: attached action gains +2 DMG.', enhance: { dmg: 2 } },
+    pulsingHex: { id: 'tut_pulsing_hex', uniqueId: 'tut_pulsing_hex', name: 'Pulsing Hex', type: 'attack', cost: 2, moments: 2, dmg: 2, perMomentDmg: 1, resolveEachMoment: true, desc: 'Deals 1 DMG in each moment it occupies.' }
 };
 
 // --- Steps ---
@@ -287,10 +288,21 @@ const tutorialSteps = [
         setup: () => { hideNext(); }
     },
     {
-        message: "Great. The early slot(s) are the wind-up; the final slot is the hit.\n\nNext: the Combat Triangle.",
+        message: "Great. The early slot(s) are the wind-up; the final slot is the hit.\n\nNext: actions that are active each moment.",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());
+        }
+    },
+    {
+        message: "Some actions are ACTIVE EACH MOMENT they occupy.\n\nThey are marked with a unique color on the card/timeline.\nAlways read the card description - it tells you exactly what happens in each occupied moment.",
+        highlightIds: ['player-hand', 'player-timeline'],
+        setup: () => {
+            forcePlanningPhase();
+            clearBoard();
+            state.player.stam = 2;
+            state.player.hand = [{ ...TUT.pulsingHex, uniqueId: 'tut_pulsing_hex_1' }];
+            updateUI();
         }
     },
 
@@ -319,7 +331,39 @@ const tutorialSteps = [
         setup: () => { hideNext(); }
     },
     {
-        message: "Yep — Grab punishes Block.\n\nWe'll cover Grab vs Buff in a dedicated lesson next.\n\nTip: If the oponent is low on Stamina (⚡) or cards, they will often block!\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
+        message: "Yep - Grab punishes Block.\n\nNext we'll do Grab vs Concentration, then the EMPTY SLOT dodge.\n\nTip: If the opponent is low on Stamina or cards, they will often block!",
+        setup: () => {
+            hideNext();
+            waitUntil(() => state.phase === 'exert', () => showNext());
+        }
+    },
+
+    // Grab vs Concentration (separate lesson)
+    {
+        message: "New triangle detail: Grab interrupts Concentration (Buff) actions (not Utility).\n\nOpponent planned a Concentration in Slot 1. Play Kidney Strike in Slot 1 and hit LOCK.",
+        expect: 'lock',
+        requiredSlot: 0,
+        highlightIds: ['player-hand', 'btn-start-resolution'],
+        highlightSelectors: [slotSel('player', 1)],
+        setup: () => {
+            hideNext();
+            forcePlanningPhase();
+            clearBoard();
+            state.ai.timeline[0] = { name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, isBasic: true, effect: 'buff_next_atk_3' };
+            state.player.stam = 1;
+            state.player.hand = [{ ...TUT.kidneyStrike, uniqueId: 'tut_grab_buff_1' }];
+            updateUI();
+        }
+    },
+    {
+        message: "FLASH (Moment 1): you can see their Concentration. LOCK IN to watch Grab interrupt it.",
+        expect: 'lockIn',
+        forceFlashMoment: 0,
+        highlightIds: ['flash-modal', 'btn-lock'],
+        setup: () => { hideNext(); }
+    },
+    {
+        message: "Great. Grab interrupted the Concentration entirely.\n\nNext: the EMPTY SLOT dodge (and why Pivot matters).",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());
@@ -365,7 +409,7 @@ const tutorialSteps = [
     },
     {
         // FIXED: there is no second flash after a pivot fill.
-        message: "Nice pivot. There is **no second Flash** — after you fill the slot(s) and press LOCK, the round goes straight to RESOLUTION.\n\nBEWARE - your oponent can also pivot! Always Watch for how much stamina they have left!\n\nWatch the timeline resolve, then click NEXT.",
+        message: "Nice pivot. There is **no second Flash** — after you fill the slot(s) and press LOCK, the round goes straight to RESOLUTION.\n\nBEWARE - your opponent can also pivot! Always Watch for how much stamina they have left!\n\nWatch the timeline resolve, then click NEXT.",
         setup: () => {
             hideNext();
             waitUntil(() => state.phase === 'exert', () => showNext());
@@ -380,38 +424,6 @@ const tutorialSteps = [
         }
     },
 
-
-    // Grab vs Buff (separate lesson)
-    {
-        message: "New triangle detail: Grab also interrupts Buff/Utility actions.\n\nOpponent planned a Buff in Slot 1. Play Kidney Strike in Slot 1 and hit LOCK.",
-        expect: 'lock',
-        requiredSlot: 0,
-        highlightIds: ['player-hand', 'btn-start-resolution'],
-        highlightSelectors: [slotSel('player', 1)],
-        setup: () => {
-            hideNext();
-            forcePlanningPhase();
-            clearBoard();
-            state.ai.timeline[0] = { name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, isBasic: true, effect: 'buff_next_atk_3' };
-            state.player.stam = 1;
-            state.player.hand = [{ ...TUT.kidneyStrike, uniqueId: 'tut_grab_buff_1' }];
-            updateUI();
-        }
-    },
-    {
-        message: "FLASH (Moment 1): you can see their Buff. LOCK IN to watch Grab interrupt it.",
-        expect: 'lockIn',
-        forceFlashMoment: 0,
-        highlightIds: ['flash-modal', 'btn-lock'],
-        setup: () => { hideNext(); }
-    },
-    {
-        message: "Great. Grab interrupted the Buff entirely.\n\nNext: Enhancer cards.",
-        setup: () => {
-            hideNext();
-            waitUntil(() => state.phase === 'exert', () => showNext());
-        }
-    },
 
     // Enhancer lesson
     {

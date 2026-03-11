@@ -66,7 +66,7 @@
     ],
     "maxStam": 7,
     "armor": 2,
-    "passiveDesc": "Upon hit, your next attack gains +1 DMG this turn.",
+    "passiveDesc": "Once per turn, when you give the opponent BLEED, your next attack gains +2 DMG.",
     "premise": "The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.",
     "deckIds": [
       "vampiress_base"
@@ -234,3 +234,4 @@
   "spirit": "SPIRIT"
 };
 })();
+

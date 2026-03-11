@@ -457,33 +457,48 @@ function aiPickMove(validMoves, ctx) {
 function aiPickMoveNormal(validMoves, ctx) {
     if (!validMoves || !validMoves.length) return null;
 
-    const aiClass = state.ai.class;
-    let chosenMove = null;
+    const proactiveMoves = validMoves.filter(
+        (m) => m && (m.type === 'attack' || m.type === 'grab' || m.type === 'buff' || m.type === 'utility')
+    );
 
-    if (state.ai.hp < state.ai.maxHp * 0.4) {
-        const defensiveMoves = validMoves.filter(m => m.type === 'block' || m.type === 'parry' || aiMoveEffectText(m).includes('heal') || aiMoveEffectText(m).includes('reduce_dmg'));
-        if (defensiveMoves.length > 0 && Math.random() < 0.75) chosenMove = defensiveMoves[Math.floor(Math.random() * defensiveMoves.length)];
+    if ((ctx?.defensiveSoFar || 0) >= 2 && proactiveMoves.length) {
+        const bestProactive = proactiveMoves
+            .map((m) => ({ move: m, score: aiScoreMove(m, { ...ctx, noRandom: true }) }))
+            .sort((a, b) => b.score - a.score)[0];
+        if (bestProactive) return bestProactive.move;
     }
 
-    if (!chosenMove && ctx.virtualStam >= 2 && (aiClass === 'Mauja' || aiClass === 'Paladin' || aiClass === 'Necromancer')) {
-        const heavyMoves = validMoves.filter(m => getMoveCost('ai', m) >= 2);
-        if (heavyMoves.length > 0 && Math.random() < 0.6) chosenMove = heavyMoves[Math.floor(Math.random() * heavyMoves.length)];
+    if ((ctx?.slotIndex || 0) >= 2 && (ctx?.proactiveSoFar || 0) === 0 && proactiveMoves.length) {
+        const bestStarter = proactiveMoves
+            .map((m) => ({ move: m, score: aiScoreMove(m, { ...ctx, noRandom: true }) }))
+            .sort((a, b) => b.score - a.score)[0];
+        if (bestStarter) return bestStarter.move;
     }
 
-    if (!chosenMove && (aiClass === 'Rogue' || aiClass === 'Vampiress')) {
-        const fastMoves = validMoves.filter(m => m.moments === 1 && (m.type === 'attack' || m.type === 'grab'));
-        if (fastMoves.length > 0 && Math.random() < 0.6) chosenMove = fastMoves[Math.floor(Math.random() * fastMoves.length)];
-    }
+    const scored = validMoves
+        .map((m) => {
+            let score = aiScoreMove(m, { ...ctx, noRandom: true });
+            if (m.type === 'block' || m.type === 'parry') score -= 3.5;
+            if ((ctx?.defensiveSoFar || 0) >= 1 && (m.type === 'block' || m.type === 'parry')) score -= 2.5;
+            if ((ctx?.slotIndex || 0) >= 3 && (m.type === 'block' || m.type === 'parry')) score -= 2.5;
+            if (m.type === 'attack' || m.type === 'grab') score += 1.8;
+            return { move: m, score };
+        })
+        .sort((a, b) => b.score - a.score);
 
-    if (!chosenMove && Math.random() < 0.2) {
-        const randomIdx = Math.floor(Math.random() * validMoves.length);
-        chosenMove = validMoves[randomIdx];
-    }
+    if (!scored.length) return null;
+    if (scored.length === 1) return scored[0].move;
 
-    return chosenMove || validMoves[Math.floor(Math.random() * validMoves.length)];
+    const top = scored.slice(0, Math.min(3, scored.length));
+    const weights = top.map((x) => Math.exp(x.score / 12));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < top.length; i++) {
+        roll -= weights[i];
+        if (roll <= 0) return top[i].move;
+    }
+    return top[0].move;
 }
-
-
 function aiPickCounterMove(validMoves, ctx) {
     const level = String(ctx?.difficulty || aiGetDifficulty() || 'hard').toLowerCase();
     if (level === 'normal') return null;
@@ -1410,37 +1425,4 @@ function handleAIReaction() {
         resolveMoment(); 
     }, 1000); 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

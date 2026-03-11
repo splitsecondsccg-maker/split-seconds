@@ -518,7 +518,6 @@ if (pGrab) {
         }
 
         // Passives - FIXED ROGUE LOGIC
-        if(state.player.class === 'Vampiress') { state.player.statuses.nextAtkMod += 1; log("Player Vampiress Passive: +1 DMG next attack!"); }
         if(state.player.class === 'Rogue') { state.ai.statuses.rogueDebuff = (state.ai.statuses.rogueDebuff || 0) + 1; log("Player Rogue Passive: AI next attack -1 DMG!"); }
     }
 
@@ -547,7 +546,6 @@ if (pGrab) {
         }
 
         // Passives - FIXED ROGUE LOGIC
-        if(state.ai.class === 'Vampiress') { state.ai.statuses.nextAtkMod += 1; log("AI Vampiress Passive: +1 DMG next attack!"); }
         if(state.ai.class === 'Rogue') { state.player.statuses.rogueDebuff = (state.player.statuses.rogueDebuff || 0) + 1; log("AI Rogue Passive: Player next attack -1 DMG!"); }
     }
 
@@ -905,8 +903,8 @@ function nextTurn(isFirstTurn = false) {
 
 
         // Reset statuses
-        state.player.statuses.dmgReduction = 0; state.player.statuses.forceBlock = false; state.player.statuses.drawOnBlock = false; state.player.statuses.stamOnBlock = false; state.player.statuses.armorDebuff = 0; state.player.statuses.stamPenalty = 0; state.player.statuses.rogueDebuff = 0; state.player.statuses.exhausted = 0;
-        state.ai.statuses.dmgReduction = 0; state.ai.statuses.forceBlock = false; state.ai.statuses.drawOnBlock = false; state.ai.statuses.stamOnBlock = false; state.ai.statuses.armorDebuff = 0; state.ai.statuses.stamPenalty = 0; state.ai.statuses.rogueDebuff = 0; state.ai.statuses.exhausted = 0;
+        state.player.statuses.dmgReduction = 0; state.player.statuses.forceBlock = false; state.player.statuses.drawOnBlock = false; state.player.statuses.stamOnBlock = false; state.player.statuses.armorDebuff = 0; state.player.statuses.stamPenalty = 0; state.player.statuses.rogueDebuff = 0; state.player.statuses.exhausted = 0; state.player.statuses.ladyEvaBleedTriggered = false;
+        state.ai.statuses.dmgReduction = 0; state.ai.statuses.forceBlock = false; state.ai.statuses.drawOnBlock = false; state.ai.statuses.stamOnBlock = false; state.ai.statuses.armorDebuff = 0; state.ai.statuses.stamPenalty = 0; state.ai.statuses.rogueDebuff = 0; state.ai.statuses.exhausted = 0; state.ai.statuses.ladyEvaBleedTriggered = false;
 
         // Clear last turn's temporary armor and apply queued armor gains
         state.player.statuses.bonusArmor = 0;
@@ -1081,29 +1079,4 @@ function runTriggeredCardEffects(card, triggerName, args) {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

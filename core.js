@@ -93,7 +93,8 @@ const getBaseStatuses = () => ({
     hypnotized: 0,      // non-stackable; persists until losing life
     exhausted: 0,       // NOT stackable; cleared at start of turn; reduces stamina regen by 1
     poisonSkinNextTurn: 0,
-    poisonSkinActive: 0
+    poisonSkinActive: 0,
+    ladyEvaBleedTriggered: false
 });
 
 const KEYWORD_DEFS = {
@@ -176,10 +177,15 @@ function applyBleedCounters(sourceKey, targetKey, amount) {
     target.statuses.bleed = (target.statuses.bleed || 0) + amount;
     if (source) source.roundData.appliedStatus = true;
 
+    if (source && source.class === 'Vampiress' && !source.statuses.ladyEvaBleedTriggered) {
+        source.statuses.nextAtkMod += 2;
+        source.statuses.ladyEvaBleedTriggered = true;
+        log(`${sourceKey === 'player' ? 'Player' : 'AI'} Lady Eva passive: next attack gains +2 DMG.`);
+    }
+
     spawnFloatingText(targetKey, `+${amount} BLEED`, 'float-bleed');
     log(`${targetKey === 'player' ? 'Player' : 'AI'} gains ${amount} BLEED (${target.statuses.bleed}).`);
 }
-
 function applyPoisonCounters(sourceKey, targetKey, amount) {
     const source = state?.[sourceKey];
     const target = state?.[targetKey];
@@ -1533,10 +1539,4 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
   }
   document.addEventListener('DOMContentLoaded', apply, { passive: true });
 })();
-
-
-
-
-
-
 

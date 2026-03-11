@@ -1919,8 +1919,8 @@
     "type": "attack",
     "cost": 1,
     "moments": 1,
-    "dmg": 2,
-    "desc": "2 DMG. On hit: BLEED 2.",
+    "dmg": 1,
+    "desc": "1 DMG. On hit: BLEED 2.",
     "effects": [
       {
         "trigger": "on_hit",
@@ -2338,3 +2338,4 @@
   }
 };
 })();
+

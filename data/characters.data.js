@@ -82,6 +82,7 @@
     "class": "wizard",
     "displayName": "Bakob",
     "talents": [
+      "demon",
       "darkness",
       "poison",
       "hypnotic"

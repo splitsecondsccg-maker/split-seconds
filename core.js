@@ -132,6 +132,148 @@ function cardHasRequirementToken(card, token) {
 }
 window.cardHasRequirementToken = cardHasRequirementToken;
 
+function collectRequirementTokens(card) {
+    if (!card || !card.requirements) return [];
+    const out = [];
+    const req = card.requirements || {};
+    if (Array.isArray(req.all)) out.push(...req.all);
+    if (Array.isArray(req.any)) {
+        for (const group of req.any) {
+            if (Array.isArray(group?.all)) out.push(...group.all);
+        }
+    }
+    return [...new Set(out.map((t) => String(t || '').toLowerCase()).filter(Boolean))];
+}
+window.collectRequirementTokens = collectRequirementTokens;
+
+function getRequirementLabel(token) {
+    const key = String(token || '').toLowerCase();
+    if (!key) return '';
+    return (window.SS_PROFICIENCY_ICONS?.[key]) || key.toUpperCase();
+}
+window.getRequirementLabel = getRequirementLabel;
+
+function buildRequirementChipsHtml(card) {
+    const tokens = collectRequirementTokens(card);
+    if (!tokens.length) return '';
+    return `<div class="card-reqs">${tokens.map((t) => `<span class="card-req-chip">${getRequirementLabel(t)}</span>`).join('')}</div>`;
+}
+window.buildRequirementChipsHtml = buildRequirementChipsHtml;
+
+function parseThresholdCue(text, keyword) {
+    const source = String(text || '');
+    const key = String(keyword || '').toUpperCase();
+    const patterns = [
+        new RegExp(`opponent[^.]{0,80}?(\\d+)\\+\\s*${key}`, 'ig'),
+        new RegExp(`opponent[^.]{0,80}?${key}[^\\d]{0,16}(\\d+)\\+`, 'ig'),
+        new RegExp(`${key}[^\\d]{0,16}(\\d+)\\+`, 'ig')
+    ];
+    const out = [];
+    for (const re of patterns) {
+        let match;
+        while ((match = re.exec(source))) {
+            const n = Number(match[1] || 0);
+            if (n > 0) out.push(n);
+        }
+    }
+    return [...new Set(out)].sort((a, b) => a - b);
+}
+
+function cardConsumesStatus(card, statusKey) {
+    const key = String(statusKey || '').toLowerCase();
+    if (!card || !key) return false;
+    const text = `${String(card?.desc || '')} ${String(card?.specialNotes || '')}`.toLowerCase();
+    if (key === 'freeze' && /remove all freeze|consume freeze/.test(text)) return true;
+    if (key === 'bleed' && /consume bleed/.test(text)) return true;
+    if (key === 'hypnotized' && /consume hypnotized/.test(text)) return true;
+    if (!Array.isArray(card.effects)) return false;
+    return card.effects.some((fx) => {
+        const type = String(fx?.type || '').toLowerCase();
+        if (type === `consume_${key}` || type === `consume_${key}_burst` || type === `consume_${key}_burst_draw`) return true;
+        if (key === 'freeze' && type === 'break_the_ice') return true;
+        if (key === 'bleed' && type === 'consume_bleed_damage') return true;
+        return false;
+    });
+}
+
+function cardHasEffectType(card, effectType) {
+    if (!card) return false;
+    const key = String(effectType || '').toLowerCase();
+    if (!key) return false;
+    if (Array.isArray(card.effects) && card.effects.some((fx) => String(fx?.type || '').toLowerCase() === key)) return true;
+    if (Array.isArray(card.enhance?.effects) && card.enhance.effects.some((fx) => String(fx?.type || '').toLowerCase() === key)) return true;
+    return false;
+}
+
+function getCardCueState(ownerKey, card) {
+    const owner = state?.[ownerKey];
+    const opponentKey = ownerKey === 'player' ? 'ai' : 'player';
+    const opponent = state?.[opponentKey];
+    const info = { enabled: false, boosted: false, reasons: [] };
+    if (!owner || !opponent || !card) return info;
+
+    const text = `${String(card?.desc || '')} ${String(card?.specialNotes || '')}`;
+    const oppStatuses = opponent.statuses || {};
+    const ownerStatuses = owner.statuses || {};
+
+    const markEnabled = (reason, boosted = true) => {
+        info.enabled = true;
+        if (boosted) info.boosted = true;
+        if (reason) info.reasons.push(reason);
+    };
+
+    if (cardConsumesStatus(card, 'hypnotized') && (oppStatuses.hypnotized || 0) > 0) markEnabled('Opponent is HYPNOTIZED');
+    if (cardConsumesStatus(card, 'freeze') && (oppStatuses.freeze || 0) > 0) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
+    if (cardConsumesStatus(card, 'bleed') && (oppStatuses.bleed || 0) > 0) markEnabled(`Opponent has BLEED ${oppStatuses.bleed}`);
+
+    for (const key of ['freeze', 'bleed', 'poison', 'hypnotized']) {
+        const thresholds = parseThresholdCue(text, key);
+        if (!thresholds.length) continue;
+        const current = Number(oppStatuses[key] || 0);
+        if (current >= thresholds[0]) markEnabled(`Opponent has ${key.toUpperCase()} ${current}`);
+    }
+
+    if (/opponent has no cards in hand|opponent has no card in hand/i.test(text) && (opponent.hand?.length || 0) === 0) {
+        markEnabled('Opponent has no cards in hand');
+    }
+    if (/opponent hand is empty/i.test(text) && (opponent.hand?.length || 0) === 0) {
+        markEnabled('Opponent hand is empty');
+    }
+    if (/opponent hand/i.test(text) && /<=\s*1|1 or less|no cards in hand|one or fewer/i.test(text) && (opponent.hand?.length || 0) <= 1) {
+        markEnabled(`Opponent hand is low (${opponent.hand?.length || 0})`);
+    }
+
+    const armorMatch = text.match(/effective armor[^\d]{0,16}(\d+)\s*(?:or more|\+)/i);
+    if (armorMatch && getEffectiveArmor(ownerKey) >= Number(armorMatch[1] || 0)) {
+        markEnabled(`Effective armor ${getEffectiveArmor(ownerKey)}`);
+    }
+
+    if (card.id === 'darkness_night_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
+    if (card.id === 'bahl_shadow_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
+    if (card.id === 'rogue_execution_window' && (opponent.hand?.length || 0) <= 1) markEnabled(`Opponent hand is low (${opponent.hand?.length || 0})`);
+    if (card.id === 'ice_assassin_shatter_step' && (oppStatuses.freeze || 0) >= 3) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
+    if (card.id === 'ice_djinn_absolute_zero' && (oppStatuses.freeze || 0) >= 6) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
+    if (card.id === 'ice_brute_shatter_grab' && (oppStatuses.freeze || 0) >= 6) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
+    if (card.id === 'paladin_armor_judgment' && getEffectiveArmor(ownerKey) >= 6) markEnabled(`Effective armor ${getEffectiveArmor(ownerKey)}`);
+
+    if (owner.class === 'Ice Assassin' && card.type === 'attack' && (oppStatuses.freeze || 0) >= 5) {
+        markEnabled('Smithen passive active');
+    }
+    if (owner.class === 'Bahl' && cardHasRequirementToken(card, 'darkness') && (oppStatuses.bleed || 0) >= 10) {
+        markEnabled(card.type === 'attack' ? 'Bahl passive: cost down and damage up' : 'Bahl passive: cost down');
+    }
+    if ((ownerStatuses.nextAtkMod || 0) > 0 && card.type === 'attack') {
+        markEnabled(`Next attack +${ownerStatuses.nextAtkMod}`);
+    }
+    if ((ownerStatuses.nextGrabMod || 0) > 0 && card.type === 'grab') {
+        markEnabled(`Next grab +${ownerStatuses.nextGrabMod}`);
+    }
+
+    info.reasons = [...new Set(info.reasons)];
+    return info;
+}
+window.getCardCueState = getCardCueState;
+
 function getMoveCost(charKey, card) {
     if (!card) return 0;
     const base = card.cost || 0;
@@ -1393,17 +1535,22 @@ function renderAbilities() {
             const typeLabel = (typeof window.getActionTypeLabel === 'function')
                 ? window.getActionTypeLabel(ability.type || 'utility')
                 : String(ability.type || 'utility').toUpperCase();
+            const cue = (typeof window.getCardCueState === 'function') ? window.getCardCueState(char, ability) : { enabled: false, reasons: [] };
+            const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(ability) : '';
+            const cueHtml = cue.enabled ? `<div class="card-live-badge ability-live-badge">LIVE</div>` : '';
             
             container.innerHTML += `
                 <div class="ability-wrapper">
-                    <button class="ability-btn" ${char === 'player' ? `onclick="useAbility(${i})"` : ''}>
+                    <button class="ability-btn ${cue.enabled ? 'card-live' : ''}" ${char === 'player' ? `onclick="useAbility(${i})"` : ''} title="${cue.enabled && cue.reasons?.length ? cue.reasons.join(' | ') : ''}">
                         <b>${ability.name}</b>
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
                         <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
                         Type: <b style="color:#ffd166;">${typeLabel}</b><br>
                         Cost: ${costDisplay} ST | Time: ${ability.moments} MOM<br>
+                        ${reqHtml}
                         ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}</span><br>` : ''}
+                        ${cueHtml}
                         <i>${formatKeywords(ability.desc)}</i>
                     </div>
                 </div>

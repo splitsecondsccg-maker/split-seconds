@@ -1118,6 +1118,39 @@
       ]
     }
   },
+  "darkness_deform": {
+    "id": "darkness_deform",
+    "name": "Deform",
+    "type": "attack",
+    "cost": 4,
+    "moments": 2,
+    "dmg": 5,
+    "desc": "5 DMG. On hit: opponent draws 1 less next turn.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "draw_less",
+        "value": 1
+      }
+    ],
+    "requirements": {
+      "all": [
+        "darkness"
+      ],
+      "any": [
+        {
+          "all": [
+            "sorcerer"
+          ]
+        },
+        {
+          "all": [
+            "wizard"
+          ]
+        }
+      ]
+    }
+  },
   "poison_toxic_sting": {
     "id": "poison_toxic_sting",
     "name": "Toxic Sting",

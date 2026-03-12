@@ -21,7 +21,7 @@
       },
       {
         "cardId": "rogue_kidney_strike",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "rogue_sharpen",
@@ -37,15 +37,15 @@
       },
       {
         "cardId": "rogue_execution_window",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "assassin_night_thrust",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "darkness_night_blade",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "necro_scare",
@@ -61,7 +61,7 @@
     "cards": [
       {
         "cardId": "brute_heavy_strike",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "brute_cleave",
@@ -69,7 +69,7 @@
       },
       {
         "cardId": "brute_dev_blow",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_suplex",
@@ -81,11 +81,11 @@
       },
       {
         "cardId": "brute_warcry",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_earthshatter",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "poison_toxic_sting",
@@ -113,7 +113,7 @@
       },
       {
         "cardId": "paladin_shield_bash",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "paladin_pummel",
@@ -129,7 +129,7 @@
       },
       {
         "cardId": "paladin_holy_smite",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "warrior_shield_discipline",
@@ -141,11 +141,11 @@
       },
       {
         "cardId": "paladin_sanctuary",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "paladin_armor_judgment",
-        "copies": 2
+        "copies": 3
       }
     ]
   },
@@ -177,11 +177,11 @@
       },
       {
         "cardId": "vamp_crimson_grapple",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "vamp_artery_rip",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "vampire_blood_sip",
@@ -189,11 +189,11 @@
       },
       {
         "cardId": "vamp_bloodletter_strike",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "vamp_exsanguinate",
-        "copies": 2
+        "copies": 3
       }
     ]
   },
@@ -209,11 +209,11 @@
       },
       {
         "cardId": "necro_siphon_soul",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "necro_skull_blast",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "necro_necro_blast",
@@ -221,7 +221,7 @@
       },
       {
         "cardId": "spiders_swarm",
-        "copies": 1
+        "copies": 3
       },
       {
         "cardId": "necro_bone_cage",
@@ -237,14 +237,18 @@
       },
       {
         "cardId": "necro_grave_whisper",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "necro_mind_sever",
+        "copies": 3
+      },
+      {
+        "cardId": "darkness_deform",
         "copies": 2
       },
       {
-        "cardId": "toxic_rain",
+        "cardId": "demon_devotion",
         "copies": 1
       }
     ]
@@ -265,7 +269,7 @@
       },
       {
         "cardId": "palea_dont",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "palea_snap_fingers",
@@ -273,7 +277,7 @@
       },
       {
         "cardId": "palea_puppet_strings",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "palea_fae_needle",
@@ -289,7 +293,7 @@
       },
       {
         "cardId": "mesmer_snare",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "palea_arcane_amp",
@@ -301,7 +305,7 @@
       },
       {
         "cardId": "palea_mind_meltdown",
-        "copies": 2
+        "copies": 3
       }
     ]
   },
@@ -313,7 +317,7 @@
     "cards": [
       {
         "cardId": "ice_cold_wind",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "ice_ice_spear",
@@ -325,7 +329,7 @@
       },
       {
         "cardId": "ice_ice_wall",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "spirit_ether_guard",
@@ -333,7 +337,7 @@
       },
       {
         "cardId": "spirit_spirit_form",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "sorcerer_spellweave",
@@ -349,7 +353,7 @@
       },
       {
         "cardId": "ice_djinn_absolute_zero",
-        "copies": 2
+        "copies": 3
       }
     ]
   },
@@ -389,7 +393,7 @@
       },
       {
         "cardId": "ice_cold_wind",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "ice_break_the_ice",
@@ -397,15 +401,15 @@
       },
       {
         "cardId": "ice_frostbind",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "ice_assassin_frigid_mark",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "ice_assassin_shatter_step",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "ice_fury",
@@ -429,7 +433,7 @@
       },
       {
         "cardId": "brute_dev_blow",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_suplex",
@@ -437,11 +441,11 @@
       },
       {
         "cardId": "brute_sunder",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_warcry",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_earthshatter",
@@ -461,7 +465,7 @@
       },
       {
         "cardId": "ice_brute_shatter_grab",
-        "copies": 2
+        "copies": 3
       }
     ]
   },
@@ -473,7 +477,7 @@
     "cards": [
       {
         "cardId": "brute_heavy_strike",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_cleave",
@@ -481,7 +485,7 @@
       },
       {
         "cardId": "brute_dev_blow",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_suplex",
@@ -489,7 +493,7 @@
       },
       {
         "cardId": "brute_warcry",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "brute_earthshatter",
@@ -505,7 +509,7 @@
       },
       {
         "cardId": "palea_puppet_strings",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "palea_fae_needle",
@@ -537,14 +541,10 @@
       },
       {
         "cardId": "darkness_dread_mark",
-        "copies": 2
-      },
-      {
-        "cardId": "necro_scare",
         "copies": 1
       },
       {
-        "cardId": "demon_devotion",
+        "cardId": "necro_scare",
         "copies": 1
       },
       {
@@ -556,8 +556,12 @@
         "copies": 2
       },
       {
+        "cardId": "darkness_deform",
+        "copies": 3
+      },
+      {
         "cardId": "bahl_bubbles",
-        "copies": 2
+        "copies": 3
       },
       {
         "cardId": "darkness_destroy_spirit",
@@ -565,11 +569,11 @@
       },
       {
         "cardId": "sorcerer_innate_talent",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "darkblood_vein_bastion",
-        "copies": 1
+        "copies": 2
       },
       {
         "cardId": "crimson_armour",

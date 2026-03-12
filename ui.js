@@ -15,6 +15,8 @@ function renderHand() {
         div.className = 'card';
         if (card.type === 'enhancer') div.classList.add('enhancer-card');
         if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(card)) div.classList.add('multi-active-card');
+        const cue = (typeof window.getCardCueState === 'function') ? window.getCardCueState('player', card) : { enabled: false, reasons: [] };
+        if (cue.enabled) div.classList.add('card-live');
 
         // fan positioning
         const angle = (index - center) * fanSpread;
@@ -65,11 +67,15 @@ function renderHand() {
 
         }
 
+        const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(card) : '';
+        if (cue.enabled && cue.reasons?.length) div.title = cue.reasons.join(' | ');
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
             <div class="card-stats"><span>${card.type === 'enhancer' ? '✨ ENH' : `⏱ ${card.moments}`}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
+            ${reqHtml}
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
             ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
+            ${cue.enabled ? `<div class="card-live-badge">LIVE</div>` : ''}
         `;
 
         handEl.appendChild(div);
@@ -359,10 +365,14 @@ function renderPlayerTimeline() {
             div.dataset.timelineIndex = String(i);
             if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
             if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(t)) div.classList.add('multi-active-card');
+            const cue = (typeof window.getCardCueState === 'function') ? window.getCardCueState('player', t) : { enabled: false, reasons: [] };
+            if (cue.enabled) div.classList.add('card-live');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
             
             const enhInfo = getEnhancerUiInfo(t);
-            div.draggable = true; div.style.cursor = 'pointer'; div.title = "Click or drag to hand to remove" + enhInfo.title;
+            const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(t) : '';
+            const cueTitle = cue.enabled && cue.reasons?.length ? `\nEnabled: ${cue.reasons.join(' | ')}` : '';
+            div.draggable = true; div.style.cursor = 'pointer'; div.title = "Click or drag to hand to remove" + enhInfo.title + cueTitle;
             div.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({source: 'timeline', index: i}));
             div.onclick = () => returnToHand(i);
 
@@ -373,7 +383,7 @@ function renderPlayerTimeline() {
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}`;
             tl.appendChild(div);
         }
     }
@@ -397,6 +407,8 @@ function renderAITimeline() {
             div.dataset.timelineIndex = String(i);
             if (Array.isArray(t.enhancers) && t.enhancers.length > 0) div.classList.add('has-enhancer');
             if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(t)) div.classList.add('multi-active-card');
+            const cue = (typeof window.getCardCueState === 'function') ? window.getCardCueState('ai', t) : { enabled: false, reasons: [] };
+            if (cue.enabled) div.classList.add('card-live');
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
 
             let extraText = '';
@@ -406,8 +418,10 @@ function renderAITimeline() {
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             const enhInfo = getEnhancerUiInfo(t);
+            const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(t) : '';
+            if (cue.enabled && cue.reasons?.length) div.title = `Enabled: ${cue.reasons.join(' | ')}`;
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
+            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}`;
             tl.appendChild(div);
         }
     }
@@ -498,6 +512,8 @@ function renderAITimeline() {
         hide();
     }, true);
 })();
+
+
 
 
 

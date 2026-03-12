@@ -2,6 +2,16 @@
   --ui-log-width: 226px;
 }
 
+/* Battle-only shape refinement: keep layout/sizing intact, change only silhouette */
+#game-screen .hero-portrait {
+  border-radius: 24px !important;
+}
+
+#game-screen .ability-orbit .ability-btn,
+#game-screen .circle-action-btn {
+  border-radius: 20px !important;
+}
+
 /* Character select must not be pushed by rooms panel */
 #char-select-screen {
   position: relative !important;

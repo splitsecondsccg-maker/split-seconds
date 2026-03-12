@@ -262,6 +262,14 @@ body {
     border-color: #ffd54a !important;
     box-shadow: 0 0 16px rgba(255, 213, 74, 0.72), 0 0 34px rgba(255, 110, 64, 0.28), 0 6px 12px rgba(0,0,0,0.7) !important;
 }
+.card.selected-for-exert {
+    border-color: #ff4757 !important;
+    box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.95), 0 0 0 8px rgba(255, 71, 87, 0.28), 0 8px 12px rgba(0,0,0,0.8) !important;
+}
+.card.card-live.selected-for-exert {
+    border-color: #ffd54a !important;
+    box-shadow: 0 0 16px rgba(255, 213, 74, 0.72), 0 0 34px rgba(255, 110, 64, 0.28), 0 0 0 5px rgba(255, 71, 87, 0.95), 0 0 0 9px rgba(255, 71, 87, 0.32), 0 8px 12px rgba(0,0,0,0.8) !important;
+}
 .card-live-badge {
     position: absolute;
     top: -10px;

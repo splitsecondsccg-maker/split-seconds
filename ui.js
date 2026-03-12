@@ -32,10 +32,7 @@ function renderHand() {
         div.style.setProperty("--rot", `${angle}deg`);
         div.style.setProperty("--scale", `0.88`);
 
-        if (card.selectedForExert) {
-            div.style.boxShadow = '0 0 12px 4px #ff4757';
-            div.style.borderColor = '#ff4757';
-        }
+        if (card.selectedForExert) div.classList.add('selected-for-exert');
 
         if (state.phase === 'planning' || state.phase === 'pivot_wait') {
 

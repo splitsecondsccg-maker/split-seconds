@@ -211,7 +211,7 @@
       "blood",
       "darkness"
     ],
-    "maxHp": 30,
+    "maxHp": 33,
     "maxStam": 7,
     "armor": 2,
     "passiveDesc": "If the opponent has 10+ BLEED, your DARKNESS actions cost 1 less and your DARKNESS ATTACKS have +1 DMG.",

@@ -121,11 +121,7 @@ function actionHasEnhancerEffectType(action, effectType) {
 
 function isPersistentPerMomentBuff(action) {
     if (!action || action.type === 'occupied') return false;
-    if (!action.resolveEachMoment) return false;
-    return (
-        actionHasEffectType(action, 'puppet_reflect_attacks') ||
-        actionHasEffectType(action, 'bahl_bubbles')
-    );
+    return !!action.resolveEachMoment;
 }
 
 function buffIgnoresGrabNegate(action) {
@@ -436,6 +432,7 @@ if (pGrab) {
     pGrabHit = true;
     if (aiBuffProtectedFromGrab) {
       log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, but it stays active.`);
+      aiActionInterrupted = true;
     } else {
       aiActionInterrupted = true;
     }
@@ -445,7 +442,7 @@ if (pGrab) {
       aiActive = getActiveCard('ai', state.currentMoment);
       log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiBuffAction.name}!`);
     } else if (aiIsSpecialPerMomentBuff) {
-      log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, but its per-moment effect persists.`);
+      log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, interrupting only this moment.`);
     }
   }
   else if (aiAttackAction) {
@@ -472,6 +469,7 @@ if (pGrab) {
         aiGrabHit = true;
         if (pBuffProtectedFromGrab) {
           log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, but it stays active.`);
+          pActionInterrupted = true;
         } else {
           pActionInterrupted = true;
         }
@@ -481,7 +479,7 @@ if (pGrab) {
           pActive = getActiveCard('player', state.currentMoment);
           log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pBuffAction.name}!`);
         } else if (pIsSpecialPerMomentBuff) {
-          log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, but its per-moment effect persists.`);
+          log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, interrupting only this moment.`);
         }
       }
       else if (pAttackAction) {

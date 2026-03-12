@@ -40,7 +40,7 @@
   },
   "Paladin": {
     "class": "warrior",
-    "displayName": "Arthur",
+    "displayName": "Hope",
     "talents": [
       "light"
     ],
@@ -207,7 +207,7 @@
   window.SS_CHAR_IMAGES = {
   "Rogue": "rogue.png",
   "Mauja": "brute.png",
-  "Paladin": "paladin.png",
+  "Paladin": "hope.png",
   "Vampiress": "vampiress.png",
   "Necromancer": "necromancer.png",
   "Ice Djinn": "ice_djinn.png",

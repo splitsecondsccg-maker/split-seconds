@@ -67,6 +67,7 @@ function getIcon(type) {
     if(type === 'grab') return '\u270B';
     if(type === 'block') return '\uD83D\uDEE1\uFE0F';
     if(type === 'parry') return '\uD83E\uDD3A';
+    if(type === 'buff') return '\uD83C\uDFAF';
     if(type === 'enhancer') return '\u2728';
     if(type === 'utility') return '\uD83D\uDCA8';
     return '\u2728';
@@ -123,13 +124,20 @@ function getMoveCost(charKey, card) {
     return base + ((card.type === 'attack') ? getAttackTax(charKey) : 0);
 }
 
+function getActionTypeLabel(type) {
+    const key = String(type || 'utility').toLowerCase();
+    if (key === 'buff') return 'CONCENTRATION';
+    return key.toUpperCase();
+}
+window.getActionTypeLabel = getActionTypeLabel;
+
 function enhancerCanTarget(enhancerCard, targetCard) {
     if (!enhancerCard || enhancerCard.type !== 'enhancer') return false;
     if (!targetCard || targetCard.type === 'enhancer') return false;
     const targets = Array.isArray(enhancerCard?.enhance?.targets)
         ? enhancerCard.enhance.targets.map(t => String(t || '').toLowerCase()).filter(Boolean)
         : [];
-    if (!targets.length) return true;
+    if (!targets.length) return false;
     return targets.includes(String(targetCard.type || '').toLowerCase());
 }
 window.enhancerCanTarget = enhancerCanTarget;
@@ -1359,7 +1367,9 @@ function renderAbilities() {
             const ability = getAbilityCard(state[char].class, i);
             if (!ability) continue;
             const costDisplay = (char === 'player') ? getMoveCost('player', ability) : (ability.cost || 0);
-            const typeLabel = String(ability.type || 'utility').toUpperCase();
+            const typeLabel = (typeof window.getActionTypeLabel === 'function')
+                ? window.getActionTypeLabel(ability.type || 'utility')
+                : String(ability.type || 'utility').toUpperCase();
             
             container.innerHTML += `
                 <div class="ability-wrapper">

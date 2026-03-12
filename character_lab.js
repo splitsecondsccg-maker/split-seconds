@@ -211,7 +211,7 @@
       row.style.cursor = 'pointer';
       row.style.background = (st.selectedAbilityId === c.id) ? 'rgba(79,172,254,0.18)' : 'rgba(255,255,255,0.03)';
       const isCustom = window.isCustomCard && window.isCustomCard(c.id);
-      row.innerHTML = `<div class="db-card-info"><div class="db-card-title">${c.name} ${isCustom ? '<span style="color:#4facfe;">(Custom)</span>' : ''}</div><div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div></div>`;
+      row.innerHTML = `<div class="db-card-info"><div class="db-card-title">${c.name} ${isCustom ? '<span style="color:#4facfe;">(Custom)</span>' : ''}</div><div class="db-card-meta">${c.id} | ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(c.type || '') : String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div></div>`;
       row.onclick = () => fillAbility(c);
       wrap.appendChild(row);
     });

@@ -370,7 +370,7 @@ function renderPlayerTimeline() {
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
             else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
             else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${String(t.type || '').toUpperCase()}</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             let icon = getIcon(t.type);
             div.innerHTML = `<strong>${t.name}</strong>${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>`;
@@ -403,7 +403,7 @@ function renderAITimeline() {
             if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
             else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
             else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
-            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${String(t.type || '').toUpperCase()}</span>`;
+            else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             const enhInfo = getEnhancerUiInfo(t);
             let icon = getIcon(t.type);

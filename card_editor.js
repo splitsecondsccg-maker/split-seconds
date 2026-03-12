@@ -587,8 +587,14 @@
     populateEffectTypeOptions();
     loadFormEffectsFromCard(card);
     UI.enhDmg().value = Number(card?.enhance?.dmg || 0);
-    const firstTarget = Array.isArray(card?.enhance?.targets) && card.enhance.targets.length ? String(card.enhance.targets[0]).toLowerCase() : 'any';
-    if (UI.enhTargets()) UI.enhTargets().value = firstTarget;
+    if (UI.enhTargets()) {
+      const selected = Array.isArray(card?.enhance?.targets)
+        ? card.enhance.targets.map((t) => String(t || '').toLowerCase())
+        : [];
+      Array.from(UI.enhTargets().options || []).forEach((opt) => {
+        opt.selected = selected.includes(String(opt.value || '').toLowerCase());
+      });
+    }
     setReqBuilderFromRequirements(card?.requirements);
     syncReqHiddenInputsFromBuilder();
     renderReqBuilder();
@@ -630,9 +636,15 @@
     if (type === 'enhancer') {
       out.moments = 0;
       const enhDmg = Math.max(0, Number(UI.enhDmg().value) || 0);
-      const enhTarget = String(UI.enhTargets()?.value || 'any').toLowerCase();
+      const enhTargets = UI.enhTargets()
+        ? Array.from(UI.enhTargets().selectedOptions || []).map((opt) => String(opt.value || '').toLowerCase()).filter(Boolean)
+        : [];
+      if (!enhTargets.length) {
+        alert('Enhancers must target at least one action type.');
+        return null;
+      }
       out.enhance = { dmg: enhDmg };
-      if (enhTarget && enhTarget !== 'any') out.enhance.targets = [enhTarget];
+      out.enhance.targets = enhTargets;
       if (normalizedEffects.length) out.enhance.effects = normalizedEffects;
       if (out.effects) delete out.effects;
       out.dmg = 0;
@@ -979,7 +991,7 @@
       row.innerHTML = `
         <div class="db-card-info">
           <div class="db-card-title">${c.name} ${isCustom ? '<span style="color:#4facfe;">(Custom)</span>' : ''}</div>
-          <div class="db-card-meta">${c.id} | ${String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div>
+          <div class="db-card-meta">${c.id} | ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(c.type || '') : String(c.type || '').toUpperCase()} | ${c.cost || 0} ST | ${c.moments || 0} MOM | ${c.dmg || 0} DMG</div>
           ${req ? `<div class="db-card-desc">Req: ${req}</div>` : ''}
         </div>
       `;

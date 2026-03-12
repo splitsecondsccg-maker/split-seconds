@@ -292,6 +292,119 @@ function aiEstimatePlayerProfile(useMemory = false) {
 
     return { defendBias, attackBias, threat, hpRatio, handRatio, stamRatio, handModel, counterParryBias, counterGrabBias };
 }
+
+function aiTextForMove(move) {
+    return `${String(move?.desc || '')} ${String(move?.specialNotes || '')}`.toLowerCase();
+}
+
+function aiGetStatusApplicationAmount(move, statusKey) {
+    if (!move) return 0;
+    const key = String(statusKey || '').toLowerCase();
+    let amount = 0;
+    if (Array.isArray(move.effects)) {
+        for (const fx of move.effects) {
+            const type = String(fx?.type || '').toLowerCase();
+            if (type === key) amount += Math.max(1, Number(fx?.value) || 1);
+            const m = type.match(new RegExp(`^${key}_(\\d+)_on_`));
+            if (m) amount += Math.max(1, Number(m[1]) || 1);
+        }
+    }
+    return amount;
+}
+
+function aiMoveConsumesStatus(move, statusKey) {
+    if (!move) return false;
+    const key = String(statusKey || '').toLowerCase();
+    const text = aiTextForMove(move);
+    if (key === 'freeze' && /remove all freeze|consume freeze/.test(text)) return true;
+    if (key === 'bleed' && /consume bleed/.test(text)) return true;
+    if (key === 'hypnotized' && /consume hypnotized/.test(text)) return true;
+    if (!Array.isArray(move.effects)) return false;
+    return move.effects.some((fx) => {
+        const type = String(fx?.type || '').toLowerCase();
+        if (type === `consume_${key}` || type === `consume_${key}_burst`) return true;
+        if (key === 'freeze' && type === 'break_the_ice') return true;
+        if (key === 'bleed' && type === 'consume_bleed_damage') return true;
+        return false;
+    });
+}
+
+function aiGetOpponentStatusThresholds(move, statusKey) {
+    if (!move) return [];
+    const key = String(statusKey || '').toUpperCase();
+    const text = `${String(move?.desc || '')} ${String(move?.specialNotes || '')}`;
+    const patterns = [
+        new RegExp(`opponent[^.]{0,80}?(\\d+)\\+\\s*${key}`, 'ig'),
+        new RegExp(`opponent[^.]{0,80}?${key}[^\\d]{0,16}(\\d+)\\+`, 'ig'),
+        new RegExp(`${key}[^\\d]{0,16}(\\d+)\\+`, 'ig')
+    ];
+    const out = [];
+    for (const re of patterns) {
+        let match;
+        while ((match = re.exec(text))) {
+            const n = Number(match[1] || 0);
+            if (n > 0) out.push(n);
+        }
+    }
+    return [...new Set(out)].sort((a, b) => a - b);
+}
+
+function aiGetFutureStatusThresholdDemand(statusKey, ctx) {
+    const futureMoves = []
+        .concat(Array.isArray(ctx?.aiHand) ? ctx.aiHand : [])
+        .concat(ctx?.aiAbility1 ? [ctx.aiAbility1] : [])
+        .concat(ctx?.aiAbility2 ? [ctx.aiAbility2] : []);
+    const thresholds = [];
+    for (const move of futureMoves) thresholds.push(...aiGetOpponentStatusThresholds(move, statusKey));
+    if (!thresholds.length) return { count: 0, min: 0, nearMin: 0 };
+    thresholds.sort((a, b) => a - b);
+    return { count: thresholds.length, min: thresholds[0], nearMin: thresholds[0] };
+}
+
+function aiScoreFreezePlan(move, ctx) {
+    if (!move) return 0;
+    const opponentFreeze = Number(state.player?.statuses?.freeze || 0);
+    const aiClass = String(state.ai?.class || '').toLowerCase();
+    const addsFreeze = aiGetStatusApplicationAmount(move, 'freeze');
+    const consumesFreeze = aiMoveConsumesStatus(move, 'freeze');
+    const freezeThresholds = aiGetOpponentStatusThresholds(move, 'freeze');
+    const freezeDemand = aiGetFutureStatusThresholdDemand('freeze', ctx);
+    let score = 0;
+
+    if (addsFreeze > 0) {
+        score += 1.6 * addsFreeze;
+        if (freezeDemand.count > 0 && opponentFreeze < freezeDemand.min) {
+            const gap = Math.max(0, freezeDemand.min - opponentFreeze);
+            score += Math.min(10, (addsFreeze * 1.8) + Math.max(0, 5 - gap) * 1.2);
+        }
+        if (aiClass === 'ice assassin' && opponentFreeze < 5) {
+            const gapToPassive = Math.max(0, 5 - opponentFreeze);
+            score += Math.max(0, 7 - gapToPassive) * 0.9;
+        }
+    }
+
+    if (freezeThresholds.length) {
+        const best = freezeThresholds[0];
+        if (opponentFreeze >= best) score += 8 + Math.min(6, opponentFreeze - best);
+        else score -= Math.min(8, (best - opponentFreeze) * 1.5);
+    }
+
+    if (consumesFreeze) {
+        if (aiClass === 'ice assassin' && opponentFreeze >= 5 && opponentFreeze < 8) score -= 8;
+        if (freezeDemand.count > 0 && opponentFreeze < freezeDemand.min) {
+            score -= Math.min(12, (freezeDemand.min - opponentFreeze) * 1.8 + freezeDemand.count * 1.2);
+        } else if (opponentFreeze >= 4) {
+            score += Math.min(10, opponentFreeze * 0.8);
+        }
+    }
+
+    if (aiClass === 'ice assassin' && move.type === 'attack' && opponentFreeze >= 5) {
+        score += 3.5;
+    }
+
+    return score;
+}
+
 function aiScoreMove(move, ctx) {
     if (!move) return -999;
     const cost = getMoveCost('ai', move);
@@ -335,6 +448,7 @@ function aiScoreMove(move, ctx) {
     if (effectText.includes('reduce_dmg') && lowHp) score += 8;
     if (aiMoveHasEffectType(move, 'dont') && (state.player.statuses?.hypnotized || 0) > 0) score += 14;
     if ((aiMoveHasEffectType(move, 'hypnotize') || aiMoveHasEffectType(move, 'hypnotized')) && (state.player.statuses?.hypnotized || 0) <= 0) score += 8;
+    score += aiScoreFreezePlan(move, ctx);
 
         // Slot-based pattern punish from previously resolved rounds (public info only).
     const slotIntel = aiGetSlotIntel(ctx.slotIndex);
@@ -823,7 +937,10 @@ function aiStateContextForPlan(stateObj, slotIndex, opts) {
         slotIntel: aiGetSlotIntel(slotIndex),
         futureGrabTailThreat: aiHasLateGrabThreat(slotIndex),
         futureAttackTailThreat: aiHasLateAttackThreat(slotIndex),
-        noRandom: true
+        noRandom: true,
+        aiHand: (stateObj?.hand || []).slice(),
+        aiAbility1: opts?.ability1 || null,
+        aiAbility2: opts?.ability2 || null
     };
 }
 

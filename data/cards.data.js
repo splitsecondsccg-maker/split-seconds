@@ -934,7 +934,11 @@
     "dmg": 0,
     "desc": "Enhancer: attached action gains +2 DMG.",
     "enhance": {
-      "dmg": 2
+      "dmg": 2,
+      "targets": [
+        "attack",
+        "grab"
+      ]
     },
     "requirements": {
       "all": [
@@ -951,7 +955,11 @@
     "dmg": 0,
     "desc": "Enhancer: attached action gains +1 DMG.",
     "enhance": {
-      "dmg": 1
+      "dmg": 1,
+      "targets": [
+        "attack",
+        "grab"
+      ]
     },
     "requirements": {
       "all": [
@@ -968,6 +976,14 @@
     "dmg": 0,
     "desc": "Enhancer: Opponent attacks during this duration have -2 DMG.",
     "enhance": {
+      "targets": [
+        "attack",
+        "grab",
+        "block",
+        "parry",
+        "buff",
+        "utility"
+      ],
       "effects": [
         {
           "trigger": "on_resolve",
@@ -1261,6 +1277,10 @@
     "desc": "Enhancer: +1 DMG. On hit: draw 1.",
     "enhance": {
       "dmg": 1,
+      "targets": [
+        "attack",
+        "grab"
+      ],
       "effects": [
         {
           "trigger": "on_hit",

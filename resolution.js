@@ -106,6 +106,34 @@ function actionHasEffectType(action, effectType) {
     if (!Array.isArray(action.effects)) return false;
     return action.effects.some((fx) => String(fx?.type || '').toLowerCase() === key);
 }
+
+function actionHasEnhancerEffectType(action, effectType) {
+    if (!action || !Array.isArray(action.enhancers) || !action.enhancers.length) return false;
+    const key = String(effectType || '').toLowerCase();
+    if (!key) return false;
+    for (const enh of action.enhancers) {
+        const fxList = enh?.enhance?.effects;
+        if (!Array.isArray(fxList)) continue;
+        if (fxList.some((fx) => String(fx?.type || '').toLowerCase() === key)) return true;
+    }
+    return false;
+}
+
+function isPersistentPerMomentBuff(action) {
+    if (!action || action.type === 'occupied') return false;
+    if (!action.resolveEachMoment) return false;
+    return (
+        actionHasEffectType(action, 'puppet_reflect_attacks') ||
+        actionHasEffectType(action, 'bahl_bubbles')
+    );
+}
+
+function buffIgnoresGrabNegate(action) {
+    if (!action || action.type === 'occupied') return false;
+    if (actionHasEnhancerEffectType(action, 'grabs_do_not_negate')) return true;
+    return false;
+}
+
 function tryResolveDont(sourceKey, targetKey, sourceAction) {
     if (!sourceAction || sourceAction.type === 'occupied') return false;
     if (!actionHasEffectType(sourceAction, 'dont')) return false;
@@ -124,6 +152,21 @@ function tryResolveDont(sourceKey, targetKey, sourceAction) {
         drawCards(1, sourceKey);
         log(`${sourceKey === 'player' ? 'Player' : 'AI'} gains tempo and draws 1.`);
     }
+    return true;
+}
+function tryResolveBloodForBlood(sourceKey, targetKey, sourceAction, targetAttackAction) {
+    if (!sourceAction || sourceAction.type === 'occupied') return false;
+    if (!actionHasEffectType(sourceAction, 'blood_for_blood')) return false;
+    if (!targetAttackAction || targetAttackAction.type !== 'attack') return false;
+
+    const damage = Math.max(0, computeAttackDamageForMoment(targetKey, sourceKey, targetAttackAction));
+    removeTimelineAction(targetKey, targetAttackAction);
+    if (damage > 0 && typeof applyBleedCounters === 'function') {
+        applyBleedCounters(sourceKey, targetKey, damage);
+    }
+    log(`${sourceKey === 'player' ? 'Player' : 'AI'} Blood for Blood negates the attack${damage > 0 ? ` and applies BLEED ${damage}` : ''}.`);
+    spawnFloatingText(targetKey, 'NEGATED', 'float-block');
+    playSound('block');
     return true;
 }
 function tryResolveBlink(sourceKey, targetKey, sourceAction, targetAction) {
@@ -207,7 +250,9 @@ function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
     }
 
     if (source.class === 'Ice Assassin' && (target.statuses?.freeze || 0) >= 5) dmg += 1;
+    if (source.class === 'Bahl' && (target.statuses?.bleed || 0) >= 10 && typeof cardHasRequirementToken === 'function' && cardHasRequirementToken(attackCard, 'darkness')) dmg += 1;
     if (attackCard.id === 'darkness_night_blade' && (target.hand?.length || 0) === 0) dmg += 3;
+    if (attackCard.id === 'bahl_shadow_blade' && (target.hand?.length || 0) === 0) dmg += 4;
     if (attackCard.id === 'rogue_execution_window' && (target.hand?.length || 0) <= 1) dmg += 3;
     if (attackCard.id === 'paladin_armor_judgment') {
         const effectiveArmor = Math.max(0, (source.armor || 0) + (source.statuses?.bonusArmor || 0) - (source.statuses?.armorDebuff || 0));
@@ -307,8 +352,18 @@ function resolveMoment() {
     if(state.player.statuses.forceBlock && pAction && pAction !== 'occupied') { log("Player is Intimidated! Action fails."); pAction = null; }
     if(state.ai.statuses.forceBlock && aiAction && aiAction !== 'occupied') { log("AI is Intimidated! Action fails."); aiAction = null; }
 
-    const pResolvingAttackNow = getResolvingAttackAction(pAction, pActive);
-    const aiResolvingAttackNow = getResolvingAttackAction(aiAction, aiActive);
+    let pResolvingAttackNow = getResolvingAttackAction(pAction, pActive);
+    let aiResolvingAttackNow = getResolvingAttackAction(aiAction, aiActive);
+    const pBloodForBlood = tryResolveBloodForBlood('player', 'ai', pAction, aiResolvingAttackNow || aiAction);
+    const aiBloodForBlood = tryResolveBloodForBlood('ai', 'player', aiAction, pResolvingAttackNow || pAction);
+    if (pBloodForBlood || aiBloodForBlood) {
+        if (pBloodForBlood) { aiActionInterrupted = true; aiAction = null; }
+        if (aiBloodForBlood) { pActionInterrupted = true; pAction = null; }
+        pActive = getActiveCard('player', state.currentMoment);
+        aiActive = getActiveCard('ai', state.currentMoment);
+        pResolvingAttackNow = getResolvingAttackAction(pAction, pActive);
+        aiResolvingAttackNow = getResolvingAttackAction(aiAction, aiActive);
+    }
     const pBlink = tryResolveBlink('player', 'ai', pAction, aiResolvingAttackNow || aiAction);
     const aiBlink = tryResolveBlink('ai', 'player', aiAction, pResolvingAttackNow || pAction);
     if (pBlink || aiBlink) {
@@ -369,7 +424,8 @@ let aiGrabHit = false;
 
 if (pGrab) {
   const aiBuffAction = ((aiActive && aiActive.type === 'buff') ? aiActive : (aiAction && aiAction.type === 'buff' ? aiAction : null));
-  const aiIsSpecialPerMomentBuff = !!(aiBuffAction && actionHasEffectType(aiBuffAction, 'puppet_reflect_attacks'));
+  const aiIsSpecialPerMomentBuff = !!(aiBuffAction && isPersistentPerMomentBuff(aiBuffAction));
+  const aiBuffProtectedFromGrab = !!(aiBuffAction && buffIgnoresGrabNegate(aiBuffAction));
 
   if (aiBlock || aiParry) {
     pGrabHit = true;
@@ -378,13 +434,17 @@ if (pGrab) {
   // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
   else if (aiBuffAction) {
     pGrabHit = true;
-    aiActionInterrupted = true;
-    if (!aiIsSpecialPerMomentBuff) {
+    if (aiBuffProtectedFromGrab) {
+      log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, but it stays active.`);
+    } else {
+      aiActionInterrupted = true;
+    }
+    if (!aiIsSpecialPerMomentBuff && !aiBuffProtectedFromGrab) {
       removeTimelineAction('ai', aiBuffAction);
       aiAction = null;
       aiActive = getActiveCard('ai', state.currentMoment);
       log(`Player ${pAction.name} GRABS and INTERRUPTS ${aiBuffAction.name}!`);
-    } else {
+    } else if (aiIsSpecialPerMomentBuff) {
       log(`Player ${pAction.name} GRABS ${aiBuffAction.name}, but its per-moment effect persists.`);
     }
   }
@@ -400,7 +460,8 @@ if (pGrab) {
 
     if (aiGrab) {
       const pBuffAction = ((pActive && pActive.type === 'buff') ? pActive : (pAction && pAction.type === 'buff' ? pAction : null));
-      const pIsSpecialPerMomentBuff = !!(pBuffAction && actionHasEffectType(pBuffAction, 'puppet_reflect_attacks'));
+      const pIsSpecialPerMomentBuff = !!(pBuffAction && isPersistentPerMomentBuff(pBuffAction));
+      const pBuffProtectedFromGrab = !!(pBuffAction && buffIgnoresGrabNegate(pBuffAction));
 
       if (pBlock || pParry) {
         aiGrabHit = true;
@@ -409,13 +470,17 @@ if (pGrab) {
       // Grab interrupts Concentration (buff) only; utilities are not interrupted by grab.
       else if (pBuffAction) {
         aiGrabHit = true;
-        pActionInterrupted = true;
-        if (!pIsSpecialPerMomentBuff) {
+        if (pBuffProtectedFromGrab) {
+          log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, but it stays active.`);
+        } else {
+          pActionInterrupted = true;
+        }
+        if (!pIsSpecialPerMomentBuff && !pBuffProtectedFromGrab) {
           removeTimelineAction('player', pBuffAction);
           pAction = null;
           pActive = getActiveCard('player', state.currentMoment);
           log(`AI ${aiAction.name} GRABS and INTERRUPTS ${pBuffAction.name}!`);
-        } else {
+        } else if (pIsSpecialPerMomentBuff) {
           log(`AI ${aiAction.name} GRABS ${pBuffAction.name}, but its per-moment effect persists.`);
         }
       }
@@ -434,17 +499,12 @@ if (pGrab) {
 
     // --- FIXED ARMOR LOGIC: Now safely catches ALL active blocks properly ---
     if(pBlock && aiDmg > 0 && !aiGrab) {
-        if (pActive.name === 'Bone Cage') {
-            if(pActive.currentBlock === undefined) pActive.currentBlock = 6;
+        if (typeof pActive?.currentBlock === 'number' || typeof pActive?.baseCurrentBlock === 'number') {
+            if(pActive.currentBlock === undefined) pActive.currentBlock = Number(pActive.baseCurrentBlock || pActive.currentBlock || 0);
             let blocked = Math.min(aiDmg, pActive.currentBlock);
             aiDmg -= blocked; pActive.currentBlock -= blocked;
-            log(`Player's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('player', 'CAGE', 'float-block'); playSound('block');
-        } else if (pActive.name === 'Ice Wall') {
-            if(pActive.currentBlock === undefined) pActive.currentBlock = 8;
-            let blocked = Math.min(aiDmg, pActive.currentBlock);
-            aiDmg -= blocked; pActive.currentBlock -= blocked;
-            log(`Player's Ice Wall absorbs ${blocked} DMG!`); spawnFloatingText('player', 'ICE WALL', 'float-block'); playSound('block');
-            if (blocked > 0) applyFreezeCounters('player', 'ai', 1);
+            log(`Player's ${pActive.name} absorbs ${blocked} DMG!`); spawnFloatingText('player', pActive.name.toUpperCase(), 'float-block'); playSound('block');
+            if (pActive.name === 'Ice Wall' && blocked > 0) applyFreezeCounters('player', 'ai', 1);
         } else {
             let effectiveArmor = getEffectiveArmor('player');
             aiDmg = Math.max(0, aiDmg - effectiveArmor);
@@ -456,17 +516,12 @@ if (pGrab) {
     }
 
     if(aiBlock && pDmg > 0 && !pGrab) {
-        if (aiActive.name === 'Bone Cage') {
-            if(aiActive.currentBlock === undefined) aiActive.currentBlock = 6;
+        if (typeof aiActive?.currentBlock === 'number' || typeof aiActive?.baseCurrentBlock === 'number') {
+            if(aiActive.currentBlock === undefined) aiActive.currentBlock = Number(aiActive.baseCurrentBlock || aiActive.currentBlock || 0);
             let blocked = Math.min(pDmg, aiActive.currentBlock);
             pDmg -= blocked; aiActive.currentBlock -= blocked;
-            log(`AI's Bone Cage absorbs ${blocked} DMG!`); spawnFloatingText('ai', 'CAGE', 'float-block'); playSound('block');
-        } else if (aiActive.name === 'Ice Wall') {
-            if(aiActive.currentBlock === undefined) aiActive.currentBlock = 8;
-            let blocked = Math.min(pDmg, aiActive.currentBlock);
-            pDmg -= blocked; aiActive.currentBlock -= blocked;
-            log(`AI's Ice Wall absorbs ${blocked} DMG!`); spawnFloatingText('ai', 'ICE WALL', 'float-block'); playSound('block');
-            if (blocked > 0) applyFreezeCounters('ai', 'player', 1);
+            log(`AI's ${aiActive.name} absorbs ${blocked} DMG!`); spawnFloatingText('ai', aiActive.name.toUpperCase(), 'float-block'); playSound('block');
+            if (aiActive.name === 'Ice Wall' && blocked > 0) applyFreezeCounters('ai', 'player', 1);
         } else {
             let effectiveArmor = getEffectiveArmor('ai');
             pDmg = Math.max(0, pDmg - effectiveArmor);
@@ -619,6 +674,40 @@ if (aiResolved) {
         context: aiResolveCtx
     });
     runEnhancerTriggeredEffects(aiAction, 'on_resolve', 'ai', 'player', aiResolveCtx);
+}
+if (pAction === 'occupied' && pActive && pActive.type === 'buff' && pActive.resolveEachMoment && !pActionInterrupted) {
+    const pActiveResolveCtx = { resolved: true, activeMoment: true };
+    runTriggeredCardEffects(pActive, 'on_resolve', {
+        sourceKey: 'player',
+        targetKey: 'ai',
+        context: pActiveResolveCtx
+    });
+    runEnhancerTriggeredEffects(pActive, 'on_resolve', 'player', 'ai', pActiveResolveCtx);
+}
+if (aiAction === 'occupied' && aiActive && aiActive.type === 'buff' && aiActive.resolveEachMoment && !aiActionInterrupted) {
+    const aiActiveResolveCtx = { resolved: true, activeMoment: true };
+    runTriggeredCardEffects(aiActive, 'on_resolve', {
+        sourceKey: 'ai',
+        targetKey: 'player',
+        context: aiActiveResolveCtx
+    });
+    runEnhancerTriggeredEffects(aiActive, 'on_resolve', 'ai', 'player', aiActiveResolveCtx);
+}
+if (pAction && pAction !== 'occupied') {
+    runTriggeredCardEffects(pAction, 'on_expire', {
+        sourceKey: 'player',
+        targetKey: 'ai',
+        context: { expired: true }
+    });
+    runEnhancerTriggeredEffects(pAction, 'on_expire', 'player', 'ai', { expired: true });
+}
+if (aiAction && aiAction !== 'occupied') {
+    runTriggeredCardEffects(aiAction, 'on_expire', {
+        sourceKey: 'ai',
+        targetKey: 'player',
+        context: { expired: true }
+    });
+    runEnhancerTriggeredEffects(aiAction, 'on_expire', 'ai', 'player', { expired: true });
 }
 
 // Defender triggers (on_block / on_parry) - attributed to the ACTIVE defense card
@@ -791,6 +880,9 @@ function applyEffect(sourceKey, targetKey, effectString, context = {}) {
             break;
         case 'blink':
             // Resolved at moment start by tryResolveBlink(). Keep as no-op fallback.
+            break;
+        case 'blood_for_blood':
+            // Resolved at moment start by tryResolveBloodForBlood(). Keep as no-op fallback.
             break;
         case 'snap_fingers': {
             const bonus = Math.max(1, Number(context.effectValue || 2));

@@ -56,6 +56,7 @@
     if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
     if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
     if (s === 'on resolve' || s === 'resolve' || s === 'on_resolve') return 'on_resolve';
+    if (s === 'on expire' || s === 'expire' || s === 'on_expire') return 'on_expire';
     if (s === 'on get blocked' || s === 'on_blocked' || s === 'upon being blocked') return 'on_blocked';
     if (s === 'on get parried' || s === 'on_parried' || s === 'upon being parried') return 'on_parried';
     return s.replace(/\s+/g, '_');
@@ -98,6 +99,11 @@
       poison: 'Poison',
       hypnotize: 'Hypnotize',
       hypnotized: 'Hypnotize',
+      blood_for_blood: 'Blood for Blood',
+      grabs_do_not_negate: 'Grabs Do Not Negate',
+      armor_next_turn: 'Gain Armor Next Turn',
+      both_players_lose_life: 'Both Players Lose Life',
+      both_players_bleed: 'Both Players Gain Bleed',
       puppet_reflect_attacks: 'Reflect Enemy Attacks',
       protective_aura: 'Protective Aura (-DMG)'
     };
@@ -105,7 +111,7 @@
   }
 
   function triggerLabel(key){
-    const map = { on_hit:'On Hit', on_block:'On Block', on_parry:'On Parry', on_blocked:'On Blocked', on_parried:'On Parried', on_resolve:'On Resolve', on_turn_end:'On Turn End' };
+    const map = { on_hit:'On Hit', on_block:'On Block', on_parry:'On Parry', on_blocked:'On Blocked', on_parried:'On Parried', on_resolve:'On Resolve', on_expire:'On Expire', on_turn_end:'On Turn End' };
     return map[key] || key;
   }
 
@@ -125,7 +131,7 @@
     const el = UI.effectType();
     if (!el) return;
     const types = Object.keys(window.EffectTypeRegistry || {}).sort();
-    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards', 'discard_random', 'consume_bleed_damage', 'consume_hypnotized_burst', 'consume_hypnotized_burst_draw'];
+    const fallback = ['bleed', 'poison', 'freeze', 'hypnotized', 'hypnotize', 'exhausted', 'draw_less', 'draw_cards', 'blood_for_blood', 'grabs_do_not_negate', 'armor_next_turn', 'both_players_lose_life', 'both_players_bleed', 'discard_random', 'consume_bleed_damage', 'consume_hypnotized_burst', 'consume_hypnotized_burst_draw'];
     const merged = [...new Set([...(types.length ? types : fallback), ...fallback])].sort();
     const current = String(el.value || '').toLowerCase();
     el.innerHTML = merged.map((t) => `<option value="${t}">${effectLabel(t)}</option>`).join('');

@@ -201,6 +201,28 @@
       "1": "ability_ice_djinn_1",
       "2": "ability_ice_djinn_2"
     }
+  },
+  "Bahl": {
+    "class": "demon",
+    "displayName": "Bahl",
+    "talents": [
+      "sorcerer",
+      "blood",
+      "darkness"
+    ],
+    "maxHp": 30,
+    "maxStam": 7,
+    "armor": 2,
+    "passiveDesc": "If the opponent has 10+ BLEED, your DARKNESS actions cost 1 less and your DARKNESS ATTACKS have +1 DMG.",
+    "premise": "A bleed-engine demon that spends the early game loading counters, then turns darkness windows into explosive finishers.",
+    "deckIds": [
+      "bahl_base"
+    ],
+    "defaultDeckId": "bahl_base",
+    "abilityIds": {
+      "1": "ability_bahl_1",
+      "2": "ability_bahl_2"
+    }
   }
 };
 
@@ -214,7 +236,8 @@
   "Palea": "palea.png",
   "Ice Assassin": "ice_assassin.png",
   "Ice Brute": "ice_brute.png",
-  "Fae Brute": "poom.png"
+  "Fae Brute": "poom.png",
+  "Bahl": "bahl.png"
 };
 
   window.SS_PROFICIENCY_ICONS = {
@@ -231,7 +254,9 @@
   "fae": "FAE",
   "ice": "ICE",
   "sorcerer": "SORCERER",
-  "spirit": "SPIRIT"
+  "spirit": "SPIRIT",
+  "blood": "BLOOD",
+  "demon": "DEMON"
 };
 })();
 

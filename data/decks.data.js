@@ -518,7 +518,63 @@
       {
         "cardId": "palea_fae_edge",
         "copies": 1
+      }
+    ]
+  },
+  "bahl_base": {
+    "id": "bahl_base",
+    "name": "Bahl - Crimson Eclipse",
+    "character": "Bahl",
+    "description": "Build BLEED fast, protect the setup turn, then cash the 10+ BLEED window into discounted darkness burst.",
+    "cards": [
+      {
+        "cardId": "bleed_open_wound",
+        "copies": 3
       },
+      {
+        "cardId": "double_slice",
+        "copies": 2
+      },
+      {
+        "cardId": "darkness_dread_mark",
+        "copies": 2
+      },
+      {
+        "cardId": "necro_scare",
+        "copies": 1
+      },
+      {
+        "cardId": "demon_devotion",
+        "copies": 1
+      },
+      {
+        "cardId": "vamp_bloodletter_strike",
+        "copies": 2
+      },
+      {
+        "cardId": "bahl_shadow_blade",
+        "copies": 2
+      },
+      {
+        "cardId": "bahl_bubbles",
+        "copies": 2
+      },
+      {
+        "cardId": "darkness_destroy_spirit",
+        "copies": 2
+      },
+      {
+        "cardId": "sorcerer_innate_talent",
+        "copies": 1
+      },
+      {
+        "cardId": "darkblood_vein_bastion",
+        "copies": 1
+      },
+      {
+        "cardId": "crimson_armour",
+        "copies": 1
+      }
     ]
   }
 };

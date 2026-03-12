@@ -1177,7 +1177,7 @@
     ],
     "requirements": {
       "all": [
-        "bleed"
+        "blood"
       ]
     }
   },
@@ -1200,7 +1200,7 @@
     ],
     "requirements": {
       "all": [
-        "bleed"
+        "blood"
       ]
     }
   },
@@ -1285,6 +1285,39 @@
         {
           "trigger": "on_hit",
           "type": "draw_cards",
+          "value": 1
+        }
+      ]
+    },
+    "requirements": {
+      "all": [
+        "sorcerer"
+      ]
+    }
+  },
+  "sorcerer_innate_talent": {
+    "id": "sorcerer_innate_talent",
+    "name": "Innate Talent",
+    "type": "enhancer",
+    "cost": 0,
+    "moments": 0,
+    "dmg": 0,
+    "desc": "Enhancer (Concentration only). Grabs do not negate this action. When it expires, draw 1.",
+    "enhance": {
+      "dmg": 0,
+      "targets": [
+        "buff"
+      ],
+      "effects": [
+        {
+          "trigger": "on_resolve",
+          "type": "grabs_do_not_negate",
+          "value": 1
+        },
+        {
+          "trigger": "on_expire",
+          "type": "draw_cards",
+          "target": "self",
           "value": 1
         }
       ]
@@ -1950,8 +1983,7 @@
     ],
     "requirements": {
       "all": [
-        "vampire",
-        "bleed"
+        "blood"
       ]
     }
   },
@@ -2353,6 +2385,213 @@
       "all": [
         "assassin",
         "ice"
+      ]
+    }
+  },
+  "ability_bahl_1": {
+    "id": "ability_bahl_1",
+    "name": "Blood for Blood",
+    "type": "buff",
+    "cost": 1,
+    "moments": 1,
+    "dmg": 0,
+    "desc": "If an opponent ATTACK resolves on this moment: negate it and apply BLEED equal to its damage.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "blood_for_blood",
+        "value": 1
+      }
+    ],
+    "isBasic": true,
+    "isAbility": true,
+    "requirements": {
+      "all": [
+        "demon",
+        "darkness",
+        "blood"
+      ]
+    }
+  },
+  "ability_bahl_2": {
+    "id": "ability_bahl_2",
+    "name": "Delve",
+    "type": "utility",
+    "cost": 0,
+    "moments": 1,
+    "dmg": 0,
+    "desc": "Apply BLEED 2 to yourself. Draw 2 cards.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "bleed",
+        "target": "self",
+        "value": 2
+      },
+      {
+        "trigger": "on_resolve",
+        "type": "draw_cards",
+        "target": "self",
+        "value": 2
+      }
+    ],
+    "isBasic": true,
+    "isAbility": true,
+    "requirements": {
+      "all": [
+        "demon",
+        "blood",
+        "sorcerer"
+      ]
+    }
+  },
+  "bahl_bubbles": {
+    "id": "bahl_bubbles",
+    "name": "Bahl's Bubbles",
+    "type": "buff",
+    "cost": 6,
+    "moments": 5,
+    "dmg": 0,
+    "resolveEachMoment": true,
+    "desc": "Resolves each occupied moment: apply BLEED 3 to the opponent.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "bleed",
+        "value": 3
+      }
+    ],
+    "requirements": {
+      "all": [
+        "sorcerer",
+        "darkness",
+        "blood"
+      ]
+    }
+  },
+  "bahl_shadow_blade": {
+    "id": "bahl_shadow_blade",
+    "name": "Shadow Blade",
+    "type": "attack",
+    "cost": 2,
+    "moments": 2,
+    "dmg": 2,
+    "desc": "2 DMG. If opponent has no cards in hand, gain +4 DMG.",
+    "specialNotes": "Conditional bonus: +4 damage if opponent hand is empty at resolution.",
+    "requirements": {
+      "all": [
+        "darkness",
+        "blood"
+      ]
+    }
+  },
+  "demon_devotion": {
+    "id": "demon_devotion",
+    "name": "Devotion",
+    "type": "buff",
+    "cost": 1,
+    "moments": 2,
+    "dmg": 0,
+    "desc": "Both players lose 4 life.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "both_players_lose_life",
+        "value": 4
+      }
+    ],
+    "requirements": {
+      "all": [
+        "demon"
+      ]
+    }
+  },
+  "darkblood_vein_bastion": {
+    "id": "darkblood_vein_bastion",
+    "name": "Vein Bastion",
+    "type": "block",
+    "cost": 4,
+    "moments": 4,
+    "dmg": 0,
+    "currentBlock": 10,
+    "desc": "Block 10 total DMG across this action. After the last moment it occupies, both players gain BLEED 4.",
+    "effects": [
+      {
+        "trigger": "on_expire",
+        "type": "both_players_bleed",
+        "value": 4
+      }
+    ],
+    "requirements": {
+      "all": [
+        "darkness",
+        "blood"
+      ]
+    }
+  },
+  "crimson_armour": {
+    "id": "crimson_armour",
+    "name": "Crimson Armour",
+    "type": "utility",
+    "cost": 0,
+    "moments": 1,
+    "dmg": 0,
+    "desc": "Apply BLEED 4 to yourself. Next turn: +4 Armor.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "bleed",
+        "target": "self",
+        "value": 4
+      },
+      {
+        "trigger": "on_resolve",
+        "type": "armor_next_turn",
+        "target": "self",
+        "value": 4
+      }
+    ],
+    "requirements": {
+      "all": [
+        "blood"
+      ],
+      "any": [
+        {
+          "all": [
+            "wizard"
+          ]
+        },
+        {
+          "all": [
+            "sorcerer"
+          ]
+        }
+      ]
+    }
+  },
+  "darkness_destroy_spirit": {
+    "id": "darkness_destroy_spirit",
+    "name": "Destroy Spirit",
+    "type": "grab",
+    "cost": 2,
+    "moments": 2,
+    "dmg": 3,
+    "desc": "3 DMG. On hit: opponent draws 1 less next turn and becomes EXHAUSTED.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "draw_less",
+        "value": 1
+      },
+      {
+        "trigger": "on_hit",
+        "type": "exhausted",
+        "value": 1
+      }
+    ],
+    "requirements": {
+      "all": [
+        "darkness"
       ]
     }
   }

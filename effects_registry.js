@@ -83,6 +83,42 @@
         window.drawCards(amount, sourceKey);
       }
     },
+    grabs_do_not_negate: () => {
+      // Passive while attached enhancer is active; resolved in resolution.js grab logic.
+    },
+    armor_next_turn: ({ sourceKey, value }) => {
+      const source = window.state?.[sourceKey];
+      if (!source) return;
+      const amount = Math.max(1, Number(value) || 1);
+      source.statuses.armorNextTurn = (source.statuses.armorNextTurn || 0) + amount;
+      if (typeof window.log === "function") {
+        window.log(`${sourceKey === "player" ? "Player" : "AI"} will gain +${amount} Armor next turn.`);
+      }
+    },
+    both_players_lose_life: ({ value }) => {
+      const amount = Math.max(1, Number(value) || 1);
+      for (const key of ["player", "ai"]) {
+        const target = window.state?.[key];
+        if (!target) continue;
+        target.hp -= amount;
+        target.roundData.lostLife = true;
+        if (typeof window.clearHypnotizedOnLifeLoss === "function") {
+          window.clearHypnotizedOnLifeLoss(key, "life loss");
+        }
+        if (typeof window.spawnFloatingText === "function") {
+          window.spawnFloatingText(key, `-${amount}`, "float-dmg");
+        }
+      }
+      if (typeof window.log === "function") {
+        window.log(`Both players lose ${amount} life.`);
+      }
+    },
+    both_players_bleed: ({ sourceKey, value }) => {
+      const amount = Math.max(1, Number(value) || 1);
+      if (typeof window.applyBleedCounters !== "function") return;
+      window.applyBleedCounters(sourceKey, "player", amount);
+      window.applyBleedCounters(sourceKey, "ai", amount);
+    },
     puppet_reflect_attacks: () => {
       // Resolved by resolveMoment() while the utility action is active.
     },

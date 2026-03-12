@@ -118,10 +118,33 @@ function getAttackTax(charKey) {
     return ((state?.[charKey]?.statuses?.freeze) || 0) >= 10 ? 1 : 0;
 }
 
+function cardHasRequirementToken(card, token) {
+    const key = String(token || '').toLowerCase();
+    if (!card || !key) return false;
+    const req = card.requirements || {};
+    if (Array.isArray(req.all) && req.all.some((t) => String(t || '').toLowerCase() === key)) return true;
+    if (Array.isArray(req.any)) {
+        for (const group of req.any) {
+            if (Array.isArray(group?.all) && group.all.some((t) => String(t || '').toLowerCase() === key)) return true;
+        }
+    }
+    return false;
+}
+window.cardHasRequirementToken = cardHasRequirementToken;
+
 function getMoveCost(charKey, card) {
     if (!card) return 0;
     const base = card.cost || 0;
-    return base + ((card.type === 'attack') ? getAttackTax(charKey) : 0);
+    const source = state?.[charKey];
+    const targetKey = charKey === 'player' ? 'ai' : 'player';
+    const target = state?.[targetKey];
+    const attackTax = (card.type === 'attack') ? getAttackTax(charKey) : 0;
+    const bahlDiscount = (
+        source?.class === 'Bahl' &&
+        (target?.statuses?.bleed || 0) >= 10 &&
+        cardHasRequirementToken(card, 'darkness')
+    ) ? 1 : 0;
+    return Math.max(0, base + attackTax - bahlDiscount);
 }
 
 function getActionTypeLabel(type) {

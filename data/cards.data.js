@@ -2480,7 +2480,7 @@
   },
   "bahl_bubbles": {
     "id": "bahl_bubbles",
-    "name": "Bahl's Bubbles",
+    "name": "Blood Moon Eclipse",
     "type": "buff",
     "cost": 6,
     "moments": 5,

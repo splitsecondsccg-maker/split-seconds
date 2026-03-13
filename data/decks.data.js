@@ -155,14 +155,14 @@
     "character": "Vampiress",
     "description": "Bleed/lifesteal pressure with grab threats and bleed cashout lines.",
     "cards": [
-      {
-        "cardId": "vamp_claw_swipe",
-        "copies": 2
-      },
-      {
-        "cardId": "vamp_siphon_strike",
-        "copies": 2
-      },
+        {
+          "cardId": "vamp_claw_swipe",
+          "copies": 2
+        },
+        {
+          "cardId": "vamp_siphon_strike",
+          "copies": 2
+        },
       {
         "cardId": "vamp_vampiric_bite",
         "copies": 2
@@ -179,10 +179,10 @@
         "cardId": "vamp_crimson_grapple",
         "copies": 3
       },
-      {
-        "cardId": "vamp_artery_rip",
-        "copies": 3
-      },
+        {
+          "cardId": "vamp_artery_rip",
+          "copies": 3
+        },
       {
         "cardId": "vampire_blood_sip",
         "copies": 2
@@ -191,14 +191,62 @@
         "cardId": "vamp_bloodletter_strike",
         "copies": 3
       },
+        {
+          "cardId": "vamp_exsanguinate",
+          "copies": 3
+        }
+      ]
+    },
+  "dravain_base": {
+    "id": "dravain_base",
+    "name": "Dravain - Blood Bastion",
+    "character": "Dravain",
+    "description": "Bleed-enabled armor warrior that pressures with blood attacks and wins on stable combat math.",
+    "cards": [
       {
-        "cardId": "vamp_exsanguinate",
+        "cardId": "blood_crimson_blade",
         "copies": 3
+      },
+      {
+        "cardId": "vamp_bloodletter_strike",
+        "copies": 3
+      },
+      {
+        "cardId": "double_slice",
+        "copies": 2
+      },
+      {
+        "cardId": "bleed_open_wound",
+        "copies": 2
+      },
+      {
+        "cardId": "paladin_shield_bash",
+        "copies": 3
+      },
+      {
+        "cardId": "paladin_pummel",
+        "copies": 2
+      },
+      {
+        "cardId": "vamp_vampiric_bite",
+        "copies": 2
+      },
+      {
+        "cardId": "vampire_blood_sip",
+        "copies": 2
+      },
+      {
+        "cardId": "vamp_crimson_grapple",
+        "copies": 3
+      },
+      {
+        "cardId": "vamp_artery_rip",
+        "copies": 2
       }
     ]
   },
-  "necromancer_base": {
-    "id": "necromancer_base",
+    "necromancer_base": {
+      "id": "necromancer_base",
     "name": "Necromancer - Rot Engine",
     "character": "Necromancer",
     "description": "Status-engine control with poison pressure and hypnotic burst payoffs.",

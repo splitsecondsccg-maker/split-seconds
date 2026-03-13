@@ -66,7 +66,7 @@
     ],
     "maxStam": 7,
     "armor": 2,
-    "passiveDesc": "Once per turn, when you give the opponent BLEED, your next attack gains +2 DMG.",
+    "passiveDesc": "Once per turn, when you give the opponent BLEED, your next attack gains +1 DMG.",
     "premise": "The relentless grappler. Bypasses shields with life-stealing grabs and forced blocks.",
     "deckIds": [
       "vampiress_base"
@@ -77,6 +77,28 @@
       "2": "ability_vampiress_2"
     },
     "maxHp": 35
+  },
+  "Dravain": {
+    "class": "Dravain",
+    "displayName": "Dravain",
+    "talents": [
+      "vampire",
+      "warrior",
+      "blood"
+    ],
+    "maxHp": 40,
+    "maxStam": 6,
+    "armor": 3,
+    "passiveDesc": "If the opponent has 3+ BLEED counters, you have +2 Armor.",
+    "premise": "A disciplined blood knight who turns bleed pressure into armor superiority, then wins through steady, punishing trades.",
+    "deckIds": [
+      "dravain_base"
+    ],
+    "defaultDeckId": "dravain_base",
+    "abilityIds": {
+      "1": "ability_dravain_1",
+      "2": "ability_dravain_2"
+    }
   },
   "Necromancer": {
     "class": "wizard",
@@ -232,6 +254,7 @@
   "Mauja": "brute.png",
   "Paladin": "hope.png",
   "Vampiress": "vampiress.png",
+  "Dravain": "dravain.png",
   "Necromancer": "necromancer.png",
   "Ice Djinn": "ice_djinn.png",
   "Palea": "palea.png",

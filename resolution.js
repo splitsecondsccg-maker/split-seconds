@@ -247,6 +247,7 @@ function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
 
     if (source.class === 'Ice Assassin' && (target.statuses?.freeze || 0) >= 5) dmg += 1;
     if (source.class === 'Bahl' && (target.statuses?.bleed || 0) >= 10 && typeof cardHasRequirementToken === 'function' && cardHasRequirementToken(attackCard, 'darkness')) dmg += 1;
+    if (attackCard.id === 'blood_crimson_blade' && (target.statuses?.bleed || 0) >= 3) dmg += 3;
     if (attackCard.id === 'darkness_night_blade' && (target.hand?.length || 0) === 0) dmg += 3;
     if (attackCard.id === 'bahl_shadow_blade' && (target.hand?.length || 0) === 0) dmg += 4;
     if (attackCard.id === 'rogue_execution_window' && (target.hand?.length || 0) <= 1) dmg += 3;

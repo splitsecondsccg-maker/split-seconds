@@ -1151,6 +1151,29 @@
       ]
     }
   },
+  "blood_crimson_blade": {
+    "id": "blood_crimson_blade",
+    "name": "Crimson Blade",
+    "type": "attack",
+    "cost": 2,
+    "moments": 1,
+    "dmg": 1,
+    "desc": "1 DMG. On hit: BLEED 2. If opponent has 3+ BLEED: +3 DMG.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "bleed",
+        "value": 2
+      }
+    ],
+    "specialNotes": "Conditional bonus: +3 damage if opponent BLEED is 3+ at resolution.",
+    "requirements": {
+      "all": [
+        "blood",
+        "warrior"
+      ]
+    }
+  },
   "poison_toxic_sting": {
     "id": "poison_toxic_sting",
     "name": "Toxic Sting",
@@ -1518,8 +1541,8 @@
     "type": "grab",
     "cost": 1,
     "moments": 1,
-    "dmg": 3,
-    "desc": "3 DMG. On hit: BLEED 2.",
+    "dmg": 2,
+    "desc": "2 DMG. On hit: BLEED 2.",
     "effects": [
       {
         "trigger": "on_hit",
@@ -1539,8 +1562,8 @@
     "type": "grab",
     "cost": 2,
     "moments": 2,
-    "dmg": 4,
-    "desc": "4 DMG. On hit: BLEED 4.",
+    "dmg": 3,
+    "desc": "3 DMG. On hit: BLEED 4.",
     "effects": [
       {
         "trigger": "on_hit",
@@ -1665,12 +1688,12 @@
     "cost": 1,
     "moments": 1,
     "dmg": 0,
-    "desc": "Draw 2 cards if opponent has BLEED counters.",
+    "desc": "Draw 1 card if opponent has BLEED counters.",
     "effects": [
       {
         "trigger": "on_resolve",
         "type": "blood_frenzy_draw",
-        "value": 2
+        "value": 1
       }
     ],
     "isBasic": true,
@@ -1689,6 +1712,44 @@
         "trigger": "on_hit",
         "type": "draw_blood",
         "value": 1
+      }
+    ],
+    "isBasic": true,
+    "isAbility": true
+  },
+  "ability_dravain_1": {
+    "id": "ability_dravain_1",
+    "name": "Crimson Lance",
+    "type": "attack",
+    "cost": 3,
+    "moments": 2,
+    "dmg": 4,
+    "desc": "4 DMG. On hit: BLEED 1.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "bleed",
+        "value": 1
+      }
+    ],
+    "isBasic": true,
+    "isAbility": true
+  },
+  "ability_dravain_2": {
+    "id": "ability_dravain_2",
+    "name": "Vampire's Honor",
+    "type": "block",
+    "cost": 1,
+    "moments": 2,
+    "dmg": 0,
+    "currentBlock": 6,
+    "desc": "Blocks up to 6 total DMG over 2 moments. Gain BLEED 1.",
+    "effects": [
+      {
+        "trigger": "on_resolve",
+        "type": "bleed",
+        "value": 1,
+        "target": "self"
       }
     ],
     "isBasic": true,
@@ -2026,8 +2087,8 @@
     "type": "grab",
     "cost": 2,
     "moments": 2,
-    "dmg": 4,
-    "desc": "4 DMG. On hit: consume BLEED and deal that much extra DMG.",
+    "dmg": 3,
+    "desc": "3 DMG. On hit: consume BLEED and deal that much extra DMG.",
     "effects": [
       {
         "trigger": "on_hit",

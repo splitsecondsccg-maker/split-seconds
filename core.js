@@ -250,6 +250,7 @@ function getCardCueState(ownerKey, card) {
 
     if (card.id === 'darkness_night_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
     if (card.id === 'bahl_shadow_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
+    if (card.id === 'blood_crimson_blade' && (oppStatuses.bleed || 0) >= 3) markEnabled(`Opponent has BLEED ${oppStatuses.bleed}`);
     if (card.id === 'rogue_execution_window' && (opponent.hand?.length || 0) <= 1) markEnabled(`Opponent hand is low (${opponent.hand?.length || 0})`);
     if (card.id === 'ice_assassin_shatter_step' && (oppStatuses.freeze || 0) >= 3) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
     if (card.id === 'ice_djinn_absolute_zero' && (oppStatuses.freeze || 0) >= 6) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
@@ -326,7 +327,10 @@ window.isMultiMomentActiveCard = isMultiMomentActiveCard;
 function getEffectiveArmor(charKey) {
     const c = state?.[charKey];
     if (!c) return 0;
-    return Math.max(0, (c.armor || 0) + (c.statuses.bonusArmor || 0) - (c.statuses.armorDebuff || 0));
+    const opponentKey = charKey === 'player' ? 'ai' : 'player';
+    const opponentBleed = Number(state?.[opponentKey]?.statuses?.bleed || 0);
+    const dravainPassiveArmor = (c.class === 'Dravain' && opponentBleed >= 3) ? 2 : 0;
+    return Math.max(0, (c.armor || 0) + (c.statuses.bonusArmor || 0) + dravainPassiveArmor - (c.statuses.armorDebuff || 0));
 }
 
 function applyFreezeCounters(sourceKey, targetKey, amount) {
@@ -351,9 +355,9 @@ function applyBleedCounters(sourceKey, targetKey, amount) {
     if (source) source.roundData.appliedStatus = true;
 
     if (source && source.class === 'Vampiress' && !source.statuses.ladyEvaBleedTriggered) {
-        source.statuses.nextAtkMod += 2;
+        source.statuses.nextAtkMod += 1;
         source.statuses.ladyEvaBleedTriggered = true;
-        log(`${sourceKey === 'player' ? 'Player' : 'AI'} Lady Eva passive: next attack gains +2 DMG.`);
+        log(`${sourceKey === 'player' ? 'Player' : 'AI'} Lady Eva passive: next attack gains +1 DMG.`);
     }
 
     spawnFloatingText(targetKey, `+${amount} BLEED`, 'float-bleed');
@@ -1566,19 +1570,21 @@ function renderAbilities() {
 }
 
 function renderStatuses(target) {
-    const statuses = state[target].statuses;
-    const container = document.getElementById(`${target === 'player' ? 'p' : 'ai'}-statuses`);
-    
-    let html = '<div style="font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid #555;">Active Effects</div>';
-    let count = 0;
+      const statuses = state[target].statuses;
+      const container = document.getElementById(`${target === 'player' ? 'p' : 'ai'}-statuses`);
+      const opponentKey = target === 'player' ? 'ai' : 'player';
+      
+      let html = '<div style="font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid #555;">Active Effects</div>';
+      let count = 0;
     
     if(statuses.nextAtkMod > 0) { html += `<div class="status-badge status-buff">Next Atk +${statuses.nextAtkMod}</div>`; count++; }
     if(statuses.nextGrabMod > 0) { html += `<div class="status-badge status-buff">Next Grab +${statuses.nextGrabMod}</div>`; count++; }
     if(statuses.dmgReduction > 0) { html += `<div class="status-badge status-buff">Guard -${statuses.dmgReduction} DMG</div>`; count++; }
     if(statuses.forceBlock) { html += `<div class="status-badge status-debuff">Intimidated (Must Block)</div>`; count++; }
     if(statuses.mustBlock > 0) { html += `<div class="status-badge status-debuff">Scared (${statuses.mustBlock}x Block Req)</div>`; count++; }
-    if(statuses.stamPenalty > 0) { html += `<div class="status-badge status-debuff">Chilled (-${statuses.stamPenalty} Stam Recov)</div>`; count++; }
-    if((statuses.bonusArmor || 0) > 0) { html += `<div class="status-badge status-buff">+${statuses.bonusArmor} Armor (this turn)</div>`; count++; }
+      if(statuses.stamPenalty > 0) { html += `<div class="status-badge status-debuff">Chilled (-${statuses.stamPenalty} Stam Recov)</div>`; count++; }
+      if((statuses.bonusArmor || 0) > 0) { html += `<div class="status-badge status-buff">+${statuses.bonusArmor} Armor (this turn)</div>`; count++; }
+      if(state[target].class === 'Dravain' && Number(state?.[opponentKey]?.statuses?.bleed || 0) >= 3) { html += `<div class="status-badge status-buff">Dravain Passive +2 Armor</div>`; count++; }
     
 if((statuses.exhausted || 0) > 0) {
     html += `<div class="status-badge status-debuff">${formatKeywords('EXHAUSTED')}</div>`;

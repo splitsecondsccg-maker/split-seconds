@@ -413,8 +413,8 @@
     "type": "grab",
     "cost": 2,
     "moments": 2,
-    "dmg": 6,
-    "desc": "Deals 6 DMG, Heals 2 HP if succeeded.",
+    "dmg": 4,
+    "desc": "Deals 4 DMG, Heals 2 HP if succeeded.",
     "effects": [
       {
         "trigger": "on_hit",

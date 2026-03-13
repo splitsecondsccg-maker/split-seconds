@@ -1563,12 +1563,12 @@
     "cost": 2,
     "moments": 2,
     "dmg": 3,
-    "desc": "3 DMG. On hit: BLEED 4.",
+    "desc": "3 DMG. On hit: BLEED 3.",
     "effects": [
       {
         "trigger": "on_hit",
         "type": "bleed",
-        "value": 4
+        "value": 3
       }
     ],
     "requirements": {

@@ -1,0 +1,140 @@
+Got it — these examples are **very consistent stylistically**, and we can absolutely lock your prompts to this look. The key characteristics of the style you showed are:
+
+### Core Style Traits
+
+Your reference images share these traits:
+
+**Rendering**
+
+* painterly digital illustration
+* **smooth painted shading**
+* **very little visible linework**
+* **soft blended edges**
+* brushy background shapes
+* crisp focal character
+
+**Lighting**
+
+* strong rim lighting
+* dramatic but soft shadows
+* glowing accents (eyes, magic, weapons)
+
+**Composition**
+
+* centered character
+* dynamic but readable silhouette
+* foreground / background separation
+* soft atmospheric background
+
+**Color**
+
+* **vibrant but controlled palette**
+* strong color accents (red / purple / gold / teal)
+* cinematic color grading
+
+**Brushwork**
+
+* painterly strokes in environment
+* smooth skin rendering
+* no comic-style outlines
+
+---
+
+# The Prompt Template (Save This)
+
+From now on, you should use **this base template for all characters**:
+
+```
+[CHARACTER DESCRIPTION],
+
+centered fantasy character composition with a clear readable silhouette,
+
+cinematic environment supporting the character,
+
+dramatic fantasy lighting with strong rim light and soft shadow gradients,
+
+vibrant fantasy color palette with rich saturated accent colors,
+
+painterly digital fantasy illustration, smooth painted shading, minimal linework, soft blended edges, brush-painted background, crisp focal character rendering, high detail character painting,
+
+fantasy card illustration, character showcase artwork
+
+--ar 3:4 --style raw --stylize 150 --chaos 2 --sref 4902961494 7225153798 --sw 90
+```
+
+---
+
+# Important Style Tokens
+
+These are the **most important tokens to keep**:
+
+```
+painterly digital fantasy illustration
+smooth painted shading
+minimal linework
+soft blended edges
+brush-painted background
+crisp focal character
+```
+
+These are **why your newer images look like the references you posted.**
+
+---
+
+# Color Upgrade (More Vibrant)
+
+To get **more vibrant color like LoR / Riot art**, add:
+
+```
+rich saturated fantasy colors
+vibrant accent lighting
+cinematic color grading
+```
+
+---
+
+# Example Prompt (Using Your Style)
+
+### Blood Witch Warrior
+
+```
+adult blood witch warrior woman with pale skin and long black hair tied in a high ponytail, glowing red eyes and faint crimson veins of blood magic across her neck and arms, intense focused expression, gripping a heavy ritual axe forged from dark metal with glowing blood runes, spectral red blood magic swirling around her like flowing ribbons, dark leather combat attire layered over simple village clothing with ritual charms and straps,
+
+centered fantasy character composition with a clear readable silhouette,
+
+ancient stone ruins partially covered in moss and vines, drifting crimson magic forming abstract shapes behind her,
+
+dramatic fantasy lighting with strong rim light and soft shadow gradients,
+
+rich saturated fantasy colors with deep crimson magic contrasting against cool green stone,
+
+painterly digital fantasy illustration, smooth painted shading, minimal linework, soft blended edges, brush-painted background, crisp focal character rendering, high detail character painting,
+
+fantasy card illustration, character showcase artwork
+
+--ar 3:4 --style raw --stylize 150 --chaos 2 --sref 4902961494 7225153798 --sw 90
+```
+
+---
+
+# One More Important Tip
+
+Avoid these words — they **ruin the style**:
+
+❌ `concept art`
+❌ `sketch`
+❌ `ink`
+❌ `line art`
+❌ `comic`
+
+They reintroduce **linework and anime artifacts**.
+
+---
+
+# If you want, I can also give you:
+
+* **A universal MidJourney prompt builder for your entire CCG** (characters, monsters, spells, environments)
+* **A way to keep the exact same art style across hundreds of cards**
+* **A trick Riot artists use in prompts to stabilize character design**
+
+It will make your **CCG art pipeline MUCH more consistent.**

@@ -80,13 +80,28 @@
         <button onclick="openCardEditor()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(46,204,113,0.15); color: #2ecc71; font-weight: bold; border: 1px solid #2ecc71; border-radius: 8px; cursor: pointer; margin-left: 10px;">CARD LAB</button>
         <button onclick="openCharacterLab()" style="margin-top: 20px; padding: 15px 30px; font-size: 1.05em; background-color: rgba(230,126,34,0.15); color: #e67e22; font-weight: bold; border: 1px solid #e67e22; border-radius: 8px; cursor: pointer; margin-left: 10px;">CHARACTER LAB</button>
     </div>
-            <div id="ai-difficulty-picker" style="margin: 10px 0 14px; display:flex; align-items:center; justify-content:center; gap:10px;">
+    <div id="ai-difficulty-picker" style="margin: 10px 0 14px; display:flex; align-items:center; justify-content:center; gap:10px;">
         <label for="ai-difficulty-select" style="font-weight: bold; color: #f1c40f;">AI Difficulty</label>
         <select id="ai-difficulty-select" style="padding: 8px 12px; border-radius: 8px; border: 2px solid rgba(241,196,15,0.65); background: rgba(0,0,0,0.45); color: #f8f8f2; font-weight: 700;">
             <option value="normal">Normal</option>
             <option value="hard" selected>Hard</option>
             <option value="pro">Pro</option>
         </select>
+    </div>
+    <div id="ladder-profile-picker" style="margin: 4px 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+            <label for="ladder-profile-select" style="font-weight: bold; color: #c39bd3;">Ladder Type</label>
+            <select id="ladder-profile-select" style="padding: 8px 12px; border-radius: 8px; border: 2px solid rgba(195,155,211,0.65); background: rgba(0,0,0,0.45); color: #f8f8f2; font-weight: 700;">
+                <option value="random">Random Gauntlet</option>
+                <option value="blood_hunt">Blood Hunt</option>
+                <option value="frozen_gauntlet">Frozen Gauntlet</option>
+                <option value="mind_maze">Mind Maze</option>
+                <option value="guardian_trial">Guardian Trial</option>
+            </select>
+        </div>
+        <div id="ladder-profile-desc" style="max-width: 680px; text-align: center; color: #d7c7ea; font-size: 0.96em;">
+            Classic 6-fight ladder vs random opponents.
+        </div>
     </div>
     <div id="lan-pvp-panel" class="lan-pvp-panel">
         <button id="lan-panel-toggle" type="button" class="lan-panel-toggle" aria-label="Toggle LAN panel">&#9664;</button>
@@ -117,7 +132,8 @@
     <div id="ladder-intro" class="ladder-intro" style="display:none;">
         <div class="ladder-intro-card">
             <h2>LADDER MODE</h2>
-            <p>Climb 6 fights: 2 Normal, 2 Hard, 2 Pro.</p>
+            <p id="ladder-intro-mode-line">Climb 6 fights: 2 Normal, 2 Hard, 2 Pro.</p>
+            <p id="ladder-intro-theme-line" style="margin-top:-4px; color:#d9c7ea;">Classic 6-fight ladder vs random opponents.</p>
             <div id="ladder-intro-track" class="ladder-transition-track ladder-intro-track"></div>
             <div class="ladder-transition-actions">
                 <button id="ladder-intro-begin" class="submit-btn" onclick="ladderBeginFromIntro()">BEGIN CLIMB</button>

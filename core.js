@@ -741,6 +741,74 @@ let __fightPlayerLocked = false;
 let __fightAiChosen = false;
 
 const LADDER_DIFFICULTIES = ['normal', 'normal', 'hard', 'hard', 'pro', 'pro'];
+const LADDER_STAGE_META = [
+    { title: 'Opening Bout', modifierLabel: '' },
+    { title: 'Opening Bout', modifierLabel: '' },
+    { title: 'Elite Fight', modifierLabel: 'Elite' },
+    { title: 'Elite Fight', modifierLabel: 'Elite' },
+    { title: 'Mini-Boss', modifierLabel: 'Mini-Boss' },
+    { title: 'Final Boss', modifierLabel: 'Boss' }
+];
+const LADDER_PROFILES = {
+    random: {
+        id: 'random',
+        name: 'Random Gauntlet',
+        description: 'Classic 6-fight ladder vs random opponents.',
+        bucketTags: [null, null, null, null, null, null]
+    },
+    blood_hunt: {
+        id: 'blood_hunt',
+        name: 'Blood Hunt',
+        description: 'A bleed-and-burst route through blood, vampire, demon, and darkness fighters.',
+        bucketTags: [
+            ['blood', 'vampire', 'bleed'],
+            ['blood', 'vampire', 'bleed'],
+            ['darkness', 'blood', 'demon'],
+            ['darkness', 'blood', 'demon'],
+            ['blood', 'darkness', 'demon'],
+            ['blood', 'darkness', 'demon']
+        ]
+    },
+    frozen_gauntlet: {
+        id: 'frozen_gauntlet',
+        name: 'Frozen Gauntlet',
+        description: 'A control-heavy climb through ice and spirit specialists that punish bad sequencing.',
+        bucketTags: [
+            ['ice'],
+            ['ice'],
+            ['ice', 'spirit'],
+            ['ice', 'sorcerer', 'spirit'],
+            ['ice', 'spirit'],
+            ['ice', 'spirit', 'sorcerer']
+        ]
+    },
+    mind_maze: {
+        id: 'mind_maze',
+        name: 'Mind Maze',
+        description: 'A trickster run of hypnotic, fae, sorcerer, and darkness timing battles.',
+        bucketTags: [
+            ['hypnotic', 'fae'],
+            ['hypnotic', 'fae'],
+            ['hypnotic', 'sorcerer', 'darkness'],
+            ['hypnotic', 'sorcerer', 'darkness'],
+            ['hypnotic', 'fae', 'darkness'],
+            ['hypnotic', 'fae', 'sorcerer', 'darkness']
+        ]
+    },
+    guardian_trial: {
+        id: 'guardian_trial',
+        name: 'Guardian Trial',
+        description: 'A steadier ladder of armor, light, warrior, and defensive timing specialists.',
+        bucketTags: [
+            ['warrior', 'light'],
+            ['warrior', 'light'],
+            ['warrior', 'blood', 'light'],
+            ['warrior', 'blood', 'light'],
+            ['warrior', 'light', 'ice'],
+            ['warrior', 'light', 'blood']
+        ]
+    }
+};
 let ladderRun = null;
 
 function hasActiveLanSession(){
@@ -772,29 +840,95 @@ function getCharacterLabel(charName){
     return String(charName || '');
 }
 
+function getCharacterTags(charName){
+    const data = classData?.[charName];
+    const tags = []
+        .concat(Array.isArray(data?.talents) ? data.talents : [])
+        .concat(data?.class ? [data.class] : []);
+    return [...new Set(tags.map(t => String(t || '').toLowerCase()).filter(Boolean))];
+}
+
+function characterMatchesAnyTags(charName, tags){
+    if (!Array.isArray(tags) || !tags.length) return true;
+    const charTags = getCharacterTags(charName);
+    return tags.some(tag => charTags.includes(String(tag || '').toLowerCase()));
+}
+
+function getLadderProfileId(){
+    const sel = document.getElementById('ladder-profile-select');
+    const raw = String(sel?.value || 'random');
+    return LADDER_PROFILES[raw] ? raw : 'random';
+}
+
+function getLadderProfile(profileId){
+    return LADDER_PROFILES[String(profileId || 'random')] || LADDER_PROFILES.random;
+}
+
+function updateLadderProfileUi(){
+    const profile = getLadderProfile(getLadderProfileId());
+    const desc = document.getElementById('ladder-profile-desc');
+    if (desc) desc.textContent = profile.description;
+}
+
 function pickRandomOpponent(excludeName){
     const chars = getAllCharacters().filter(c => c !== excludeName);
     if(chars.length === 0) return excludeName || (getAllCharacters()[0] || '');
     return chars[Math.floor(Math.random() * chars.length)];
 }
 
-function buildLadderRun(playerChar, playerDeckId){
-    const pool = getAllCharacters().filter(c => c !== playerChar);
-    for(let i = pool.length - 1; i > 0; i--){
-        const j = Math.floor(Math.random() * (i + 1));
-        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
-    }
+function pickLadderOpponentFromBucket(pool, used, tags){
+    const eligible = pool.filter(c => !used.has(c) && characterMatchesAnyTags(c, tags));
+    if (eligible.length) return eligible[Math.floor(Math.random() * eligible.length)];
+    const fallbackUnused = pool.filter(c => !used.has(c));
+    if (fallbackUnused.length) return fallbackUnused[Math.floor(Math.random() * fallbackUnused.length)];
+    return pool[Math.floor(Math.random() * pool.length)] || '';
+}
 
-    const picked = pool.slice(0, 6);
+function pickDeckIdForDifficulty(charName, difficulty){
+    const ids = getDeckIdsForChar(charName);
+    if (!ids.length) {
+        return (typeof getDefaultDeckIdForCharacter === 'function') ? getDefaultDeckIdForCharacter(charName) : null;
+    }
+    if (difficulty === 'normal') return ids[0];
+    if (difficulty === 'hard') return ids[Math.min(1, ids.length - 1)];
+    return ids[Math.min(ids.length - 1, ids.length > 2 ? 2 : ids.length - 1)];
+}
+
+function buildLadderRun(playerChar, playerDeckId, profileId){
+    const profile = getLadderProfile(profileId);
+    const pool = getAllCharacters().filter(c => c !== playerChar);
+    const used = new Set();
+    const picked = [];
+    for (let i = 0; i < 6; i++) {
+        const tags = profile.bucketTags?.[i] || null;
+        const opp = pickLadderOpponentFromBucket(pool, used, tags);
+        if (opp) {
+            picked.push(opp);
+            used.add(opp);
+        }
+    }
     while (picked.length < 6) picked.push(pool[picked.length % Math.max(1, pool.length)] || playerChar);
 
     const steps = LADDER_DIFFICULTIES.map((difficulty, i) => {
         const opp = picked[i];
+        const stageMeta = LADDER_STAGE_META[i] || { title: `Fight ${i + 1}`, modifierLabel: '' };
+        const modifier = {};
+        if (i === 4) {
+            modifier.hpBonus = 4;
+            modifier.armorBonus = 1;
+        } else if (i === 5) {
+            modifier.hpBonus = 8;
+            modifier.armorBonus = 1;
+            modifier.stamBonus = 1;
+        }
         return {
             index: i,
             opponent: opp,
             difficulty,
-            deckId: (typeof pickRandomDeckIdForCharacter === 'function') ? pickRandomDeckIdForCharacter(opp) : null,
+            stageTitle: stageMeta.title,
+            modifierLabel: stageMeta.modifierLabel,
+            modifier,
+            deckId: pickDeckIdForDifficulty(opp, difficulty),
             result: 'pending'
         };
     });
@@ -805,6 +939,9 @@ function buildLadderRun(playerChar, playerDeckId){
         current: 0,
         playerChar,
         playerDeckId,
+        profileId: profile.id,
+        profileName: profile.name,
+        profileDescription: profile.description,
         steps
     };
 }
@@ -822,12 +959,16 @@ function ladderStepHtml(step, idx){
     const name = getCharacterLabel(step.opponent);
     const diff = String(step.difficulty || '').toUpperCase();
     const css = ladderStepCss(step, idx);
+    const stage = String(step?.modifierLabel || '');
+    const bonus = formatLadderModifierText(step?.modifier);
     return `
         <div class="ladder-step ${css}">
             <div class="ladder-avatar" style="background-image:url('${img}');"></div>
             <div class="ladder-meta">
                 <div class="ladder-name">${idx + 1}. ${name}</div>
                 <div class="ladder-diff">${diff}</div>
+                ${stage ? `<div class="ladder-stage">${stage}</div>` : ''}
+                ${bonus ? `<div class="ladder-modifier">${bonus}</div>` : ''}
             </div>
         </div>
     `;
@@ -845,6 +986,7 @@ function renderLadderTrackInto(el){
 function renderLadderHud(){
     const hud = document.getElementById('ladder-hud');
     const track = document.getElementById('ladder-hud-track');
+    const title = hud?.querySelector('.ladder-hud-title');
     if (!hud || !track) return;
 
     if (!isLadderRunning()) {
@@ -852,6 +994,7 @@ function renderLadderHud(){
         return;
     }
     hud.style.display = 'block';
+    if (title) title.textContent = String(ladderRun?.profileName || 'KOMBAT LADDER').toUpperCase();
     renderLadderTrackInto(track);
 }
 
@@ -870,8 +1013,12 @@ function showLadderIntro(){
     const track = document.getElementById('ladder-intro-track');
     const beginBtn = document.getElementById('ladder-intro-begin');
     const cancelBtn = document.getElementById('ladder-intro-cancel');
+    const modeLine = document.getElementById('ladder-intro-mode-line');
+    const themeLine = document.getElementById('ladder-intro-theme-line');
     if (!wrap || !track || !beginBtn || !cancelBtn) return;
     renderLadderTrackInto(track);
+    if (modeLine) modeLine.textContent = `${ladderRun?.profileName || 'Ladder'} - 6 fights: 2 Normal, 2 Hard, 2 Pro.`;
+    if (themeLine) themeLine.textContent = String(ladderRun?.profileDescription || '');
     beginBtn.disabled = false;
     cancelBtn.disabled = false;
     wrap.style.display = 'flex';
@@ -895,6 +1042,15 @@ function showLadderTransition(title, subtitle, canContinue){
     wrap.style.display = 'flex';
 }
 
+function formatLadderModifierText(modifier){
+    if (!modifier) return '';
+    const bits = [];
+    if (modifier.hpBonus) bits.push(`+${modifier.hpBonus} HP`);
+    if (modifier.armorBonus) bits.push(`+${modifier.armorBonus} Armor`);
+    if (modifier.stamBonus) bits.push(`+${modifier.stamBonus} Stamina`);
+    return bits.join(' | ');
+}
+
 function applyLadderStepSelection(){
     if (!isLadderRunning()) return false;
     const step = ladderRun.steps?.[ladderRun.current];
@@ -914,6 +1070,28 @@ function applyLadderStepSelection(){
     return true;
 }
 
+function applyLadderBattleModifier(){
+    if (!isLadderRunning()) return;
+    const step = ladderRun.steps?.[ladderRun.current];
+    if (!step || !state?.ai) return;
+    const mod = step.modifier || {};
+    if (mod.hpBonus) {
+        state.ai.maxHp += Number(mod.hpBonus || 0);
+        state.ai.hp += Number(mod.hpBonus || 0);
+    }
+    if (mod.armorBonus) {
+        state.ai.armor += Number(mod.armorBonus || 0);
+    }
+    if (mod.stamBonus) {
+        state.ai.maxStam += Number(mod.stamBonus || 0);
+        state.ai.stam += Number(mod.stamBonus || 0);
+    }
+    state.ladderStepMeta = {
+        title: step.stageTitle || '',
+        modifierLabel: step.modifierLabel || ''
+    };
+}
+
 function startLadderGame(){
     if (hasActiveLanSession()) {
         alert('Ladder Mode is offline vs AI only. Leave LAN PvP first.');
@@ -921,7 +1099,7 @@ function startLadderGame(){
     }
 
     ensureValidDeckSelection('player');
-    ladderRun = buildLadderRun(selectedPlayer, selectedPlayerDeckId);
+    ladderRun = buildLadderRun(selectedPlayer, selectedPlayerDeckId, getLadderProfileId());
     if (!applyLadderStepSelection()) return;
     hideLadderTransition();
     showLadderIntro();
@@ -973,7 +1151,9 @@ function handleBattleOutcome(playerWon){
         ladderRun.current += 1;
         renderLadderHud();
         const next = ladderRun.steps[ladderRun.current];
-        showLadderTransition('VICTORY', `Next: ${getCharacterLabel(next.opponent)} (${String(next.difficulty).toUpperCase()})`, true);
+        const stageText = next.modifierLabel ? ` - ${next.modifierLabel}` : '';
+        const bonusText = formatLadderModifierText(next.modifier);
+        showLadderTransition('VICTORY', `Next: ${getCharacterLabel(next.opponent)} (${String(next.difficulty).toUpperCase()})${stageText}${bonusText ? ` | ${bonusText}` : ''}`, true);
     } else {
         step.result = 'lost';
         ladderRun.active = false;
@@ -1482,6 +1662,12 @@ window.addEventListener('load', () => {
             window.setAIDifficulty(aiDifficultySelect.value);
         });
     }
+
+    const ladderProfileSelect = document.getElementById('ladder-profile-select');
+    if (ladderProfileSelect) {
+        ladderProfileSelect.addEventListener('change', updateLadderProfileUi);
+        updateLadderProfileUi();
+    }
 });
 
 
@@ -1601,6 +1787,7 @@ function startGame(opts = {}) {
     hideLadderTransition();
     hideLadderIntro();
     state.aiDifficulty = aiDifficulty;
+    if (typeof window.applyAppScale === 'function') window.applyAppScale();
     
     // Build the decks and stats from registries (cards / decks / characters)
     ensureValidDeckSelection('player');
@@ -1638,12 +1825,23 @@ function startGame(opts = {}) {
         roundData: { lostLife: false, appliedStatus: false } 
     };
 
+    if (opts.fromLadder && isLadderRunning()) {
+        applyLadderBattleModifier();
+    } else {
+        state.ladderStepMeta = null;
+    }
+
     applyBattleMetaFromState();
     renderLadderHud();
 
 
     clearBattleLog();
     setBattleLogDefaultCollapsed();
+    if (opts.fromLadder && isLadderRunning() && state.ladderStepMeta?.title) {
+        const step = ladderRun?.steps?.[ladderRun.current];
+        const bonusText = formatLadderModifierText(step?.modifier);
+        log(`${state.ladderStepMeta.title}: ${getCharacterLabel(selectedAI)} enters on ${String(aiDifficulty).toUpperCase()}${bonusText ? ` with ${bonusText}.` : '.'}`);
+    }
     drawCards(3, 'player'); drawCards(3, 'ai'); 
     nextTurn(true);
 }
@@ -1652,6 +1850,7 @@ function backToMenu() {
     resetLadderRun();
     stopBattleMusic(); music.select.play().catch(e=>console.log("Select BGM blocked"));
     document.getElementById('game-screen').style.display = 'none'; document.getElementById('char-select-screen').style.display = 'flex';
+    if (typeof window.applyAppScale === 'function') window.applyAppScale();
 }
 
 function log(msg) {
@@ -1944,57 +2143,69 @@ if (window.EngineRuntime && !window.__splitSecondsHandlersInstalled) {
    Does NOT scale deck builder overlays/modals (they remain full-size for readability).
 */
 (function appScaleToFit(){
-  const DESIGN_W = 1024; // baseline layout width after HUD rework
-  const DESIGN_H = 700;  // baseline layout height after HUD rework
-
-  function ensureScaleRoot(){
-    // Wrap only the main screens (char select + game) so overlays can stay unscaled.
-    const body = document.body;
-    if(!body) return null;
-    let root = document.getElementById('app-scale-root');
-    if(root) return root;
-
-    const screens = [];
-    const cs = document.getElementById('char-select-screen');
-    const gs = document.getElementById('game-screen');
-    if(cs) screens.push(cs);
-    if(gs) screens.push(gs);
-    if(screens.length === 0) return null;
-
-    root = document.createElement('div');
-    root.id = 'app-scale-root';
-
-    // Insert root before first screen, then move screens into it.
-    body.insertBefore(root, screens[0]);
-    screens.forEach(el => root.appendChild(el));
-    return root;
-  }
-
   function viewport(){
-    // visualViewport helps on iOS (accounts for browser UI bars)
     const vv = window.visualViewport;
     const w = vv?.width || window.innerWidth;
     const h = vv?.height || window.innerHeight;
     return { w, h };
   }
 
+  function getVisibleMainScreen(){
+    const screens = [
+      document.getElementById('char-select-screen'),
+      document.getElementById('game-screen')
+    ].filter(Boolean);
+    for(const el of screens){
+      const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      if(style && style.display !== 'none' && style.visibility !== 'hidden') return el;
+    }
+    return screens[0] || null;
+  }
+
   function apply(){
-    const root = ensureScaleRoot();
+    const root = document.getElementById('app-scale-root');
     if(!root) return;
 
     const { w, h } = viewport();
-    const pad = 8;
-    const touchLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    const shouldScale = !!touchLike && (w < DESIGN_W || h < DESIGN_H);
-    const scale = shouldScale ? Math.min((w - pad) / DESIGN_W, (h - pad) / DESIGN_H, 1) : 1;
+    const screen = getVisibleMainScreen();
+    if (!screen) return;
+    const touchLike = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches);
+    document.body?.classList.toggle('touch-like-scaling', touchLike);
+    document.body?.classList.toggle('desktop-native-layout', !touchLike);
+
+    document.documentElement.style.setProperty('--ui-scale', '1');
+    document.documentElement.style.setProperty('--ui-inv-scale', '1');
+
+    if (!touchLike) {
+      return;
+    }
+
+    const padX = 12;
+    const padY = 12;
+    const naturalW = Math.max(
+      screen.scrollWidth || 0,
+      screen.offsetWidth || 0,
+      screen.getBoundingClientRect ? Math.ceil(screen.getBoundingClientRect().width) : 0,
+      1
+    );
+    const naturalH = Math.max(
+      screen.scrollHeight || 0,
+      screen.offsetHeight || 0,
+      screen.getBoundingClientRect ? Math.ceil(screen.getBoundingClientRect().height) : 0,
+      1
+    );
+    const scale = Math.min((w - padX) / naturalW, (h - padY) / naturalH, 1);
 
     document.documentElement.style.setProperty('--ui-scale', String(scale));
     document.documentElement.style.setProperty('--ui-inv-scale', String(scale > 0 ? (1/scale) : 1));
   }
 
+  window.applyAppScale = apply;
+
   // Apply ASAP and on changes
   apply();
   window.addEventListener('resize', apply, { passive: true });
+  window.addEventListener('load', apply, { passive: true });
   window.addEventListener('orientationchange', apply, { passive: true });
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', apply, { passive: true });

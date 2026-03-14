@@ -389,6 +389,8 @@ function aiGetStatusApplicationAmount(move, statusKey) {
         for (const fx of move.effects) {
             const type = String(fx?.type || '').toLowerCase();
             if (type === key) amount += Math.max(1, Number(fx?.value) || 1);
+            if ((key === 'hypnotized' || key === 'hypnotize') && type !== key && (type === 'hypnotized' || type === 'hypnotize')) amount += Math.max(1, Number(fx?.value) || 1);
+            if (key === 'exhausted' && type === 'exhausted') amount += Math.max(1, Number(fx?.value) || 1);
             const m = type.match(new RegExp(`^${key}_(\\d+)_on_`));
             if (m) amount += Math.max(1, Number(m[1]) || 1);
         }
@@ -445,6 +447,60 @@ function aiGetFutureStatusThresholdDemand(statusKey, ctx) {
     return { count: thresholds.length, min: thresholds[0], nearMin: thresholds[0] };
 }
 
+function aiCharacterHasTalent(charName, talent){
+    const key = String(talent || '').toLowerCase();
+    const data = classData?.[charName];
+    const tags = []
+        .concat(Array.isArray(data?.talents) ? data.talents : [])
+        .concat(data?.class ? [data.class] : [])
+        .map(t => String(t || '').toLowerCase());
+    return tags.includes(key);
+}
+
+function aiScoreGenericStatusPlan(move, ctx, statusKey, cfg = {}) {
+    if (!move) return 0;
+    const key = String(statusKey || '').toLowerCase();
+    const current = Number(state.player?.statuses?.[key] || 0);
+    const adds = aiGetStatusApplicationAmount(move, key);
+    const consumes = aiMoveConsumesStatus(move, key);
+    const thresholds = aiGetOpponentStatusThresholds(move, key);
+    const demand = aiGetFutureStatusThresholdDemand(key, ctx);
+    const applyWeight = Number(cfg.applyWeight || 1.2);
+    const consumeWeight = Number(cfg.consumeWeight || 1.5);
+    const preserveThreshold = Number(cfg.preserveThreshold || 0);
+    let score = 0;
+
+    if (adds > 0) {
+        score += adds * applyWeight;
+        if (demand.count > 0 && current < demand.min) {
+            const gap = Math.max(0, demand.min - current);
+            score += Math.min(10, adds * (applyWeight + 0.8) + Math.max(0, 4 - gap) * 1.3);
+        }
+        if (cfg.earlyGoal && current < cfg.earlyGoal) {
+            score += Math.max(0, cfg.earlyGoal - current) * 0.8;
+        }
+    }
+
+    if (thresholds.length) {
+        const best = thresholds[0];
+        if (current >= best) score += 7 + Math.min(6, current - best);
+        else score -= Math.min(8, (best - current) * 1.4);
+    }
+
+    if (consumes) {
+        if (current <= 0) score -= 16;
+        else {
+            score += Math.min(12, current * consumeWeight);
+            if (preserveThreshold > 0 && current >= preserveThreshold && current < preserveThreshold + 3) score -= 7;
+            if (demand.count > 0 && current < demand.min) {
+                score -= Math.min(12, (demand.min - current) * 1.9 + demand.count * 1.2);
+            }
+        }
+    }
+
+    return score;
+}
+
 function aiScoreFreezePlan(move, ctx) {
     if (!move) return 0;
     const opponentFreeze = Number(state.player?.statuses?.freeze || 0);
@@ -486,6 +542,96 @@ function aiScoreFreezePlan(move, ctx) {
         score += 3.5;
     }
 
+    return score;
+}
+
+function aiScoreBleedPlan(move, ctx) {
+    const aiClass = String(state.ai?.class || '').toLowerCase();
+    const bleed = Number(state.player?.statuses?.bleed || 0);
+    let score = aiScoreGenericStatusPlan(move, ctx, 'bleed', {
+        applyWeight: 1.8,
+        consumeWeight: 1.35,
+        preserveThreshold: aiClass === 'bahl' ? 10 : 0,
+        earlyGoal: aiClass === 'dravain' ? 3 : (aiClass === 'bahl' ? 10 : 0)
+    });
+
+    if (aiClass === 'bahl') {
+        if (bleed < 10 && aiGetStatusApplicationAmount(move, 'bleed') > 0) score += 5.5;
+        if (bleed >= 10 && typeof cardHasRequirementToken === 'function' && cardHasRequirementToken(move, 'darkness')) {
+            score += move.type === 'attack' ? 7 : 3.5;
+        }
+        if (aiMoveConsumesStatus(move, 'bleed') && bleed >= 10 && bleed < 14) score -= 5.5;
+    }
+    if (aiClass === 'dravain') {
+        if (move.id === 'blood_crimson_blade' && bleed >= 3) score += 7;
+        if (bleed < 3 && aiGetStatusApplicationAmount(move, 'bleed') > 0) score += 3.5;
+    }
+    if (aiClass === 'vampiress') {
+        if (aiGetStatusApplicationAmount(move, 'bleed') > 0) score += 2.5;
+        if (aiMoveConsumesStatus(move, 'bleed') && bleed >= 4) score += 4.5;
+    }
+    return score;
+}
+
+function aiScoreHypnoticPlan(move, ctx) {
+    const aiClass = String(state.ai?.class || '').toLowerCase();
+    const hypnotized = Number(state.player?.statuses?.hypnotized || 0);
+    let score = aiScoreGenericStatusPlan(move, ctx, 'hypnotized', {
+        applyWeight: 3.2,
+        consumeWeight: 2.8,
+        earlyGoal: 1
+    });
+    if ((aiClass === 'palea' || aiClass === 'fae brute' || aiClass === 'necromancer') && aiGetStatusApplicationAmount(move, 'hypnotized') > 0 && hypnotized <= 0) {
+        score += 5.5;
+    }
+    if (aiMoveConsumesStatus(move, 'hypnotized') && hypnotized > 0) {
+        score += 4.5;
+    }
+    return score;
+}
+
+function aiScorePoisonPlan(move, ctx) {
+    const aiClass = String(state.ai?.class || '').toLowerCase();
+    const poison = Number(state.player?.statuses?.poison || 0);
+    let score = aiScoreGenericStatusPlan(move, ctx, 'poison', {
+        applyWeight: 1.4,
+        consumeWeight: 1.6,
+        earlyGoal: aiClass === 'mauja' ? 4 : 0
+    });
+    if (aiClass === 'mauja') {
+        if (aiGetStatusApplicationAmount(move, 'poison') > 0 && poison < 4) score += 3.8;
+        if (move.id === 'brute_venom_crush' && poison >= 4) score += 7;
+    }
+    return score;
+}
+
+function aiScoreCharacterPlan(move, ctx) {
+    if (!move) return 0;
+    const aiClass = String(state.ai?.class || '').toLowerCase();
+    const playerFreeze = Number(state.player?.statuses?.freeze || 0);
+    const playerBleed = Number(state.player?.statuses?.bleed || 0);
+    let score = 0;
+
+    if (aiClass === 'paladin' || aiClass === 'hope') {
+        const armor = (typeof getEffectiveArmor === 'function') ? getEffectiveArmor('ai') : Number(state.ai?.armor || 0);
+        if (armor >= 5 && move.type === 'attack') score += 3.5;
+        if (move.type === 'block' || move.type === 'parry') score += 1.2;
+    }
+    if (aiClass === 'ice djinn') {
+        if (move.type === 'parry') score += 2.8;
+        if (playerFreeze >= 4 && move.type === 'attack') score += 2.2;
+    }
+    if (aiClass === 'ice brute') {
+        if (playerFreeze >= 6 && move.type === 'grab') score += 6;
+        if (move.type === 'block') score += 1.2;
+    }
+    if (aiClass === 'yaura') {
+        if (move.type === 'enhancer') score += 9;
+        if ((move.type === 'attack' || move.type === 'grab') && Array.isArray(move.enhancers) && move.enhancers.length > 0) score += 6;
+    }
+    if (aiClass === 'dravain') {
+        if (playerBleed >= 3 && (move.type === 'block' || move.type === 'parry')) score += 2.4;
+    }
     return score;
 }
 
@@ -533,6 +679,10 @@ function aiScoreMove(move, ctx) {
     if (aiMoveHasEffectType(move, 'dont') && (state.player.statuses?.hypnotized || 0) > 0) score += 14;
     if ((aiMoveHasEffectType(move, 'hypnotize') || aiMoveHasEffectType(move, 'hypnotized')) && (state.player.statuses?.hypnotized || 0) <= 0) score += 8;
     score += aiScoreFreezePlan(move, ctx);
+    score += aiScoreBleedPlan(move, ctx);
+    score += aiScoreHypnoticPlan(move, ctx);
+    score += aiScorePoisonPlan(move, ctx);
+    score += aiScoreCharacterPlan(move, ctx);
 
         // Slot-based pattern punish from previously resolved rounds (public info only).
     const slotIntel = aiGetSlotIntel(ctx.slotIndex);

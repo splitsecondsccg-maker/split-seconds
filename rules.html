@@ -14,7 +14,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: #222;
             padding: 30px 40px;
@@ -51,7 +51,7 @@
         p {
             margin-bottom: 15px;
         }
-        ul {
+        ul, ol {
             padding-left: 20px;
             margin-bottom: 20px;
         }
@@ -99,6 +99,12 @@
             border-top: 1px solid #444;
             margin: 30px 0;
         }
+        code {
+            color: #ffd54a;
+            background: rgba(255,255,255,0.06);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -107,107 +113,171 @@
     <a href="index.html" class="back-btn">Back to Game</a>
     <a href="character_playbook.html" class="back-btn" style="background:#2980b9; margin-left:8px;">Character Playbook</a>
 
-    <h1>📜 Welcome to the Arena</h1>
+    <h1>Welcome to the Arena</h1>
     <h2>Split Seconds - Official Rulebook</h2>
     <hr>
 
     <h3>The Premise</h3>
-    <p><strong>Split Seconds</strong> is a high-speed, double-blind dueling game where combat happens in flashes of precognition. You and your opponent will secretly plan a sequence of strikes, defenses, and abilities across a <strong>5-Moment Timeline</strong>. Before the clash begins, you will both get a glimpse of the future. Will you stick to your plan, or will you pay the price to panic, pivot, and outsmart your enemy?</p>
-    <p><span class="highlight">The Objective:</span> Reduce your opponent's Health Points (HP) to 0 before they do the same to you!</p>
+    <p><strong>Split Seconds</strong> is a high-speed, double-blind dueling game where combat happens in flashes of precognition. You and your opponent secretly plan a sequence of strikes, defenses, abilities, Concentrations, and tricks across a <strong>5-Moment Timeline</strong>. Then one moment is revealed in the <strong>Flash</strong>, and both players may decide whether to hold firm or <strong>Pivot</strong>.</p>
+    <p><span class="highlight">The Objective:</span> Reduce your opponent's Health Points (HP) to 0 before they do the same to you.</p>
 
-    <h3>1. Core Resources & Classes</h3>
+    <h3>1. Core Resources, Proficiencies & Decks</h3>
     <ul>
-        <li><strong style="color: #2ecc71;">Health (HP):</strong> Your life force. If it hits 0, you lose.</li>
-        <li><strong style="color: #f1c40f;">Stamina (⚡):</strong> The energy used to play cards. Powerful attacks and parries cost Stamina.</li>
-        <li><strong style="color: #3498db;">The Timeline:</strong> A board with <strong>5 Slots (Moments)</strong>. Every turn, you arrange your moves into these 5 moments. Fast actions take 1 moment; heavy attacks take 2 or 3 moments to "charge up" and trigger on their final slot.</li>
-        <li><strong style="color: #9b59b6;">Class Passives:</strong> Every class (Mauja, Rogue, Paladin, etc.) has a unique <strong>Passive Ability</strong> that is permanently active during the match. Check your class details to see your unique advantage!</li>
-        <li><strong style="color: #e67e22;">Hand Limit:</strong> You can only hold a maximum of <strong>7 cards</strong> in your hand at once. Managing your hand size through planning and Exertion is key to making sure you have room to draw new cards!</li>
+        <li><strong style="color: #2ecc71;">Health (HP):</strong> Your life force. If it reaches 0, you lose.</li>
+        <li><strong style="color: #f1c40f;">Stamina:</strong> The energy used to play cards, Parry, and Pivot. Stronger actions cost more Stamina.</li>
+        <li><strong style="color: #3498db;">Armor:</strong> Reduces incoming damage. Some passives and cards temporarily increase effective Armor.</li>
+        <li><strong style="color: #8ad0ff;">Timeline:</strong> Each round has <strong>5 moments</strong>. You place actions into those moments. Some actions resolve only on their final moment; others resolve on <strong>every</strong> moment they occupy.</li>
+        <li><strong style="color: #9b59b6;">Character Passive:</strong> Every character has a unique passive effect that is always active during the match.</li>
+        <li><strong style="color: #ff9ff3;">Proficiencies:</strong> Cards require one or more proficiencies, such as Warrior, Assassin, Sorcerer, Wizard, Blood, Darkness, Light, Poison, Ice, Hypnotic, and more. Your character can only use cards whose requirements they satisfy.</li>
+        <li><strong style="color: #e67e22;">Hand Limit:</strong> You may hold at most <strong>7 cards</strong>. If a draw would exceed 7, extra cards are lost.</li>
+        <li><strong style="color: #7bed9f;">Decks:</strong> Matches use constructed decks. The current base decks are <strong>24 cards</strong>, with up to <strong>3 copies</strong> of the same card.</li>
     </ul>
 
-    <h3>2. The Combat System & Actions</h3>
-    <p>Combat is built around predicting your opponent's exact sequence. The core triangle is simple: <strong>Attacks beat Grabs, Grabs beat Defenses, and Defenses beat Attacks.</strong></p>
-    
+    <h3>2. Action Types</h3>
+    <p>The core triangle is still the heart of combat: <strong>Attacks beat Grabs, Grabs beat Concentrations/defensive moments, and Defenses beat Attacks.</strong> But the modern rules also distinguish Utility, Enhancers, and Multi-Active actions.</p>
+
     <ul>
-        <li><strong>Attacks:</strong> Deal damage to the opponent's HP. They will hit unless Blocked or Parried. Attacks also interrupt and beat an opponent who is trying to Grab you.</li>
-        <li><strong>Blocks <span class="cost-note">(Cost: 0 Stamina | Limit: Unlimited)</span>:</strong> Reduce incoming damage. Since they cost nothing, you can fill many empty slots with Blocks when you are low on Stamina.</li>
-        <li><strong>Grabs <span class="cost-note">(Limit: Based on cards)</span>:</strong> Grappling moves designed to punish defensive players. <strong>Grabs bypass Blocks and Parries</strong>. Grabs also <strong>interrupt Concentration actions</strong> resolving in that same moment (unless a card explicitly says its effect persists each occupied moment). If the interrupted action had attached Enhancers, those Enhancers are canceled with it for that moment. If the opponent is Attacking, or if their slot is empty, your Grab misses.</li>
-        <li><strong>Empty Slots <span class="cost-note">(Cost: 0 Stamina | Limit: Unlimited)</span>:</strong> You do not have to fill every moment. Leaving a slot blank costs no Stamina and can make an opponent Grab miss if timed correctly.</li>
-        <li><strong>Class Abilities <span class="cost-note">(Limit: Once per turn)</span>:</strong> Unique active skills based on your chosen class. You may only place each specific ability onto the timeline <strong>once per round</strong>.</li>
-        <li><strong>Concentration:</strong> Setup/tech card type (formerly named Buff). Concentration can be interrupted by a Grab in the same moment.</li>
-        <li><strong>Enhancers:</strong> Attach to timeline actions and do not take timeline slots. If the parent action is returned to hand, the Enhancer returns as a separate card.</li>
+        <li><strong>Attack:</strong> Deals damage. If not stopped, it hits the opponent. Attacks beat Grabs because they interrupt the opponent before the Grab can succeed.</li>
+        <li><strong>Block <span class="cost-note">(basic action, 0 Stamina)</span>:</strong> Reduces incoming damage in that moment. Blocks do not stop the attack entirely; they just absorb damage.</li>
+        <li><strong>Parry <span class="cost-note">(basic action, 1 Stamina)</span>:</strong> Hard-counters an Attack in the same moment. A successful Parry negates the attack entirely and gives the attacker the Parry draw penalty next round.</li>
+        <li><strong>Grab:</strong> Punishes Block and Concentration. Grabs bypass Block and Parry. If the opposing slot contains an Attack, Utility, or nothing relevant to Grab, the Grab misses.</li>
+        <li><strong>Utility:</strong> Technical actions that are not Attacks, Grabs, or Concentrations. Utility is <strong>not</strong> interrupted by Grab unless a card explicitly says otherwise.</li>
+        <li><strong>Concentration <span class="cost-note">(icon: brain)</span>:</strong> Setup, ritual, stance, or ongoing focus card type. A normal Concentration is interrupted entirely by a successful Grab in the same moment.</li>
+        <li><strong>Enhancer <span class="cost-note">(icon: sparkle)</span>:</strong> A card that attaches to another action instead of taking a timeline slot itself. Every Enhancer must list which action types it can legally attach to.</li>
+        <li><strong>Empty Slot:</strong> Leaving a slot empty is legal and often useful. It can make the opponent's Grab miss.</li>
+    </ul>
+
+    <h4>2.1 Concentration vs Utility</h4>
+    <ul>
+        <li><strong>Grab interrupts Concentration.</strong></li>
+        <li><strong>Grab does not interrupt Utility</strong> by default.</li>
+        <li>If you are unsure, trust the card type shown on the card or tooltip.</li>
+    </ul>
+
+    <h4>2.2 Enhancers</h4>
+    <ul>
+        <li>Enhancers are dragged <strong>onto an existing legal action</strong> during Planning.</li>
+        <li>They do <strong>not</strong> occupy timeline slots by themselves.</li>
+        <li>If the parent action returns to hand, attached Enhancers return too, as separate cards.</li>
+        <li>If the parent action is fully canceled, its Enhancers are lost with it unless a card effect says otherwise.</li>
+        <li>Some Enhancers are tempo pieces, some are value pieces, and some are payoff pieces. Many weaker Enhancers replace themselves on <code>on_first_resolve</code> so they are not dead cards.</li>
+    </ul>
+
+    <h4>2.3 Multi-Active Actions</h4>
+    <p>Some actions use a distinct special color because they are <strong>Multi-Active</strong>: they resolve on <strong>each moment they occupy</strong>, not only once at the end.</p>
+    <ul>
+        <li><strong>Multi-Active Attack:</strong> each occupied moment is its own damage window.</li>
+        <li><strong>Multi-Active Concentration:</strong> each occupied moment is its own resolve window.</li>
+        <li><strong>Grab and Parry interact moment-by-moment</strong> with Multi-Active actions, not with the whole card at once.</li>
+        <li>Enhancers attached to a Multi-Active action can matter on multiple moments. This is intentional.</li>
     </ul>
 
     <div class="example-box">
-        <h4>⚔️ Combat Examples:</h4>
-        <p><strong>Example 1 (The Parry):</strong> You place a 3-moment Heavy Attack (Moments 1, 2, 3). Your opponent places a Parry in Moment 3. Your attack triggers on Moment 3, hits the Parry, and is negated. You take no damage, but you will draw 1 less card next turn.</p>
-        <p><strong>Example 2 (The Grab):</strong> You place a Grab in Moment 2. Your opponent placed a Block in Moment 2. Because they are in a defensive stance, your Grab connects, bypassing their Block and dealing its full effect!</p>
-        <p><strong>Example 3 (The Empty Dodge):</strong> You place a Grab in Moment 2. Your opponent anticipated this, so they left Moment 2 <strong>Empty</strong>. Because they are not Blocking or Parrying, your Grab fails completely!</p>
+        <h4>Example: Multi-Active Concentration</h4>
+        <p>You place a Multi-Active Concentration on Moments 2-4. The opponent Grabs on Moment 3.</p>
+        <p><strong>Result:</strong> Moment 3 is interrupted, but Moments 2 and 4 still resolve.</p>
     </div>
 
+    <div class="example-box">
+        <h4>Example: Multi-Active Attack + Enhancer</h4>
+        <p>You attach an Enhancer that adds damage or an <code>on_hit</code> effect to a Multi-Active Attack.</p>
+        <p><strong>Result:</strong> that attached effect can apply on multiple occupied moments if the attack keeps resolving. This is part of the card's intended power.</p>
+    </div>
 
-
-    <h3>2.5 Statuses & Keywords</h3>
-    <p>Some cards apply lasting effects called <strong>Statuses</strong>. These are tracked as badges under each fighter.</p>
+    <h3>3. Statuses & Live Conditions</h3>
+    <p>Statuses are tracked under the fighter portraits. Many cards are conditional: they become stronger, cheaper, or gain extra effects when a state is active.</p>
     <ul>
-        <li><strong>FREEZE ❄️ :</strong> A <strong>stackable debuff</strong> that is <strong>not removed at end of turn</strong>. When a fighter reaches <strong>10+ FREEZE</strong>, all of their <strong>Attacks</strong> cost <strong>+1 Stamina</strong> until their FREEZE is reduced (for example by effects like <em>Break the Ice</em>).</li>
+        <li><strong>FREEZE:</strong> Stackable. Persists between turns. At <strong>10+ FREEZE</strong>, Attacks cost <strong>+1 Stamina</strong> until FREEZE is reduced.</li>
+        <li><strong>BLEED:</strong> Stackable. Persists until consumed or removed. Many Blood cards scale with BLEED or cash it out for burst damage.</li>
+        <li><strong>POISON:</strong> Stackable. Deals damage at end of turn and then partially decays.</li>
+        <li><strong>HYPNOTIZED:</strong> Non-stackable. It is <strong>not</strong> removed at the start of turn. It is removed when that fighter loses life. Some cards consume it for stronger effects.</li>
+        <li><strong>EXHAUSTED:</strong> Non-stackable. Reduces the next stamina regeneration, then clears.</li>
+        <li><strong>Bonus Armor / Armor Debuff / Draw Less / Next Attack Mod / Next Grab Mod:</strong> temporary hidden combat values created by abilities, passives, and card effects.</li>
     </ul>
 
-    <h3>3. Turn Phases</h3>
-    <p>Every round follows a strict sequence of events:</p>
+    <h4>Live cues</h4>
+    <p>If a card is currently enabled by a condition, the game gives it a live glow. Hovering timeline cards also shows current live changes such as:</p>
+    <ul>
+        <li>cost changing from a passive</li>
+        <li>damage being increased</li>
+        <li>added effects from passives or Enhancers</li>
+        <li>triggered text such as <code>on_first_resolve</code>, <code>on_first_hit</code>, and <code>on_hit</code></li>
+    </ul>
 
-    <h4>Phase 1: Upkeep & Exertion</h4>
-    <p>Before you plan your moves, you prepare your resources for the round:</p>
+    <h3>4. Round Structure</h3>
+    <p>Each round follows the same sequence.</p>
+
+    <h4>Phase 1: Regenerate, Exert, Draw</h4>
     <ol>
-        <p>At the very start of the match, both players begin with a starting hand of <strong>3 cards</strong>. Each subsequent round follows this flow:</p>
-        <li><strong>Regeneration:</strong> Both players automatically regenerate <strong>3 Stamina</strong> (up to their character's maximum).</li>
-        <li><strong>Exertion (Optional):</strong> You may permanently discard cards from your hand to gain <strong>+1 Stamina</strong> per card discarded. This happens before you draw!</li>
-        <li><strong>Draw:</strong> Both players draw up to <strong>2 new cards</strong> to replenish their hands. 
-            <ul>
-                <li><em>The Hand Limit:</em> If drawing would put you over your maximum hand size of <strong>7</strong>, you stop drawing and the excess cards are discarded to the void.</li>
-                <li><em>The Parry Penalty:</em> If your attack was Parried in the previous round, your draw is reduced by 1!</li>
-            </ul>
-        </li>
+        <li><strong>Regenerate:</strong> Both players recover <strong>3 Stamina</strong> up to max, modified by effects like EXHAUSTED.</li>
+        <li><strong>Exert:</strong> You may discard cards from hand for <strong>+1 Stamina each</strong>.</li>
+        <li><strong>Draw:</strong> Both players draw up to <strong>2 cards</strong>, modified by draw penalties such as Parry penalty or draw-less effects.</li>
     </ol>
 
-    <h4>Phase 2: Planning (Double-Blind)</h4>
-    <p>Both players secretly drag and drop cards onto their 5-Moment Timeline. You must pay the Stamina cost of the cards upfront. Once you are happy with your sequence, you Lock In.</p>
+    <h4>Phase 2: Planning</h4>
+    <p>Both players secretly place actions on their 5-moment timeline. Costs are paid up front. Enhancers are attached to actions during this phase.</p>
 
-    <h4>Phase 3: The Precognition Flash</h4>
-    <p>The engine randomly selects <strong>one of the 5 moments</strong> and reveals what both players have placed in that exact slot. You now have a glimpse of the future.</p>
+    <h4>Phase 3: Flash</h4>
+    <p>One random moment is revealed. Each player sees only what was in that flashed moment.</p>
 
-    <h4>Phase 4: The Pivot</h4>
-    <p>Did the Flash reveal that your heavy attack is about to get Parried? It's time to Pivot!</p>
+    <h4>Phase 4: Pivot</h4>
     <ul>
-        <li>Both players evaluate the revealed cards simultaneously.</li>
-        <li>You may choose to pay a <strong>1 Stamina Tax</strong> to cancel the exact card you revealed in the Flash. <em>(You must have at least 1 Stamina saved up to do this!)</em></li>
-        <li>The canceled card is returned to your hand, and its initial Stamina cost is refunded to you.</li>
-        <li>You now enter a "Mini-Planning" phase where you can secretly drop new cards into those freed-up slots.</li>
+        <li>You may pay a <strong>1 Stamina Pivot tax</strong> to cancel the exact flashed action you revealed.</li>
+        <li>The canceled action returns to hand and its original card cost is refunded.</li>
+        <li>You then refill those freed moments in a mini-planning window.</li>
+        <li><strong>Important:</strong> the Flash reveals only what was there at that moment. It does <strong>not</strong> reveal what either player pivots into afterward.</li>
+        <li>If you have <strong>0 Stamina</strong> left after Planning, you cannot Pivot.</li>
     </ul>
 
-    <h4>Phase 5: The Clash (Resolution)</h4>
-    <p>The Timeline unlocks and resolves Moment 1 to Moment 5. Actions in the same moment interact by timing priority (below). After Moment 5, the round ends and the next turn begins.</p>
+    <h4>Phase 5: Resolution</h4>
+    <p>The timeline resolves from Moment 1 to Moment 5.</p>
 
-    <h4>Resolution Timing Priority (Same Moment)</h4>
+    <h3>5. Same-Moment Timing Priority</h3>
     <ul>
-        <li><strong>Step 1 - Hard negation/interrupt checks:</strong> effects like <em>Don't</em>, <em>Blink</em>, Parry-vs-Attack, and Grab interruptions are processed first.</li>
-        <li><strong>Step 2 - Damage resolution:</strong> surviving attacks/grabs in that moment resolve damage (attack-vs-attack is simultaneous).</li>
-        <li><strong>Step 3 - Triggered effects:</strong> <code>on_hit</code>, <code>on_blocked</code>/<code>on_parried</code>, defender <code>on_block</code>/<code>on_parry</code>, then <code>on_resolve</code>.</li>
-        <li><strong>Step 4 - Legacy card effect keys:</strong> legacy single-key effects resolve after triggered effects.</li>
-        <li><strong>Important:</strong> If both attacks resolve in the same moment, "next attack" modifiers apply to future attacks, not retroactively to the simultaneous one.</li>
+        <li><strong>Step 1 - Hard interruption / negation:</strong> Parry, Grab interruption, and special cancel effects are checked first.</li>
+        <li><strong>Step 2 - Damage:</strong> surviving Attacks and Grabs deal damage. Attack-vs-Attack is simultaneous.</li>
+        <li><strong>Step 3 - Triggered text:</strong> <code>on_hit</code>, <code>on_first_hit</code>, blocked/parried text, defender <code>on_block</code> / <code>on_parry</code>, then <code>on_resolve</code> / <code>on_first_resolve</code>.</li>
+        <li><strong>Step 4 - Expire text:</strong> once an action has finished its full duration, <code>on_expire</code> resolves.</li>
+        <li><strong>Step 5 - Legacy/special handlers:</strong> older effect keys and card-specific scripting resolve after the main trigger system.</li>
     </ul>
 
+    <h4>Trigger meanings</h4>
+    <ul>
+        <li><strong><code>on_hit</code>:</strong> every successful hit by that action.</li>
+        <li><strong><code>on_first_hit</code>:</strong> only the first successful hit by that action.</li>
+        <li><strong><code>on_resolve</code>:</strong> every time the action resolves.</li>
+        <li><strong><code>on_first_resolve</code>:</strong> only the first time the action resolves.</li>
+        <li><strong><code>on_expire</code>:</strong> when the full action ends, even if it never hit.</li>
+    </ul>
+
+    <div class="example-box">
+        <h4>Example: Draw enhancer wording</h4>
+        <p>If an Enhancer says <code>On first resolve: draw 1</code>, that draw happens the first time the parent action starts resolving.</p>
+        <p>If it instead says <code>On first hit: draw 1</code>, the action must actually connect first.</p>
+    </div>
+
+    <h3>6. Important Interaction Rules</h3>
+    <ul>
+        <li><strong>Attack into Grab:</strong> Attack wins. The Grab misses.</li>
+        <li><strong>Grab into Block:</strong> Grab connects and bypasses Block.</li>
+        <li><strong>Grab into Parry:</strong> Grab connects and bypasses Parry.</li>
+        <li><strong>Grab into Concentration:</strong> a normal Concentration is negated entirely.</li>
+        <li><strong>Grab into Multi-Active Concentration:</strong> only that moment is interrupted.</li>
+        <li><strong>Grab into Utility:</strong> Grab misses by default.</li>
+        <li><strong>Parry into Multi-Active Attack:</strong> Parry only stops the contested moment, not the whole action.</li>
+        <li><strong>If both attacks resolve in the same moment:</strong> they hit simultaneously. "Next attack" bonuses affect future attacks, not that simultaneous exchange.</li>
+    </ul>
+
+    <h3>7. Tactical Notes</h3>
     <div class="example-box" style="border-left-color: #f1c40f;">
-        <h4 style="color: #f1c40f;">💡 Advanced Tactical Tips</h4>
-        <p><strong>Save 1 Stamina for the Pivot:</strong> If you end your Planning Phase with 0 Stamina, <strong>you cannot afford to Pivot</strong>. If the Flash reveals you are walking into a trap, you will be forced to just watch it happen!</p>
-        <p><strong>Bait the Pivot:</strong> If the Flash reveals your opponent is Blocking, and you are Attacking, they might Pivot to try and Grab you. You can anticipate this by Pivoting your <em>own</em> Attack into a fast 1-moment Attack to counter their incoming Grab!</p>
+        <h4 style="color: #f1c40f;">Advanced Tips</h4>
+        <p><strong>Save Pivot stamina:</strong> ending Planning on 0 Stamina means you cannot Pivot, even if the Flash shows disaster.</p>
+        <p><strong>Empty slots matter:</strong> leaving a moment empty is sometimes the best anti-Grab play.</p>
+        <p><strong>Think in windows:</strong> many cards care about thresholds like 3+ BLEED, 5+ FREEZE, 10+ BLEED, or empty enemy hand. Build toward those windows, then cash them out.</p>
+        <p><strong>Enhancers change timing math:</strong> on Multi-Active actions, attached damage and <code>on_hit</code> text can snowball across several moments.</p>
     </div>
 
 </div>
 
 </body>
 </html>
-
-
-
-
-

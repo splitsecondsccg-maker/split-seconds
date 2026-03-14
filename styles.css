@@ -1119,10 +1119,11 @@ body {
    We compensate width/height using inverse scale so layouts don't clip.
 */
 #app-scale-root{
-  transform-origin: top left;
+  transform-origin: top center;
   transform: scale(var(--ui-scale, 1));
   width: calc(100% * var(--ui-inv-scale, 1));
   height: calc(100% * var(--ui-inv-scale, 1));
+  margin: 0 auto;
 }
 
 /* ===============================
@@ -1539,6 +1540,25 @@ transition:none;
 #app-scale-wrap {
   height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: url('bg.png') no-repeat center center;
+  background-size: cover;
+}
+
+body.desktop-native-layout #app-scale-wrap {
+  display: block;
+  justify-content: normal;
+  align-items: normal;
+  background: transparent;
+}
+
+body.desktop-native-layout #app-scale-root {
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
 }
 
 #game-screen {
@@ -2896,6 +2916,20 @@ body {
   color: #a9b6d3;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+.ladder-step .ladder-stage {
+  font-size: 10px;
+  color: #f1c40f;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.ladder-step .ladder-modifier {
+  font-size: 10px;
+  color: #d7c7ea;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 .ladder-step.done {
   border-color: rgba(46, 204, 113, 0.9);

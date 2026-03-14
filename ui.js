@@ -6,8 +6,35 @@ function renderHand() {
     const total = state.player.hand.length;
     const center = (total - 1) / 2;
 
-    const fanSpread = 16;
-    const fanOffset = 70;
+    const compactDesktop = !!(window.matchMedia && window.matchMedia('(min-width: 1180px) and (max-height: 1120px) and (pointer: fine)').matches);
+    const touchLandscape = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: landscape)').matches);
+    const touchPortrait = !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: portrait)').matches);
+
+    let fanSpread = 16;
+    let fanOffset = 70;
+    let handScale = 0.88;
+    let handBiasX = 0;
+
+    if (compactDesktop) {
+        fanSpread = 12;
+        fanOffset = 52;
+        handScale = 0.76;
+        handBiasX = 0;
+    }
+
+    if (touchLandscape) {
+        fanSpread = 11;
+        fanOffset = 52;
+        handScale = 0.82;
+        handBiasX = 34;
+    }
+
+    if (touchPortrait) {
+        fanSpread = 10;
+        fanOffset = 48;
+        handScale = 0.8;
+        handBiasX = 0;
+    }
 
     state.player.hand.forEach((card, index) => {
 
@@ -20,7 +47,7 @@ function renderHand() {
 
         // fan positioning
         const angle = (index - center) * fanSpread;
-        const x = (index - center) * fanOffset;
+        const x = (index - center) * fanOffset + handBiasX;
         const y = Math.abs(index - center) * 6;
 
         div.dataset.handIndex = String(index);
@@ -30,7 +57,7 @@ function renderHand() {
         div.style.setProperty("--tx", `${x}px`);
         div.style.setProperty("--ty", `${y}px`);
         div.style.setProperty("--rot", `${angle}deg`);
-        div.style.setProperty("--scale", `0.88`);
+        div.style.setProperty("--scale", String(handScale));
 
         if (card.selectedForExert) div.classList.add('selected-for-exert');
 

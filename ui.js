@@ -65,13 +65,16 @@ function renderHand() {
         }
 
         const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(card) : '';
+        const enhancerTargetHtml = (typeof window.buildEnhancerTargetHtml === 'function') ? window.buildEnhancerTargetHtml(card) : '';
+        const dmgHtml = (typeof window.buildDamagePreviewHtml === 'function') ? window.buildDamagePreviewHtml('player', card) : (card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : '');
         if (cue.enabled && cue.reasons?.length) div.title = cue.reasons.join(' | ');
         div.innerHTML = `
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
             <div class="card-stats"><span>${card.type === 'enhancer' ? '✨ ENH' : `⏱ ${card.moments}`}</span><span>⚡ ${getMoveCost('player', card)}</span></div>
             ${reqHtml}
+            ${enhancerTargetHtml}
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
-            ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
+            ${dmgHtml}
             ${cue.enabled ? `<div class="card-live-badge">LIVE</div>` : ''}
         `;
 
@@ -368,19 +371,22 @@ function renderPlayerTimeline() {
             
             const enhInfo = getEnhancerUiInfo(t);
             const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(t) : '';
+            const enhancerTargetHtml = (typeof window.buildEnhancerTargetHtml === 'function') ? window.buildEnhancerTargetHtml(t) : '';
+            const hoverTooltipHtml = (typeof window.buildTimelineHoverTooltipHtml === 'function') ? window.buildTimelineHoverTooltipHtml('player', t) : '';
             const cueTitle = cue.enabled && cue.reasons?.length ? `\nEnabled: ${cue.reasons.join(' | ')}` : '';
             div.draggable = true; div.style.cursor = 'pointer'; div.title = "Click or drag to hand to remove" + enhInfo.title + cueTitle;
             div.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({source: 'timeline', index: i}));
             div.onclick = () => returnToHand(i);
 
             let extraText = '';
-            if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
+            const pPreview = (typeof window.getCardPreviewStats === 'function') ? window.getCardPreviewStats('player', t) : { dmg: t.dmg || 0, bonusDmg: 0, buffed: false };
+            if(pPreview.dmg > 0) extraText = `<span class="timeline-dmg${pPreview.buffed ? ' timeline-dmg-buffed' : ''}">${pPreview.bonusDmg > 0 ? `${pPreview.baseDmg}<b>→${pPreview.dmg}</b>` : `${pPreview.dmg}`} DMG</span>`;
             else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
             else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}`;
+            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${enhancerTargetHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}${hoverTooltipHtml}`;
             tl.appendChild(div);
         }
     }
@@ -409,16 +415,19 @@ function renderAITimeline() {
             div.style.left = `calc(${left}% + 10px)`; div.style.width = `calc(${width}% - 20px)`; 
 
             let extraText = '';
-            if(t.dmg > 0) extraText = `<span style="color:#ffcccc; font-weight:bold;">${t.dmg} DMG</span>`;
+            const aiPreview = (typeof window.getCardPreviewStats === 'function') ? window.getCardPreviewStats('ai', t) : { dmg: t.dmg || 0, bonusDmg: 0, buffed: false };
+            if(aiPreview.dmg > 0) extraText = `<span class="timeline-dmg${aiPreview.buffed ? ' timeline-dmg-buffed' : ''}">${aiPreview.bonusDmg > 0 ? `${aiPreview.baseDmg}<b>→${aiPreview.dmg}</b>` : `${aiPreview.dmg}`} DMG</span>`;
             else if(t.type === 'block') extraText = `<span style="color:#ccffff; font-weight:bold;">🛡️ Block</span>`;
             else if(t.type === 'parry') extraText = `<span style="color:#ccffff; font-weight:bold;">🤺 Parry</span>`;
             else extraText = `<span style="color:#ccffcc; font-weight:bold;">✨ ${typeof window.getActionTypeLabel === 'function' ? window.getActionTypeLabel(t.type || '') : String(t.type || '').toUpperCase()}</span>`;
 
             const enhInfo = getEnhancerUiInfo(t);
             const reqHtml = (typeof window.buildRequirementChipsHtml === 'function') ? window.buildRequirementChipsHtml(t) : '';
+            const enhancerTargetHtml = (typeof window.buildEnhancerTargetHtml === 'function') ? window.buildEnhancerTargetHtml(t) : '';
+            const hoverTooltipHtml = (typeof window.buildTimelineHoverTooltipHtml === 'function') ? window.buildTimelineHoverTooltipHtml('ai', t) : '';
             if (cue.enabled && cue.reasons?.length) div.title = `Enabled: ${cue.reasons.join(' | ')}`;
             let icon = getIcon(t.type);
-            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}`;
+            div.innerHTML = `<strong>${t.name}</strong>${reqHtml}${enhancerTargetHtml}${t.desc ? `<div class="card-desc-timeline">${formatKeywords(t.desc)}</div>` : ''}${enhInfo.inline}<div>${icon} ${extraText}</div>${cue.enabled ? `<div class="card-live-badge timeline-live-badge">LIVE</div>` : ''}${hoverTooltipHtml}`;
             tl.appendChild(div);
         }
     }

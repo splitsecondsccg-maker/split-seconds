@@ -84,9 +84,10 @@ function spotlightStep(step) {
 
     const ids = step.highlightIds || [];
     const selectors = step.highlightSelectors || [];
+    const expect = step.expect || null;
 
     const hasHighlights = ids.length > 0 || selectors.length > 0;
-    if (hasHighlights) document.body.classList.add('tutorial-dimmed');
+    if (hasHighlights && !expect) document.body.classList.add('tutorial-dimmed');
     else document.body.classList.remove('tutorial-dimmed');
 
     ids.forEach(id => {
@@ -103,7 +104,6 @@ function spotlightStep(step) {
     });
 
     // Make the coach click-through during interactive steps (so it can't block required clicks)
-    const expect = step.expect || null;
     if (expect) document.body.classList.add('tutorial-passive-dialogue');
     else document.body.classList.remove('tutorial-passive-dialogue');
 }
@@ -132,7 +132,7 @@ const TUT = {
     lungingDagger: { id: 'r3', uniqueId: 'tut_lunge', name: 'Lunging Dagger', type: 'attack', cost: 1, moments: 2, dmg: 4, desc: 'Wind-up, then strike.' },
     kidneyStrike: { id: 'r4', uniqueId: 'tut_grab', name: 'Kidney Strike', type: 'grab', cost: 1, moments: 1, dmg: 3, desc: 'Grab: beats Block, loses to Attack.' },
     sharpen: { id: 'r5', uniqueId: 'tut_sharpen', name: 'Sharpen', type: 'buff', cost: 1, moments: 1, dmg: 0, desc: '+3 DMG to next Attack.', effect: 'buff_next_atk_3' },
-    arcaneAmp: { id: 'palea_arcane_amp', uniqueId: 'tut_arcane_amp', name: 'Arcane Amp', type: 'enhancer', cost: 1, moments: 0, dmg: 0, desc: 'Enhancer: attached action gains +2 DMG.', enhance: { dmg: 2 } },
+    arcaneAmp: { id: 'palea_arcane_amp', uniqueId: 'tut_arcane_amp', name: 'Arcane Amp', type: 'enhancer', cost: 1, moments: 0, dmg: 0, desc: 'Enhancer: attached action gains +2 DMG.', enhance: { dmg: 2, targets: ['attack', 'grab'] } },
     pulsingHex: { id: 'tut_pulsing_hex', uniqueId: 'tut_pulsing_hex', name: 'Pulsing Hex', type: 'attack', cost: 2, moments: 2, dmg: 2, perMomentDmg: 1, resolveEachMoment: true, desc: 'Deals 1 DMG in each moment it occupies.' }
 };
 
@@ -295,7 +295,7 @@ const tutorialSteps = [
         }
     },
     {
-        message: "Some actions are ACTIVE EACH MOMENT they occupy.\n\nThey are marked with a unique color on the card/timeline.\nAlways read the card description - it tells you exactly what happens in each occupied moment.",
+        message: "Some actions are <span class=\"tutorial-inline-multi\">MULTI-ACTIVE</span>.<br><br>They use the same special color on the card and timeline.<br>Read the card text: it tells you what happens in each occupied moment.",
         highlightIds: ['player-hand', 'player-timeline'],
         setup: () => {
             forcePlanningPhase();
@@ -304,6 +304,22 @@ const tutorialSteps = [
             state.player.hand = [{ ...TUT.pulsingHex, uniqueId: 'tut_pulsing_hex_1' }];
             updateUI();
         }
+    },
+    {
+        message: "Counterplay: <span class=\"tutorial-inline-multi\">MULTI-ACTIVE</span> moments are separate.<br><br>If your action is in Slots 1-3 and the opponent GRABS only Slot 2, only Slot 2 is canceled. Slots 1 and 3 still happen.",
+        highlightIds: ['player-timeline', 'ai-timeline'],
+        setup: () => {
+            forcePlanningPhase();
+            clearBoard();
+            state.player.timeline[0] = { ...TUT.pulsingHex, uniqueId: 'tut_pulsing_hex_live', paidUpfront: true };
+            state.player.timeline[1] = 'occupied';
+            state.ai.timeline[1] = { ...TUT.kidneyStrike, uniqueId: 'tut_grab_vs_each_moment', paidUpfront: true };
+            updateUI();
+        }
+    },
+    {
+        message: "Normal Concentration: GRAB cancels the whole action.<br><br><span class=\"tutorial-inline-multi\">MULTI-ACTIVE</span> action: GRAB cancels only that one moment.",
+        highlightIds: ['player-timeline', 'ai-timeline']
     },
 
     // Combat Triangle: Grab vs Block
@@ -427,7 +443,7 @@ const tutorialSteps = [
 
     // Enhancer lesson
     {
-        message: "Enhancer cards are attached to actions and DO NOT take a timeline slot by themselves.\n\nPlace Quick Jab in Slot 1, then drag Arcane Amp ONTO that action card, then hit LOCK.",
+        message: "Enhancer cards are attached to actions and DO NOT take a timeline slot by themselves.\n\nArcane Amp can attach to ATTACK or GRAB.\nPlace Quick Jab in Slot 1, then drag Arcane Amp ONTO that action card, then hit LOCK.",
         expect: 'lock',
         requiredSlot: 0,
         requiredEnhancerOnSlot: 0,
@@ -583,7 +599,7 @@ function runStep() {
 
     const step = tutorialSteps[currentStep];
     const textEl = document.getElementById('tutorial-text');
-    if (textEl) textEl.innerText = step.message;
+    if (textEl) textEl.innerHTML = String(step.message || '').replace(/\n/g, '<br>');
 
     // Default: Next is visible, unless the step setup hides it.
     showNext();
@@ -594,6 +610,9 @@ function runStep() {
     if (typeof updateUI === 'function') updateUI();
 
     spotlightStep(step);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => spotlightStep(step));
+    }
 }
 
 function advanceTutorial() {
@@ -615,7 +634,6 @@ function endTutorial() {
     alert('Tutorial Complete! Returning to menu.');
     location.reload();
 }
-
 
 
 

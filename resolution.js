@@ -1,6 +1,11 @@
-function getEnhancerDamageBonus(action) {
+function getEnhancerDamageBonus(action, context = {}) {
     if (!action || !Array.isArray(action.enhancers) || action.enhancers.length === 0) return 0;
-    return action.enhancers.reduce((sum, enh) => sum + (enh?.enhance?.dmg || 0), 0);
+    const targetBlocking = !!context.targetBlocking;
+    return action.enhancers.reduce((sum, enh) => {
+        let bonus = Number(enh?.enhance?.dmg || 0);
+        if (enh?.id === 'palea_fae_edge' && targetBlocking) bonus += 3;
+        return sum + bonus;
+    }, 0);
 }
 
 function getEnhancerAttackReductionAura(action) {
@@ -21,12 +26,28 @@ function getEnhancerAttackReductionAura(action) {
 function runEnhancerTriggeredEffects(action, triggerName, sourceKey, targetKey, context) {
     if (!action || !Array.isArray(action.enhancers) || !action.enhancers.length) return;
     const triggerKey = String(triggerName || '').toLowerCase();
-    for (const enh of action.enhancers) {
+    if (!action._enhancerFirstHitFired) action._enhancerFirstHitFired = new Set();
+    if (!action._enhancerFirstResolveFired) action._enhancerFirstResolveFired = new Set();
+    for (let enhIndex = 0; enhIndex < action.enhancers.length; enhIndex++) {
+        const enh = action.enhancers[enhIndex];
         const fxList = enh?.enhance?.effects;
         if (Array.isArray(fxList)) {
-            for (const fx of fxList) {
+            for (let fxIndex = 0; fxIndex < fxList.length; fxIndex++) {
+                const fx = fxList[fxIndex];
                 const trigger = String(fx?.trigger || '').toLowerCase();
-                if (trigger !== triggerKey) continue;
+                if (trigger !== triggerKey) {
+                    if (triggerKey === 'on_hit' && trigger === 'on_first_hit') {
+                        const firstHitKey = `${enh?.id || enh?.name || enhIndex}:${fxIndex}`;
+                        if (action._enhancerFirstHitFired.has(firstHitKey)) continue;
+                        action._enhancerFirstHitFired.add(firstHitKey);
+                    } else if (triggerKey === 'on_resolve' && trigger === 'on_first_resolve') {
+                        const firstResolveKey = `${enh?.id || enh?.name || enhIndex}:${fxIndex}`;
+                        if (action._enhancerFirstResolveFired.has(firstResolveKey)) continue;
+                        action._enhancerFirstResolveFired.add(firstResolveKey);
+                    } else {
+                        continue;
+                    }
+                }
                 const type = String(fx?.type || '').toLowerCase();
                 const value = Math.max(1, Number(fx?.value) || 1);
                 const effectTargetKey = ((String(fx?.target || 'opponent').toLowerCase() === 'self' || String(fx?.target || 'opponent').toLowerCase() === 'source') ? sourceKey : targetKey);
@@ -52,6 +73,40 @@ function runEnhancerTriggeredEffects(action, triggerName, sourceKey, targetKey, 
         }
     }
 }
+
+function runSingleEnhancerTriggeredEffects(enhancerCard, triggerName, sourceKey, targetKey, context) {
+    if (!enhancerCard) return;
+    const triggerKey = String(triggerName || '').toLowerCase();
+    const fxList = enhancerCard?.enhance?.effects;
+    if (Array.isArray(fxList)) {
+        for (const fx of fxList) {
+            const trigger = String(fx?.trigger || '').toLowerCase();
+            if (trigger !== triggerKey) continue;
+            const type = String(fx?.type || '').toLowerCase();
+            const value = Math.max(1, Number(fx?.value) || 1);
+            const effectTargetKey = ((String(fx?.target || 'opponent').toLowerCase() === 'self' || String(fx?.target || 'opponent').toLowerCase() === 'source') ? sourceKey : targetKey);
+            const effectContext = Object.assign({}, context || {});
+            effectContext.effectValue = value;
+            if (typeof window.tryRunEffectType === 'function') {
+                const handled = window.tryRunEffectType(type, {
+                    sourceKey,
+                    targetKey: effectTargetKey,
+                    value,
+                    context: effectContext,
+                    card: enhancerCard
+                });
+                if (handled) continue;
+            }
+            if (typeof applyEffect === 'function') applyEffect(sourceKey, effectTargetKey, type, effectContext);
+        }
+        return;
+    }
+    const legacyKey = String(enhancerCard?.enhance?.effect || enhancerCard?.effect || '').trim();
+    if (legacyKey && typeof applyEffect === 'function' && triggerKey === 'on_hit') {
+        applyEffect(sourceKey, targetKey, legacyKey, context || {});
+    }
+}
+window.runSingleEnhancerTriggeredEffects = runSingleEnhancerTriggeredEffects;
 
 function runEnhancerOnHitEffects(action, sourceKey, targetKey, context) {
     runEnhancerTriggeredEffects(action, 'on_hit', sourceKey, targetKey, context);
@@ -227,7 +282,7 @@ function getResolvingAttackAction(action, active) {
     return null;
 }
 
-function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
+function computeAttackDamageForMoment(sourceKey, targetKey, attackCard, context = {}) {
     if (!attackCard) return 0;
     const source = state[sourceKey];
     const target = state[targetKey];
@@ -235,7 +290,7 @@ function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
 
     const perMoment = !!attackCard.resolveEachMoment;
     const baseDmg = perMoment ? Math.max(0, Number(attackCard.perMomentDmg || attackCard.dmg || 0)) : Number(attackCard.dmg || 0);
-    let dmg = baseDmg + getEnhancerDamageBonus(attackCard);
+    let dmg = baseDmg + getEnhancerDamageBonus(attackCard, context);
 
     if (!perMoment || !attackCard._modsConsumedThisAction) {
         let roguePenalty = source.statuses.rogueDebuff || 0;
@@ -245,6 +300,8 @@ function computeAttackDamageForMoment(sourceKey, targetKey, attackCard) {
         attackCard._modsConsumedThisAction = true;
     }
 
+    if (attackCard.id === 'ability_yaura_1' && Array.isArray(attackCard.enhancers) && attackCard.enhancers.length > 0) dmg += 2;
+    if (attackCard.id === 'yaura_runeblood_crescent' && Array.isArray(attackCard.enhancers) && attackCard.enhancers.length > 0) dmg += attackCard.enhancers.length * 2;
     if (source.class === 'Ice Assassin' && (target.statuses?.freeze || 0) >= 5) dmg += 1;
     if (source.class === 'Bahl' && (target.statuses?.bleed || 0) >= 10 && typeof cardHasRequirementToken === 'function' && cardHasRequirementToken(attackCard, 'darkness')) dmg += 1;
     if (attackCard.id === 'blood_crimson_blade' && (target.statuses?.bleed || 0) >= 3) dmg += 3;
@@ -282,8 +339,6 @@ function resolveMoment() {
         }
         if (state.player.class === 'Necromancer' && state.player.roundData.appliedStatus) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Necromancer gained 1 Stam (Passive)."); }
         if (state.ai.class === 'Necromancer' && state.ai.roundData.appliedStatus) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Necromancer gained 1 Stam (Passive)."); }
-        if (state.player.class === 'Mauja' && state.player.roundData.lostLife) { state.player.stam = Math.min(state.player.maxStam, state.player.stam + 1); log("Player Mauja gained 1 Stam (Passive)."); }
-        if (state.ai.class === 'Mauja' && state.ai.roundData.lostLife) { state.ai.stam = Math.min(state.ai.maxStam, state.ai.stam + 1); log("AI Mauja gained 1 Stam (Passive)."); }
         setTimeout(() => nextTurn(), END_ROUND_DELAY); return;
     }
 
@@ -383,12 +438,6 @@ function resolveMoment() {
     let pAttackTargetKey = 'ai';
     let aiAttackTargetKey = 'player';
 
-    if(pAction && pAction !== 'occupied') {
-        if(pAction.type === 'parry') pParry = true;
-        if(pAction.type === 'grab') { pGrab = true; pDmg = computeGrabDamageForMoment('player', 'ai', pAction); }
-    }
-    if (!pGrab && pAttackAction) pDmg = computeAttackDamageForMoment('player', 'ai', pAttackAction);
-
     if (pActive && pActive.type === 'block') pBlock = true;
 
     if(aiAction && aiAction !== 'occupied') {
@@ -400,7 +449,15 @@ function resolveMoment() {
         if(aiAction.type === 'parry') aiParry = true;
         if(aiAction.type === 'grab') { aiGrab = true; aiDmg = computeGrabDamageForMoment('ai', 'player', aiAction); }
     }
-    if (!aiGrab && aiAttackAction) aiDmg = computeAttackDamageForMoment('ai', 'player', aiAttackAction);
+    if (aiActive && aiActive.type === 'block') aiBlock = true;
+
+    if(pAction && pAction !== 'occupied') {
+        if(pAction.type === 'parry') pParry = true;
+        if(pAction.type === 'grab') { pGrab = true; pDmg = computeGrabDamageForMoment('player', 'ai', pAction); }
+    }
+    if (!pGrab && pAttackAction) pDmg = computeAttackDamageForMoment('player', 'ai', pAttackAction, { targetBlocking: aiBlock });
+
+    if (!aiGrab && aiAttackAction) aiDmg = computeAttackDamageForMoment('ai', 'player', aiAttackAction, { targetBlocking: pBlock });
 
     // Protective Aura enhancer: while active, enemy attacks during this duration deal less damage.
     const pAuraReduction = getEnhancerAttackReductionAura(pActive);
@@ -413,8 +470,6 @@ function resolveMoment() {
         pDmg = Math.max(0, pDmg - aiAuraReduction);
         log('AI Protective Aura reduces Player attack by ' + aiAuraReduction + '.');
     }
-
-    if (aiActive && aiActive.type === 'block') aiBlock = true;
 
     let pGrabHit = false;
 let aiGrabHit = false;
@@ -566,9 +621,16 @@ if (pGrab) {
             if (state[pHitTarget].class === 'Ice Brute') {
                 applyFreezeCounters(pHitTarget, 'player', 1);
             }
+            if (state[pHitTarget].class === 'Mauja') {
+                applyPoisonCounters(pHitTarget, 'player', 1);
+            }
             if (state[pHitTarget].class === 'Fae Brute') {
                 applyHypnotizedStatus(pHitTarget, 'player');
             }
+        }
+        const pSourceCard = pAttackAction || (pGrab ? pAction : null);
+        if (state.player.class === 'Yaura' && pSourceCard && Array.isArray(pSourceCard.enhancers) && pSourceCard.enhancers.length > 0 && (pSourceCard.type === 'attack' || pSourceCard.type === 'grab')) {
+            applyBleedCounters('player', pHitTarget, 1);
         }
 
         // Passives - FIXED ROGUE LOGIC
@@ -594,9 +656,16 @@ if (pGrab) {
             if (state[aiHitTarget].class === 'Ice Brute') {
                 applyFreezeCounters(aiHitTarget, 'ai', 1);
             }
+            if (state[aiHitTarget].class === 'Mauja') {
+                applyPoisonCounters(aiHitTarget, 'ai', 1);
+            }
             if (state[aiHitTarget].class === 'Fae Brute') {
                 applyHypnotizedStatus(aiHitTarget, 'ai');
             }
+        }
+        const aiSourceCard = aiAttackAction || (aiGrab ? aiAction : null);
+        if (state.ai.class === 'Yaura' && aiSourceCard && Array.isArray(aiSourceCard.enhancers) && aiSourceCard.enhancers.length > 0 && (aiSourceCard.type === 'attack' || aiSourceCard.type === 'grab')) {
+            applyBleedCounters('ai', aiHitTarget, 1);
         }
 
         // Passives - FIXED ROGUE LOGIC
@@ -673,6 +742,14 @@ if (aiResolved) {
         context: aiResolveCtx
     });
     runEnhancerTriggeredEffects(aiAction, 'on_resolve', 'ai', 'player', aiResolveCtx);
+}
+if (pAction === 'occupied' && pAttackAction && pAttackAction.type === 'attack' && pAttackAction.resolveEachMoment && !pActionInterrupted) {
+    const pAttackResolveCtx = { resolved: true, activeMoment: true, hitLanded: pHit, grabHit: pGrabHit, targetBlocked: aiBlock, targetParried: aiParry };
+    runEnhancerTriggeredEffects(pAttackAction, 'on_resolve', 'player', pAttackTargetKey, pAttackResolveCtx);
+}
+if (aiAction === 'occupied' && aiAttackAction && aiAttackAction.type === 'attack' && aiAttackAction.resolveEachMoment && !aiActionInterrupted) {
+    const aiAttackResolveCtx = { resolved: true, activeMoment: true, hitLanded: aiHit, grabHit: aiGrabHit, targetBlocked: pBlock, targetParried: pParry };
+    runEnhancerTriggeredEffects(aiAttackAction, 'on_resolve', 'ai', aiAttackTargetKey, aiAttackResolveCtx);
 }
 if (pAction === 'occupied' && pActive && pActive.type === 'buff' && pActive.resolveEachMoment && !pActionInterrupted) {
     const pActiveResolveCtx = { resolved: true, activeMoment: true };
@@ -1052,17 +1129,16 @@ function confirmExert() {
     if (!window.EngineRuntime) return;
     if (state.phase !== 'exert') return;
 
-    // Tutorial: confirm exert is the expected action for some steps.
-    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
-        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
-        if (!step || step.expect !== 'confirmExert') return;
-        advanceTutorial();
-    }
-
     window.EngineRuntime.dispatch({
         type: window.EngineRuntime.ActionTypes.CONFIRM_EXERT,
         payload: {}
     });
+
+    // Tutorial: advance only after the real exert action succeeds.
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        const step = (typeof tutorialSteps !== 'undefined' && tutorialSteps[currentStep]) ? tutorialSteps[currentStep] : null;
+        if (step && step.expect === 'confirmExert') advanceTutorial();
+    }
 }
 // Modal Dragging Logic
 let flashModal = document.getElementById("flash-modal");

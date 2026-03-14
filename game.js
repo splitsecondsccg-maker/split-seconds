@@ -115,10 +115,94 @@ function aiCounterPayoffVs(playerType, aiType) {
         grab: { attack: 10, grab: -1.5, block: -10, parry: -8, buff: 1.5, utility: 1.5 },
         block: { attack: 5, grab: 8, block: 0.3, parry: 0.2, buff: -1, utility: -1 },
         parry: { attack: 9, grab: -7, block: 0.2, parry: 0, buff: -1, utility: -1 },
-        buff: { attack: 2.5, grab: 3, block: 2, parry: 2, buff: -0.5, utility: -0.2 },
-        utility: { attack: 2.5, grab: 3, block: 2, parry: 2, buff: -0.2, utility: -0.2 }
+        buff: { attack: 1.2, grab: 9, block: 1.5, parry: 1.5, buff: -0.5, utility: -0.2 },
+        utility: { attack: 2, grab: 0.5, block: 1.5, parry: 1.5, buff: -0.2, utility: -0.2 }
     };
     return Number(tbl[p]?.[a] ?? 0);
+}
+
+function aiCardPressureValue(card) {
+    if (!card) return 0;
+    const moments = Math.max(1, Number(card?.moments || 1));
+    if (card.resolveEachMoment) {
+        const perMoment = Math.max(0, Number(card?.perMomentDmg || card?.dmg || 0));
+        return perMoment * moments;
+    }
+    return Math.max(0, Number(card?.dmg || 0));
+}
+
+function aiEstimatePlayerPivotAwayProbability(aiCard, pCard, playerModel, slotIntel) {
+    const aiType = String(aiCard?.type || '').toLowerCase();
+    const pType = String(pCard?.type || '').toLowerCase();
+    const aiPressure = aiCardPressureValue(aiCard);
+    let prob = 0.18;
+
+    if (pType === 'parry' && aiType === 'attack') prob = 0.68;
+    else if (pType === 'block' && aiType === 'attack') prob = aiPressure >= 6 ? 0.20 : (aiPressure >= 4 ? 0.28 : 0.42);
+    else if (pType === 'buff' && aiType === 'grab') prob = 0.34;
+    else if (pType === 'grab' && aiType === 'attack') prob = 0.24;
+    else if ((pType === 'block' || pType === 'parry') && (playerModel?.attackBias || 0.5) >= 0.55) prob += 0.10;
+
+    prob += (Number(playerModel?.attackBias || 0.5) - 0.5) * 0.22;
+    prob -= (Number(playerModel?.defendBias || 0.5) - 0.5) * 0.14;
+    if ((slotIntel?.predictable || false) && Number(slotIntel?.samples || 0) >= 3) prob -= 0.08;
+
+    return Math.max(0.05, Math.min(0.85, prob));
+}
+
+function aiGetPivotProbability(aiCard, pCard) {
+    if (!aiCard || !pCard) return 0;
+    const level = String(aiGetDifficulty() || 'hard').toLowerCase();
+    const playerModel = aiEstimatePlayerProfile(level === 'pro');
+    const slotIntel = aiGetSlotIntel(Number(state?.flashMoment || 0));
+    const aiType = String(aiCard?.type || '').toLowerCase();
+    const pType = String(pCard?.type || '').toLowerCase();
+    const aiPressure = aiCardPressureValue(aiCard);
+    const playerPressure = aiCardPressureValue(pCard);
+    const playerCannotPivot = Number(state?.player?.stam || 0) <= 0;
+    const pivotAwayProb = aiEstimatePlayerPivotAwayProbability(aiCard, pCard, playerModel, slotIntel);
+
+    let urgency = -aiCounterPayoffVs(pType, aiType);
+
+    if (aiType === 'attack' && pType === 'parry') urgency += 7.5;
+    if (aiType === 'grab' && pType === 'attack') urgency += 6.8;
+    if (aiType === 'buff' && pType === 'grab') urgency += 8.5;
+
+    if (aiType === 'attack' && pType === 'block') {
+        if (aiPressure >= 6) urgency -= 5.5;
+        else if (aiPressure >= 4) urgency -= 3.5;
+        else urgency += 1.8;
+    }
+    if (aiType === 'block' && pType === 'attack') {
+        if (playerPressure >= 5) urgency += playerCannotPivot ? 8.5 : 4.4;
+        else if (playerPressure >= 3) urgency += 2.2;
+    }
+    if (aiType === 'grab' && pType === 'buff') urgency -= 8.0;
+    if (aiType === 'grab' && pType === 'utility') urgency += 1.8;
+
+    if (state.ai.hp < state.ai.maxHp * 0.45 && pType === 'attack' && aiType !== 'block' && aiType !== 'parry') urgency += 2.4;
+    if ((aiType === 'attack' || aiType === 'grab') && aiPressure >= 6) urgency -= 1.4;
+
+    if (urgency > 0) urgency -= pivotAwayProb * 5.8;
+    else urgency += pivotAwayProb * 2.4;
+
+    if (level === 'pro') {
+        const mind = aiGetMind();
+        urgency += (Number(mind?.adapt?.antiParry || 0.5) - 0.5) * 2.0;
+        urgency += (Number(mind?.adapt?.antiGrab || 0.5) - 0.5) * 1.5;
+    }
+
+    let probability = 1 / (1 + Math.exp(-(urgency - 0.7) / 1.85));
+
+    if (aiType === 'attack' && pType === 'block' && aiPressure >= 4) probability = Math.min(probability, 0.24);
+    if (aiType === 'block' && pType === 'attack' && playerPressure >= 5) probability = Math.max(probability, playerCannotPivot ? 0.98 : 0.58);
+    if (aiType === 'grab' && pType === 'buff') probability = Math.min(probability, 0.18);
+    if (aiType === 'attack' && pType === 'parry') probability = Math.max(probability, 0.26);
+    if (aiType === 'grab' && pType === 'attack') probability = Math.max(probability, 0.34);
+
+    const wobble = (Math.random() - 0.5) * (level === 'pro' ? 0.16 : 0.22);
+    probability = Math.max(0.06, Math.min(0.9, probability + wobble));
+    return probability;
 }
 
 function aiExpectedCounterValue(aiType, intel) {
@@ -620,6 +704,9 @@ function aiPickCounterMove(validMoves, ctx) {
 
     const intel = aiGetSlotIntel(ctx.slotIndex);
     const revealedType = String(ctx?.revealedPlayerCard?.type || '').toLowerCase();
+    const revealedDmg = aiCardPressureValue(ctx?.revealedPlayerCard || null);
+    const revealedAIMoveType = String(ctx?.revealedAICard?.type || '').toLowerCase();
+    const playerCannotPivot = !!ctx?.playerCannotPivot;
     if ((intel.samples || 0) < 2 && !revealedType) return null;
 
     const rep = aiGetMind().repeatPressure || 0;
@@ -630,6 +717,11 @@ function aiPickCounterMove(validMoves, ctx) {
     const projectedAttackRate = Math.max(Number(intel.attackRate || 0), Number(lateAttackThreat.rate || 0));
     const grabHeavy = projectedGrabRate >= (rep >= 1 ? 0.30 : 0.40);
     const attackHeavy = projectedAttackRate >= (rep >= 1 ? 0.38 : 0.50);
+
+    if (revealedType === 'attack' && revealedAIMoveType === 'block' && revealedDmg >= 5) {
+        const parryMoves = validMoves.filter(m => m && m.type === 'parry');
+        if (playerCannotPivot && parryMoves.length) return parryMoves[0];
+    }
 
     const scored = validMoves
         .filter(m => !!m)
@@ -661,17 +753,6 @@ function aiPickCounterMove(validMoves, ctx) {
 
     if (!scored.length) return null;
 
-    if (lateSlot && attackHeavy) {
-        const forcedParry = scored.find(x => x?.move?.type === 'parry');
-        if (forcedParry) return forcedParry.move;
-        const forcedAtkVsAtk = scored.find(x => x?.move?.type === 'attack');
-        if (forcedAtkVsAtk) return forcedAtkVsAtk.move;
-    }
-    if (lateSlot && grabHeavy) {
-        const forcedAtk = scored.find(x => x?.move?.type === 'attack');
-        if (forcedAtk) return forcedAtk.move;
-    }
-
     const best = scored[0];
     const second = scored[1] || { ev: -999 };
     const margin = best.ev - second.ev;
@@ -681,6 +762,24 @@ function aiPickCounterMove(validMoves, ctx) {
         : ((intel.samples || 0) >= 3 && (best.ev >= 1.2 || margin >= 0.75 || rep >= 2));
 
     if (!confident) return null;
+
+    const pool = scored.slice(0, Math.min(3, scored.length));
+    const weights = pool.map((entry, idx) => {
+        let w = Math.exp(Number(entry.ev || 0) / 4.5);
+        if (lateSlot && attackHeavy && entry?.move?.type === 'parry') w *= 1.25;
+        if (lateSlot && grabHeavy && entry?.move?.type === 'attack') w *= 1.2;
+        if (revealedType === 'attack' && revealedAIMoveType === 'block' && revealedDmg >= 5 && entry?.move?.type === 'parry') w *= playerCannotPivot ? 4.5 : 2.1;
+        if (revealedType === 'buff' && entry?.move?.type === 'grab') w *= 1.3;
+        if (revealedType === 'utility' && entry?.move?.type === 'grab') w *= 0.78;
+        if (idx === 0) w *= 1.08;
+        return Math.max(0.01, w);
+    });
+    const total = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < pool.length; i++) {
+        roll -= weights[i];
+        if (roll <= 0) return pool[i].move || null;
+    }
     return best.move || null;
 }
 function aiMaybeForceProactiveMove(validMoves, ctx, chosenMove) {
@@ -817,27 +916,8 @@ function aiShouldPivot(aiCard, pCard) {
         if (state.ai.hp < state.ai.maxHp * 0.4 && pCard.type === 'attack' && (pCard.dmg || 0) >= 3 && aiCard.type !== 'block' && aiCard.type !== 'parry' && Math.random() < 0.8) shouldPivot = true;
         return shouldPivot;
     }
-
-    const playerModel = aiEstimatePlayerProfile(level === 'pro');
-    let score = 0;
-
-    if (aiCard.type === 'attack' && pCard.type === 'parry') score += 9;
-    if (aiCard.type === 'grab' && pCard.type === 'attack') score += 8;
-    if (aiCard.type === 'attack' && pCard.type === 'block' && (aiCard.dmg || 0) >= 4) score += 5;
-    if (state.ai.hp < state.ai.maxHp * 0.45 && pCard.type === 'attack') score += 6;
-
-    score += playerModel.threat * 5.5;
-    score += playerModel.stamRatio * 2.5;
-    score += (playerModel.handModel?.highDmg || 0) * 0.7;
-
-    if (level === 'pro') {
-        const mind = aiGetMind();
-        score += (mind.adapt.defense * 2.2);
-        score += (mind.adapt.antiParry * 1.6);
-    }
-
-    score += (Math.random() * 2.4);
-    return score >= 9.8;
+    const pivotProbability = aiGetPivotProbability(aiCard, pCard);
+    return Math.random() < pivotProbability;
 }
 function aiExertDiscardComparator(a, b) {
     const ac = Number(a?.cost || 0);
@@ -931,6 +1011,8 @@ function aiStateContextForPlan(stateObj, slotIndex, opts) {
         playerModel: opts.playerModel || aiEstimatePlayerProfile(String(opts?.aiLevel || aiGetDifficulty()) === 'pro'),
         lastMove: aiGetActiveFromTimeline(stateObj.timeline, slotIndex - 1),
         revealedPlayerCard: opts.revealedPlayerCard || null,
+        revealedAICard: opts.revealedAICard || null,
+        playerCannotPivot: !!opts.playerCannotPivot,
         difficulty: opts.aiLevel || aiGetDifficulty(),
         defensiveSoFar: counts.defensive,
         proactiveSoFar: counts.proactive,
@@ -1186,16 +1268,22 @@ function getCardData(side, momentIndex) {
     return { card: null, startIndex: -1 };
 }
 
-function generateCardHTML(card) {
+function generateCardHTML(card, ownerKey = 'player') {
     const classes = ['card'];
     if (card?.type === 'enhancer') classes.push('enhancer-card');
     if (typeof window.isMultiMomentActiveCard === 'function' && window.isMultiMomentActiveCard(card)) classes.push('multi-active-card');
+    const dmgHtml = (typeof window.buildDamagePreviewHtml === 'function')
+        ? window.buildDamagePreviewHtml(ownerKey, card)
+        : (card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : '');
+    const costDisplay = (typeof window.getMoveCost === 'function') ? window.getMoveCost(ownerKey, card) : (card.cost || 0);
+    const enhancerTargetHtml = (typeof window.buildEnhancerTargetHtml === 'function') ? window.buildEnhancerTargetHtml(card) : '';
     return `
         <div class="${classes.join(' ')}" style="width: 100%; height: 100%; margin: 0; box-sizing: border-box; cursor: default;">
             <div class="card-header"><span>${getIcon(card.type)}</span> <span>${card.name}</span></div>
-            <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${card.cost}</span></div>
+            <div class="card-stats"><span>⏱ ${card.moments}</span><span>⚡ ${costDisplay}</span></div>
+            ${enhancerTargetHtml}
             <div class="card-desc">${formatKeywords(card.desc ? card.desc : '')}</div>
-            ${card.dmg > 0 ? `<div class="card-dmg">${card.dmg} DMG</div>` : ''}
+            ${dmgHtml}
         </div>
     `;
 }
@@ -1292,8 +1380,8 @@ function _startResolutionImpl() {
     state.aiFlashDecision = { shouldPivot: !!preShouldPivot };
     // ---------------------------
     
-    document.getElementById('flash-p-card').innerHTML = pData.card ? generateCardHTML(pData.card) : '<div class="empty-flash">EMPTY SLOT</div>';
-    document.getElementById('flash-ai-card').innerHTML = aiData.card ? generateCardHTML(aiData.card) : '<div class="empty-flash">EMPTY SLOT</div>';
+    document.getElementById('flash-p-card').innerHTML = pData.card ? generateCardHTML(pData.card, 'player') : '<div class="empty-flash">EMPTY SLOT</div>';
+    document.getElementById('flash-ai-card').innerHTML = aiData.card ? generateCardHTML(aiData.card, 'ai') : '<div class="empty-flash">EMPTY SLOT</div>';
     document.getElementById('flash-moment-title').innerText = `FLASH: MOMENT ${state.flashMoment + 1}`;
     
     document.getElementById('flash-modal').style.display = 'flex';
@@ -1458,6 +1546,8 @@ function handleAIReaction() {
             aiLevel: aiGetDifficulty(),
             playerModel: aiEstimatePlayerProfile(aiGetDifficulty() === 'pro'),
             revealedPlayerCard: pCard || null,
+            revealedAICard: aiCard || null,
+            playerCannotPivot: Number(state?.player?.stam || 0) <= 0,
             beamWidth: aiGetDifficulty() === 'pro' ? 20 : 12
         });
         if (pivotPlan) {
@@ -1485,6 +1575,8 @@ function handleAIReaction() {
                 playerModel: aiEstimatePlayerProfile(aiGetDifficulty() === 'pro'),
                 lastMove: (currentSlot > pivotStartIndex) ? getActiveCard('ai', currentSlot - 1) : null,
                 revealedPlayerCard: pCard || null,
+                revealedAICard: aiCard || null,
+                playerCannotPivot: Number(state?.player?.stam || 0) <= 0,
                 difficulty: aiGetDifficulty(),
                 defensiveSoFar: state.ai.timeline.filter((c, idx) => idx >= pivotStartIndex && idx <= currentSlot && c && c !== 'occupied' && (c.type === 'block' || c.type === 'parry')).length,
                 proactiveSoFar: state.ai.timeline.filter((c, idx) => idx >= pivotStartIndex && idx <= currentSlot && c && c !== 'occupied' && (c.type === 'attack' || c.type === 'grab' || c.type === 'buff' || c.type === 'utility')).length,

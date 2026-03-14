@@ -27,7 +27,7 @@
     ],
     "maxStam": 5,
     "armor": 2,
-    "passiveDesc": "End of turn: If you lost life this turn, gain 1 Stamina.",
+    "passiveDesc": "Upon being hit by an ATTACK, the opponent gains POISON 1.",
     "premise": "The king of raw damage. Slow, devastating attacks that crush through defenses.",
     "deckIds": [
       "brute_base"
@@ -98,6 +98,28 @@
     "abilityIds": {
       "1": "ability_dravain_1",
       "2": "ability_dravain_2"
+    }
+  },
+  "Yaura": {
+    "class": "Yaura",
+    "displayName": "Yaura",
+    "talents": [
+      "sorcerer",
+      "warrior",
+      "blood"
+    ],
+    "maxHp": 38,
+    "maxStam": 6,
+    "armor": 3,
+    "passiveDesc": "Your enhanced ATTACKs and GRABs apply BLEED 1 on hit.",
+    "premise": "A blood duelist who mixes disciplined warrior timing with sorcerous enhancements, turning simple strikes and guards into bleeding spell-weapons.",
+    "deckIds": [
+      "yaura_base"
+    ],
+    "defaultDeckId": "yaura_base",
+    "abilityIds": {
+      "1": "ability_yaura_1",
+      "2": "ability_yaura_2"
     }
   },
   "Necromancer": {
@@ -255,6 +277,7 @@
   "Paladin": "hope.png",
   "Vampiress": "vampiress.png",
   "Dravain": "dravain.png",
+  "Yaura": "yaura.png",
   "Necromancer": "necromancer.png",
   "Ice Djinn": "ice_djinn.png",
   "Palea": "palea.png",

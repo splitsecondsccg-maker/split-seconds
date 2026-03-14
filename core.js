@@ -25,8 +25,66 @@ const HEAVY_IMPACT_DELAY = Math.round(1200 * SPEED_MULT); // big hit
 const END_ROUND_DELAY = Math.round(800 * SPEED_MULT);
 
 Object.values(sounds).forEach(sound => sound.volume = 0.6);
-const music = { select: new Audio('select.mp3'), battle: new Audio('battle.mp3') };
-music.select.loop = true; music.select.volume = 0.5; music.battle.loop = true; music.battle.volume = 0.4;
+const BATTLE_MUSIC_TRACKS = [
+    'battle_music/battle.mp3',
+    'battle_music/Ambient 1 Loop.mp3',
+    'battle_music/Ambient 2 Loop.mp3',
+    'battle_music/Ambient 3 Loop.mp3',
+    'battle_music/Ambient 4 Loop.mp3',
+    'battle_music/Ambient 5 Loop.mp3',
+    'battle_music/Ambient 6 Loop.mp3',
+    'battle_music/Ambient 7 Loop.mp3',
+    'battle_music/Ambient 8 Loop.mp3',
+    'battle_music/Ambient 9 Loop.mp3',
+    'battle_music/Ambient 10 Loop.mp3'
+];
+let lastBattleMusicIndex = -1;
+const music = { select: new Audio('select.mp3'), battle: null };
+music.select.loop = true; music.select.volume = 0.5;
+
+function stopBattleMusic() {
+    if (!music.battle) return;
+    music.battle.pause();
+    music.battle.currentTime = 0;
+}
+
+function pickBattleMusicTrack() {
+    if (!BATTLE_MUSIC_TRACKS.length) return null;
+    if (BATTLE_MUSIC_TRACKS.length === 1) {
+        lastBattleMusicIndex = 0;
+        return BATTLE_MUSIC_TRACKS[0];
+    }
+    let idx = Math.floor(Math.random() * BATTLE_MUSIC_TRACKS.length);
+    if (idx === lastBattleMusicIndex) idx = (idx + 1) % BATTLE_MUSIC_TRACKS.length;
+    lastBattleMusicIndex = idx;
+    return BATTLE_MUSIC_TRACKS[idx];
+}
+
+function playRandomBattleMusic() {
+    const track = pickBattleMusicTrack();
+    if (!track) return;
+    stopBattleMusic();
+    const tried = new Set();
+
+    function tryTrack(nextTrack) {
+        if (!nextTrack || tried.has(nextTrack)) return;
+        tried.add(nextTrack);
+        music.battle = new Audio(nextTrack);
+        music.battle.loop = true;
+        music.battle.volume = 0.4;
+        music.battle.addEventListener('error', () => {
+            const fallback = BATTLE_MUSIC_TRACKS.find((candidate) => !tried.has(candidate));
+            if (fallback) {
+                tryTrack(fallback);
+            } else {
+                console.warn('No playable battle music tracks found.');
+            }
+        }, { once: true });
+        music.battle.play().catch(e=>console.log("Battle BGM blocked"));
+    }
+
+    tryTrack(track);
+}
 function playSound(name) { sounds[name].currentTime = 0; sounds[name].play().catch(e=>console.log("Audio muted")); }
 
 function playPlaceSound(moments) {
@@ -67,7 +125,7 @@ function getIcon(type) {
     if(type === 'grab') return '\u270B';
     if(type === 'block') return '\uD83D\uDEE1\uFE0F';
     if(type === 'parry') return '\uD83E\uDD3A';
-    if(type === 'buff') return '\uD83C\uDFAF';
+    if(type === 'buff') return '\uD83E\uDDE0';
     if(type === 'enhancer') return '\u2728';
     if(type === 'utility') return '\uD83D\uDCA8';
     return '\u2728';
@@ -251,6 +309,8 @@ function getCardCueState(ownerKey, card) {
     if (card.id === 'darkness_night_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
     if (card.id === 'bahl_shadow_blade' && (opponent.hand?.length || 0) === 0) markEnabled('Opponent has no cards in hand');
     if (card.id === 'blood_crimson_blade' && (oppStatuses.bleed || 0) >= 3) markEnabled(`Opponent has BLEED ${oppStatuses.bleed}`);
+    if (card.id === 'ability_yaura_1' && Array.isArray(card.enhancers) && card.enhancers.length > 0) markEnabled('Enhanced');
+    if (card.id === 'yaura_runeblood_crescent' && Array.isArray(card.enhancers) && card.enhancers.length > 0) markEnabled(`Enhanced x${card.enhancers.length}`);
     if (card.id === 'rogue_execution_window' && (opponent.hand?.length || 0) <= 1) markEnabled(`Opponent hand is low (${opponent.hand?.length || 0})`);
     if (card.id === 'ice_assassin_shatter_step' && (oppStatuses.freeze || 0) >= 3) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
     if (card.id === 'ice_djinn_absolute_zero' && (oppStatuses.freeze || 0) >= 6) markEnabled(`Opponent has FREEZE ${oppStatuses.freeze}`);
@@ -289,6 +349,194 @@ function getMoveCost(charKey, card) {
     ) ? 1 : 0;
     return Math.max(0, base + attackTax - bahlDiscount);
 }
+window.getMoveCost = getMoveCost;
+
+function getEnhancerDamagePreview(card) {
+    if (!card || !Array.isArray(card.enhancers)) return 0;
+    return card.enhancers.reduce((sum, enh) => sum + Number(enh?.enhance?.dmg || 0), 0);
+}
+
+function getCardPreviewStats(ownerKey, card) {
+    const owner = state?.[ownerKey];
+    const opponentKey = ownerKey === 'player' ? 'ai' : 'player';
+    const opponent = state?.[opponentKey];
+    const out = {
+        cost: getMoveCost(ownerKey, card),
+        dmg: Number(card?.dmg || 0),
+        baseDmg: Number(card?.dmg || 0),
+        bonusDmg: 0,
+        buffed: false
+    };
+    if (!owner || !opponent || !card) return out;
+
+    let bonus = 0;
+    const oppStatuses = opponent.statuses || {};
+    const ownerStatuses = owner.statuses || {};
+
+    bonus += getEnhancerDamagePreview(card);
+
+    if (card.type === 'attack' && !card._modsConsumedThisAction) {
+        bonus += Number(ownerStatuses.nextAtkMod || 0) - Number(ownerStatuses.rogueDebuff || 0);
+    }
+    if (card.type === 'grab' && !card._modsConsumedThisAction) {
+        bonus += Number(ownerStatuses.nextGrabMod || 0);
+    }
+
+    if (owner.class === 'Ice Assassin' && card.type === 'attack' && Number(oppStatuses.freeze || 0) >= 5) bonus += 1;
+    if (owner.class === 'Bahl' && cardHasRequirementToken(card, 'darkness') && Number(oppStatuses.bleed || 0) >= 10) {
+        if (card.type === 'attack') bonus += 1;
+    }
+    if (card.id === 'ability_yaura_1' && Array.isArray(card.enhancers) && card.enhancers.length > 0) bonus += 2;
+    if (card.id === 'yaura_runeblood_crescent' && Array.isArray(card.enhancers) && card.enhancers.length > 0) bonus += card.enhancers.length * 2;
+    if (card.id === 'blood_crimson_blade' && Number(oppStatuses.bleed || 0) >= 3) bonus += 3;
+    if (card.id === 'rogue_execution_window' && Number(opponent.hand?.length || 0) <= 1) bonus += 3;
+    if (card.id === 'ice_assassin_shatter_step' && Number(oppStatuses.freeze || 0) >= 3) bonus += 2;
+    if (card.id === 'ice_djinn_absolute_zero' && Number(oppStatuses.freeze || 0) >= 6) bonus += 4;
+    if (card.id === 'paladin_armor_judgment' && getEffectiveArmor(ownerKey) >= 6) bonus += 3;
+    if (card.id === 'bahl_shadow_blade' && Number(opponent.hand?.length || 0) === 0) bonus += 4;
+    if (card.id === 'darkness_night_blade' && Number(opponent.hand?.length || 0) === 0) bonus += 3;
+    if (card.id === 'ice_brute_shatter_grab' && Number(oppStatuses.freeze || 0) >= 6) bonus += 4;
+    if (card.id === 'brute_venom_crush' && Number(oppStatuses.poison || 0) >= 4) bonus += 3;
+
+    out.bonusDmg = bonus;
+    out.dmg = Math.max(0, out.baseDmg + bonus);
+    out.buffed = bonus !== 0;
+    return out;
+}
+window.getCardPreviewStats = getCardPreviewStats;
+
+function buildDamagePreviewHtml(ownerKey, card, className = 'card-dmg') {
+    const preview = getCardPreviewStats(ownerKey, card);
+    if (!card || preview.dmg <= 0) return '';
+    const buffClass = preview.buffed ? ' card-dmg-buffed' : '';
+    const valueHtml = preview.bonusDmg > 0
+        ? `${preview.baseDmg}<span class="card-dmg-arrow">→</span>${preview.dmg} DMG`
+        : `${preview.dmg} DMG`;
+    return `<div class="${className}${buffClass}">${valueHtml}</div>`;
+}
+window.buildDamagePreviewHtml = buildDamagePreviewHtml;
+
+function getEffectTargetLabel(effect) {
+    const target = String(effect?.target || '').toLowerCase();
+    if (target === 'self' || target === 'source') return 'you';
+    if (target === 'opponent' || target === 'enemy' || target === 'target') return 'opponent';
+    if (target === 'both') return 'both players';
+    return '';
+}
+
+function getTriggerLabel(trigger) {
+    const key = String(trigger || 'on_hit').toLowerCase();
+    if (key === 'on_first_resolve') return 'On first resolve';
+    if (key === 'on_first_hit') return 'On first hit';
+    if (key === 'on_hit') return 'On hit';
+    if (key === 'on_resolve') return 'On resolve';
+    if (key === 'on_expire') return 'On expire';
+    if (key === 'on_block') return 'On block';
+    if (key === 'on_attach') return 'On attach';
+    return 'Effect';
+}
+
+function getEffectSummary(effect) {
+    if (!effect) return '';
+    const type = String(effect?.type || '').toLowerCase();
+    const value = Number(effect?.value || 0);
+    const target = getEffectTargetLabel(effect);
+    if (type === 'draw_cards') return `${target === 'opponent' ? 'Opponent draws' : 'Draw'} ${Math.max(1, value || 1)}`;
+    if (type === 'draw_less') return `${target === 'self' || target === 'you' ? 'You draw' : 'Opponent draws'} ${Math.max(1, value || 1)} less next turn`;
+    if (type === 'bleed') return `${target === 'self' || target === 'you' ? 'Gain' : 'Apply'} BLEED ${Math.max(1, value || 1)}${target === 'opponent' ? '' : target === 'both players' ? ' to both players' : ''}`;
+    if (type === 'freeze') return `${target === 'self' || target === 'you' ? 'Gain' : 'Apply'} FREEZE ${Math.max(1, value || 1)}${target === 'opponent' ? '' : target === 'both players' ? ' to both players' : ''}`;
+    if (type === 'poison') return `${target === 'self' || target === 'you' ? 'Gain' : 'Apply'} POISON ${Math.max(1, value || 1)}${target === 'opponent' ? '' : target === 'both players' ? ' to both players' : ''}`;
+    if (type === 'hypnotized' || type === 'hypnotize') return `${target === 'self' || target === 'you' ? 'Become' : 'Apply'} HYPNOTIZED`;
+    if (type === 'exhausted') return `${target === 'self' || target === 'you' ? 'Become' : 'Apply'} EXHAUSTED`;
+    if (type === 'armor_next_turn') return `Gain +${Math.max(1, value || 1)} Armor next turn`;
+    if (type === 'both_players_lose_life') return `Both players lose ${Math.max(1, value || 1)} life`;
+    if (type === 'both_players_bleed') return `Both players gain BLEED ${Math.max(1, value || 1)}`;
+    if (type === 'grabs_do_not_negate') return 'Grabs do not negate this action';
+    if (type === 'consume_bleed_damage') return `Consume BLEED for +${Math.max(1, value || 1)} DMG per stack`;
+    if (type === 'consume_hypnotized_burst') return `Consume HYPNOTIZED for +${Math.max(1, value || 1)} DMG`;
+    if (type === 'consume_hypnotized_burst_draw') return `Consume HYPNOTIZED for +${Math.max(1, value || 1)} DMG and draw 1`;
+    return '';
+}
+
+function getTriggeredEffectLines(card) {
+    const lines = [];
+    const pushFx = (fx, prefix = '') => {
+        const summary = getEffectSummary(fx);
+        if (!summary) return;
+        const trigger = getTriggerLabel(fx?.trigger);
+        lines.push(`${prefix}${trigger}: ${summary}`);
+    };
+    for (const fx of (Array.isArray(card?.effects) ? card.effects : [])) pushFx(fx);
+    for (const enh of (Array.isArray(card?.enhancers) ? card.enhancers : [])) {
+        const fxList = Array.isArray(enh?.effects)
+            ? enh.effects
+            : Array.isArray(enh?.enhance?.effects)
+                ? enh.enhance.effects
+                : [];
+        for (const fx of fxList) pushFx(fx, `${enh.name}: `);
+    }
+    return lines;
+}
+
+function getCardLiveTextLines(ownerKey, card) {
+    const owner = state?.[ownerKey];
+    const opponentKey = ownerKey === 'player' ? 'ai' : 'player';
+    const opponent = state?.[opponentKey];
+    const lines = [];
+    if (!owner || !opponent || !card) return lines;
+
+    const preview = getCardPreviewStats(ownerKey, card);
+    const baseCost = Number(card?.cost || 0);
+    if (preview.cost !== baseCost) {
+        lines.push(`Cost: ${baseCost}\u2192${preview.cost}`);
+    }
+    if (preview.bonusDmg > 0) {
+        lines.push(`Damage: ${preview.baseDmg}\u2192${preview.dmg}`);
+    }
+
+    const oppStatuses = opponent.statuses || {};
+    const ownerStatuses = owner.statuses || {};
+
+    if (owner.class === 'Yaura' && Array.isArray(card.enhancers) && card.enhancers.length > 0 && (card.type === 'attack' || card.type === 'grab')) {
+        lines.push('On hit: BLEED 1 (Yaura passive)');
+    }
+    if (owner.class === 'Bahl' && cardHasRequirementToken(card, 'darkness') && Number(oppStatuses.bleed || 0) >= 10) {
+        lines.push(card.type === 'attack' ? 'Bahl passive: -1 cost, +1 DMG' : 'Bahl passive: -1 cost');
+    }
+    if (owner.class === 'Ice Assassin' && card.type === 'attack' && Number(oppStatuses.freeze || 0) >= 5) {
+        lines.push('Smithen passive: +1 DMG');
+    }
+    if ((ownerStatuses.nextAtkMod || 0) > 0 && card.type === 'attack') {
+        lines.push(`Next attack bonus: +${ownerStatuses.nextAtkMod} DMG`);
+    }
+    if ((ownerStatuses.nextGrabMod || 0) > 0 && card.type === 'grab') {
+        lines.push(`Next grab bonus: +${ownerStatuses.nextGrabMod} DMG`);
+    }
+
+    for (const line of getTriggeredEffectLines(card)) {
+        lines.push(line);
+    }
+
+    const cue = getCardCueState(ownerKey, card);
+    for (const reason of (cue.reasons || [])) {
+        if (!lines.includes(reason)) lines.push(reason);
+    }
+    return [...new Set(lines)];
+}
+window.getCardLiveTextLines = getCardLiveTextLines;
+
+function buildTimelineHoverTooltipHtml(ownerKey, card) {
+    if (!card) return '';
+    const lines = getCardLiveTextLines(ownerKey, card);
+    if (!lines.length) return '';
+    return `
+        <div class="timeline-hover-tooltip">
+            <div class="timeline-hover-title">Live Changes</div>
+            ${lines.map(line => `<div class="timeline-hover-line">${formatKeywords(line)}</div>`).join('')}
+        </div>
+    `;
+}
+window.buildTimelineHoverTooltipHtml = buildTimelineHoverTooltipHtml;
 
 function getActionTypeLabel(type) {
     const key = String(type || 'utility').toLowerCase();
@@ -296,6 +544,22 @@ function getActionTypeLabel(type) {
     return key.toUpperCase();
 }
 window.getActionTypeLabel = getActionTypeLabel;
+
+function getEnhancerTargetLabels(card) {
+    if (!card || card.type !== 'enhancer') return [];
+    const targets = Array.isArray(card?.enhance?.targets)
+        ? card.enhance.targets.map(t => String(t || '').toLowerCase()).filter(Boolean)
+        : [];
+    return [...new Set(targets)].map((t) => getActionTypeLabel(t));
+}
+window.getEnhancerTargetLabels = getEnhancerTargetLabels;
+
+function buildEnhancerTargetHtml(card) {
+    const labels = getEnhancerTargetLabels(card);
+    if (!labels.length) return '';
+    return `<div class="enhancer-targets">Attach to: ${labels.join(' / ')}</div>`;
+}
+window.buildEnhancerTargetHtml = buildEnhancerTargetHtml;
 
 function enhancerCanTarget(enhancerCard, targetCard) {
     if (!enhancerCard || enhancerCard.type !== 'enhancer') return false;
@@ -866,9 +1130,16 @@ function renderDeckPickers(){
 window.renderDeckPickers = renderDeckPickers;
 
 
-function computeFightRosterCols(n){
-    // Keep roster at 3 rows to avoid an overly wide strip.
-    return Math.max(3, Math.ceil((n || 1) / 3));
+function computeFightRosterRows(n){
+    const total = Math.max(1, Number(n) || 1);
+    const rowCount = Math.min(4, total);
+    const base = Math.floor(total / rowCount);
+    const extra = total % rowCount;
+    const rows = [];
+    for (let i = 0; i < rowCount; i++) {
+        rows.push(base + (i < extra ? 1 : 0));
+    }
+    return rows.filter(v => v > 0);
 }
 
 function buildFightRoster(){
@@ -877,31 +1148,36 @@ function buildFightRoster(){
 
     el.innerHTML = '';
     const chars = getAllCharacters();
-    const cols = computeFightRosterCols(chars.length);
-    el.style.setProperty('--roster-cols', String(cols));
+    const rowSizes = computeFightRosterRows(chars.length);
+    let cursor = 0;
 
-    chars.forEach((name, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'char-btn';
-        btn.style.backgroundImage = `url('${charImages[name]}')`;
-        btn.dataset.charKey = name;
-        btn.onclick = () => selectFightChar(name, btn);
+    rowSizes.forEach((size, rowIndex) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'fight-roster-row';
+        rowEl.dataset.row = String(rowIndex);
 
-        const row = Math.floor(i / cols);
-        btn.dataset.row = String(row);
-        btn.dataset.stagger = (row % 2 === 1) ? '1' : '0';
+        chars.slice(cursor, cursor + size).forEach((name) => {
+            const btn = document.createElement('button');
+            btn.className = 'char-btn';
+            btn.style.backgroundImage = `url('${charImages[name]}')`;
+            btn.dataset.charKey = name;
+            btn.onclick = () => selectFightChar(name, btn);
 
-        const span = document.createElement('span');
-        span.innerText = getCharacterLabel(name);
-        btn.appendChild(span);
+            const span = document.createElement('span');
+            span.innerText = getCharacterLabel(name);
+            btn.appendChild(span);
 
-        const t = document.createElement('div');
-        t.className = 'pitch-tooltip';
-        const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
-        t.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(name)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
-        btn.appendChild(t);
+            const t = document.createElement('div');
+            t.className = 'pitch-tooltip';
+            const premise = classData?.[name]?.premise || classData?.[name]?.passiveDesc || '';
+            t.innerHTML = `<b style="color: #f1c40f;">The ${getCharacterLabel(name)}</b><hr style="border-color:#555;margin:4px 0;">${premise}`;
+            btn.appendChild(t);
 
-        el.appendChild(btn);
+            rowEl.appendChild(btn);
+        });
+
+        cursor += size;
+        el.appendChild(rowEl);
     });
 }
 
@@ -1046,7 +1322,7 @@ function syncSelectionAcrossViews(){
 function markFightRosterSelections(){
     const el = document.getElementById('fight-roster');
     if(!el) return;
-    for(const btn of el.children){
+    for(const btn of el.querySelectorAll('.char-btn')){
         btn.classList.remove('selected','ai-selected','locked-player');
         const key = btn.dataset.charKey || btn.querySelector('span')?.innerText?.trim();
         if(key === selectedPlayer){
@@ -1320,7 +1596,7 @@ function startGame(opts = {}) {
         }
     }
 
-    music.select.pause(); music.select.currentTime = 0; music.battle.play().catch(e=>console.log("Battle BGM blocked"));
+    music.select.pause(); music.select.currentTime = 0; playRandomBattleMusic();
     document.getElementById('char-select-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex';
     hideLadderTransition();
     hideLadderIntro();
@@ -1374,7 +1650,7 @@ function startGame(opts = {}) {
 
 function backToMenu() {
     resetLadderRun();
-    music.battle.pause(); music.battle.currentTime = 0; music.select.play().catch(e=>console.log("Select BGM blocked"));
+    stopBattleMusic(); music.select.play().catch(e=>console.log("Select BGM blocked"));
     document.getElementById('game-screen').style.display = 'none'; document.getElementById('char-select-screen').style.display = 'flex';
 }
 
@@ -1535,7 +1811,8 @@ function renderAbilities() {
         for(let i=1; i<=2; i++) {
             const ability = getAbilityCard(state[char].class, i);
             if (!ability) continue;
-            const costDisplay = (char === 'player') ? getMoveCost('player', ability) : (ability.cost || 0);
+            const preview = (typeof window.getCardPreviewStats === 'function') ? window.getCardPreviewStats(char, ability) : { cost: (char === 'player') ? getMoveCost('player', ability) : (ability.cost || 0), dmg: ability.dmg || 0, bonusDmg: 0, buffed: false };
+            const costDisplay = preview.cost;
             const typeLabel = (typeof window.getActionTypeLabel === 'function')
                 ? window.getActionTypeLabel(ability.type || 'utility')
                 : String(ability.type || 'utility').toUpperCase();
@@ -1549,15 +1826,15 @@ function renderAbilities() {
                         <b>${ability.name}</b>
                     </button>
                     <div class="ability-tooltip ${char}-tooltip">
-                        <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
-                        Type: <b style="color:#ffd166;">${typeLabel}</b><br>
-                        Cost: ${costDisplay} ST | Time: ${ability.moments} MOM<br>
-                        ${reqHtml}
-                        ${ability.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${ability.dmg}</span><br>` : ''}
-                        ${cueHtml}
-                        <i>${formatKeywords(ability.desc)}</i>
-                    </div>
-                </div>
+                          <b style="color: #f1c40f;">${ability.name}</b><br><hr style="border-color: #555; margin: 4px 0;">
+                          Type: <b style="color:#ffd166;">${typeLabel}</b><br>
+                          Cost: ${costDisplay} ST | Time: ${ability.moments} MOM<br>
+                          ${reqHtml}
+                          ${preview.dmg > 0 ? `<span style="color:#ffcccc;">DMG: ${preview.bonusDmg > 0 ? `${preview.baseDmg}<b style="color:#ffd54a;">→${preview.dmg}</b>` : `${preview.dmg}`}</span><br>` : ''}
+                          ${cueHtml}
+                          <i>${formatKeywords(ability.desc)}</i>
+                      </div>
+                  </div>
             `;
         }
 

@@ -170,6 +170,13 @@
           card.enhancedTargetId = targetCard.uniqueId || targetCard.id || null;
           targetCard.enhancers.push(card);
           s.player.hand.splice(handIndex, 1);
+          if (typeof window.runSingleEnhancerTriggeredEffects === "function") {
+            window.runSingleEnhancerTriggeredEffects(card, 'on_attach', 'player', 'ai', {
+              attached: true,
+              attachedToId: targetCard.uniqueId || targetCard.id || null,
+              attachedToType: targetCard.type || null
+            });
+          }
 
           return {
             ok: true,

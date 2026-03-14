@@ -188,8 +188,12 @@
         "copies": 2
       },
       {
+        "cardId": "blood_crimson_coating",
+        "copies": 1
+      },
+      {
         "cardId": "vamp_bloodletter_strike",
-        "copies": 3
+        "copies": 2
       },
         {
           "cardId": "vamp_exsanguinate",
@@ -220,12 +224,16 @@
         "copies": 2
       },
       {
+        "cardId": "blood_crimson_coating",
+        "copies": 2
+      },
+      {
         "cardId": "paladin_shield_bash",
         "copies": 3
       },
       {
         "cardId": "paladin_pummel",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "vamp_vampiric_bite",
@@ -233,7 +241,7 @@
       },
       {
         "cardId": "vampire_blood_sip",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "vamp_crimson_grapple",
@@ -242,6 +250,66 @@
       {
         "cardId": "vamp_artery_rip",
         "copies": 2
+      }
+    ]
+  },
+  "yaura_base": {
+    "id": "yaura_base",
+    "name": "Yaura - Runeblood Arsenal",
+    "character": "Yaura",
+    "description": "A warrior-blood core of clean strikes and grabs, sharpened by sorcerer enhancers that turn disciplined offense into bleeding spell-weapon bursts.",
+    "cards": [
+      {
+        "cardId": "blood_crimson_blade",
+        "copies": 3
+      },
+      {
+        "cardId": "bleed_open_wound",
+        "copies": 2
+      },
+      {
+        "cardId": "double_slice",
+        "copies": 1
+      },
+      {
+        "cardId": "vamp_bloodletter_strike",
+        "copies": 1
+      },
+      {
+        "cardId": "yaura_runeblood_crescent",
+        "copies": 2
+      },
+      {
+        "cardId": "blood_crimson_coating",
+        "copies": 2
+      },
+      {
+        "cardId": "paladin_standard_strike",
+        "copies": 3
+      },
+      {
+        "cardId": "paladin_pummel",
+        "copies": 3
+      },
+      {
+        "cardId": "paladin_shield_bash",
+        "copies": 3
+      },
+      {
+        "cardId": "palea_arcane_amp",
+        "copies": 1
+      },
+      {
+        "cardId": "sorcerer_spellweave",
+        "copies": 1
+      },
+      {
+        "cardId": "yaura_blood_sigil",
+        "copies": 1
+      },
+      {
+        "cardId": "crimson_armour",
+        "copies": 1
       }
     ]
   },
@@ -600,6 +668,10 @@
         "copies": 2
       },
       {
+        "cardId": "blood_crimson_coating",
+        "copies": 1
+      },
+      {
         "cardId": "bahl_shadow_blade",
         "copies": 2
       },
@@ -613,7 +685,7 @@
       },
       {
         "cardId": "darkness_destroy_spirit",
-        "copies": 2
+        "copies": 1
       },
       {
         "cardId": "sorcerer_innate_talent",

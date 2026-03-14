@@ -52,6 +52,9 @@
   function normalizeTriggerName(t){
     const s = String(t || '').trim().toLowerCase();
     if (s === 'upon hit' || s === 'on hit' || s === 'hit' || s === 'on_hit') return 'on_hit';
+    if (s === 'on attach' || s === 'upon attach' || s === 'attach' || s === 'on_attach') return 'on_attach';
+    if (s === 'on first hit' || s === 'upon first hit' || s === 'first hit' || s === 'on_first_hit') return 'on_first_hit';
+    if (s === 'on first resolve' || s === 'upon first resolve' || s === 'first resolve' || s === 'on_first_resolve') return 'on_first_resolve';
     if (s === 'upon block' || s === 'on block' || s === 'block' || s === 'on_block') return 'on_block';
     if (s === 'upon parry' || s === 'on parry' || s === 'parry' || s === 'on_parry') return 'on_parry';
     if (s === 'turn end' || s === 'on turn end' || s === 'on_turn_end') return 'on_turn_end';
@@ -111,7 +114,7 @@
   }
 
   function triggerLabel(key){
-    const map = { on_hit:'On Hit', on_block:'On Block', on_parry:'On Parry', on_blocked:'On Blocked', on_parried:'On Parried', on_resolve:'On Resolve', on_expire:'On Expire', on_turn_end:'On Turn End' };
+    const map = { on_hit:'On Hit', on_attach:'On Attach', on_first_hit:'On First Hit', on_first_resolve:'On First Resolve', on_block:'On Block', on_parry:'On Parry', on_blocked:'On Blocked', on_parried:'On Parried', on_resolve:'On Resolve', on_expire:'On Expire', on_turn_end:'On Turn End' };
     return map[key] || key;
   }
 

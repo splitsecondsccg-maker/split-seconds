@@ -106,7 +106,7 @@
     "cost": 1,
     "moments": 0,
     "dmg": 0,
-    "desc": "Enhancer (Attack only). On hit: opponent draws 1 less next turn, and you draw 1.",
+    "desc": "Enhancer (Attack only). On first hit: opponent draws 1 less next turn, and you draw 1.",
     "enhance": {
       "dmg": 0,
       "targets": [
@@ -114,12 +114,12 @@
       ],
       "effects": [
         {
-          "trigger": "on_hit",
+          "trigger": "on_first_hit",
           "type": "draw_less",
           "value": 1
         },
         {
-          "trigger": "on_hit",
+          "trigger": "on_first_hit",
           "type": "draw_cards",
           "value": 1
         }
@@ -564,17 +564,17 @@
     "id": "spiders_swarm",
     "name": "Spiders Swarm",
     "type": "attack",
-    "cost": 4,
+    "cost": 5,
     "moments": 4,
     "dmg": 4,
     "perMomentDmg": 1,
     "resolveEachMoment": true,
-    "desc": "Resolves each occupied moment: deal 1 DMG. On hit: apply POISON 3.",
+    "desc": "Resolves each occupied moment: deal 1 DMG. On hit: apply POISON 2.",
     "effects": [
       {
         "trigger": "on_hit",
         "type": "poison",
-        "value": 3
+        "value": 2
       }
     ],
     "requirements": {
@@ -932,38 +932,97 @@
     "cost": 1,
     "moments": 0,
     "dmg": 0,
-    "desc": "Enhancer: attached action gains +2 DMG.",
+    "desc": "Enhancer: attached action gains +1 DMG. On first resolve: draw 1.",
     "enhance": {
-      "dmg": 2,
+      "dmg": 1,
       "targets": [
+        "buff",
         "attack",
         "grab"
+      ],
+      "effects": [
+        {
+          "trigger": "on_first_resolve",
+          "type": "draw_cards",
+          "target": "self",
+          "value": 1
+        }
       ]
     },
     "requirements": {
-      "all": [
-        "sorcerer"
+      "any": [
+        {
+          "all": [
+            "sorcerer"
+          ]
+        },
+        {
+          "all": [
+            "wizard"
+          ]
+        }
       ]
     }
   },
   "palea_fae_edge": {
     "id": "palea_fae_edge",
-    "name": "Fae Edge",
+    "name": "Fae Portal",
     "type": "enhancer",
     "cost": 0,
     "moments": 0,
     "dmg": 0,
-    "desc": "Enhancer: attached action gains +1 DMG.",
+    "desc": "Enhancer (Attack only). +3 DMG if the opponent is blocking. On first resolve: draw 1.",
     "enhance": {
-      "dmg": 1,
+      "dmg": 0,
       "targets": [
-        "attack",
-        "grab"
+        "attack"
+      ],
+      "effects": [
+        {
+          "trigger": "on_first_resolve",
+          "type": "draw_cards",
+          "target": "self",
+          "value": 1
+        }
       ]
     },
     "requirements": {
       "all": [
         "fae"
+      ]
+    }
+  },
+  "blood_crimson_coating": {
+    "id": "blood_crimson_coating",
+    "name": "Crimson Coating",
+    "type": "enhancer",
+    "cost": 1,
+    "moments": 0,
+    "dmg": 0,
+    "desc": "Enhancer (Attack only). On first resolve: draw 1. On hit: BLEED 2.",
+    "enhance": {
+      "dmg": 0,
+      "targets": [
+        "attack"
+      ],
+      "effects": [
+        {
+          "trigger": "on_first_resolve",
+          "type": "draw_cards",
+          "target": "self",
+          "value": 1
+        },
+        {
+          "trigger": "on_hit",
+          "type": "bleed",
+          "target": "opponent",
+          "value": 2
+        }
+      ]
+    },
+    "requirements": {
+      "all": [
+        "blood"
       ]
     }
   },
@@ -1234,6 +1293,18 @@
     "requirements": {
       "all": [
         "blood"
+      ],
+      "any": [
+        {
+          "all": [
+            "warrior"
+          ]
+        },
+        {
+          "all": [
+            "sorcerer"
+          ]
+        }
       ]
     }
   },
@@ -1241,7 +1312,7 @@
     "id": "double_slice",
     "name": "Double Slice",
     "type": "attack",
-    "cost": 2,
+    "cost": 3,
     "moments": 2,
     "dmg": 2,
     "perMomentDmg": 1,
@@ -1257,6 +1328,18 @@
     "requirements": {
       "all": [
         "blood"
+      ],
+      "any": [
+        {
+          "all": [
+            "warrior"
+          ]
+        },
+        {
+          "all": [
+            "sorcerer"
+          ]
+        }
       ]
     }
   },
@@ -1330,16 +1413,22 @@
     "cost": 1,
     "moments": 0,
     "dmg": 0,
-    "desc": "Enhancer: +1 DMG. On hit: draw 1.",
+    "desc": "Enhancer: on first resolve, draw 1. On first hit, draw 1.",
     "enhance": {
-      "dmg": 1,
+      "dmg": 0,
       "targets": [
         "attack",
         "grab"
       ],
       "effects": [
         {
-          "trigger": "on_hit",
+          "trigger": "on_first_resolve",
+          "type": "draw_cards",
+          "target": "self",
+          "value": 1
+        },
+        {
+          "trigger": "on_first_hit",
           "type": "draw_cards",
           "value": 1
         }
@@ -1648,7 +1737,14 @@
     "cost": 0,
     "moments": 3,
     "dmg": 3,
-    "desc": "Massive free strike",
+    "desc": "3 DMG. On hit: POISON 2.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "poison",
+        "value": 2
+      }
+    ],
     "isBasic": true,
     "isAbility": true
   },
@@ -1750,6 +1846,37 @@
         "type": "bleed",
         "value": 1,
         "target": "self"
+      }
+    ],
+    "isBasic": true,
+    "isAbility": true
+  },
+  "ability_yaura_1": {
+    "id": "ability_yaura_1",
+    "name": "Runic Slash",
+    "type": "attack",
+    "cost": 2,
+    "moments": 2,
+    "dmg": 4,
+    "desc": "4 DMG. If enhanced: +2 DMG.",
+    "specialNotes": "Conditional bonus: +2 damage if this action has an enhancer attached.",
+    "isBasic": true,
+    "isAbility": true
+  },
+  "ability_yaura_2": {
+    "id": "ability_yaura_2",
+    "name": "Hemoguard",
+    "type": "block",
+    "cost": 1,
+    "moments": 2,
+    "dmg": 0,
+    "currentBlock": 6,
+    "desc": "Blocks up to 6 total DMG over 2 moments. On block: BLEED 1.",
+    "effects": [
+      {
+        "trigger": "on_block",
+        "type": "bleed",
+        "value": 1
       }
     ],
     "isBasic": true,
@@ -2078,6 +2205,81 @@
     "requirements": {
       "all": [
         "blood"
+      ],
+      "any": [
+        {
+          "all": [
+            "assassin"
+          ]
+        },
+        {
+          "all": [
+            "warrior"
+          ]
+        },
+        {
+          "all": [
+            "sorcerer"
+          ]
+        }
+      ]
+    }
+  },
+  "yaura_blood_sigil": {
+    "id": "yaura_blood_sigil",
+    "name": "Blood Sigil",
+    "type": "enhancer",
+    "cost": 1,
+    "moments": 0,
+    "dmg": 0,
+    "desc": "Enhancer (Attack/Grab/Block). On hit or on block: BLEED 1.",
+    "enhance": {
+      "targets": [
+        "attack",
+        "grab",
+        "block"
+      ],
+      "effects": [
+        {
+          "trigger": "on_hit",
+          "type": "bleed",
+          "value": 1
+        },
+        {
+          "trigger": "on_block",
+          "type": "bleed",
+          "value": 1
+        }
+      ]
+    },
+    "requirements": {
+      "all": [
+        "blood",
+        "sorcerer"
+      ]
+    }
+  },
+  "yaura_runeblood_crescent": {
+    "id": "yaura_runeblood_crescent",
+    "name": "Runeblood Crescent",
+    "type": "attack",
+    "cost": 4,
+    "moments": 3,
+    "dmg": 5,
+    "desc": "5 DMG. +2 DMG for each enhancer on this action. On hit: BLEED 2.",
+    "effects": [
+      {
+        "trigger": "on_hit",
+        "type": "bleed",
+        "value": 2
+      }
+    ],
+    "specialNotes": "Conditional bonus: +2 damage for each enhancer attached to this action.",
+    "requirements": {
+      "all": [
+        "blood",
+        "sorcerer",
+        "warrior"
       ]
     }
   },
@@ -2462,7 +2664,7 @@
     "id": "ice_fury",
     "name": "Ice Fury",
     "type": "attack",
-    "cost": 4,
+    "cost": 5,
     "moments": 4,
     "dmg": 8,
     "perMomentDmg": 2,

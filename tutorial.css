@@ -5,7 +5,7 @@
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.75);
+    background: transparent;
     z-index: 9000;
     display: none; /* Hidden by default */
     pointer-events: none; /* Lets clicks pass through to the spotlighted items */
@@ -43,6 +43,12 @@ body.tutorial-no-next #tutorial-dialogue {
     font-size: 1.2em;
     margin-bottom: 20px;
     line-height: 1.4;
+}
+
+.tutorial-inline-multi {
+    color: #9ef0ea;
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(88, 212, 212, 0.45);
 }
 
 #tutorial-next-btn {
@@ -90,5 +96,14 @@ body.tutorial-dimmed::before {
     position: relative;
     z-index: 8001 !important; 
     pointer-events: auto !important;
+    opacity: 1 !important;
+    filter: none !important;
+    isolation: isolate;
     box-shadow: 0 0 15px 5px rgba(241, 196, 15, 0.8) !important; /* Gold glow */
 }
+
+body.tutorial-active .tutorial-spotlight {
+    background-color: rgba(12, 18, 38, 0.35);
+    border-radius: 12px;
+}
+

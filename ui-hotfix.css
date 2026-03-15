@@ -289,21 +289,21 @@
   }
 
   #game-screen #player-hand {
-    right: -16px !important;
-    width: min(560px, 42vw) !important;
-    height: 156px !important;
+    right: -28px !important;
+    width: min(500px, 38vw) !important;
+    height: 146px !important;
   }
 
   #game-screen #exert-controls {
     right: 8px !important;
-    bottom: 170px !important;
-    width: min(500px, 38vw) !important;
+    bottom: 158px !important;
+    width: min(460px, 34vw) !important;
     padding: 12px !important;
   }
 
   #game-screen .net-wait-indicator {
     right: 16px !important;
-    bottom: 142px !important;
+    bottom: 130px !important;
   }
 }
 
@@ -1489,5 +1489,176 @@
     position: fixed !important;
     top: 8px !important;
     left: 8px !important;
+  }
+}
+
+/* Phone landscape: keep the same UI, but compress into a true small-screen shell */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 960px) {
+  #game-screen {
+    padding: 6px 8px 8px 8px !important;
+  }
+
+  #game-screen .log {
+    position: fixed !important;
+    top: 6px !important;
+    right: 6px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    padding: 4px !important;
+    overflow: hidden !important;
+    z-index: 260 !important;
+  }
+
+  #game-screen .log .log-header {
+    margin: 0 !important;
+    justify-content: center !important;
+  }
+
+  #game-screen .log .log-header strong {
+    display: none !important;
+  }
+
+  #game-screen #battle-log-toggle {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    line-height: 28px !important;
+  }
+
+  #game-screen .top-bar,
+  #game-screen #timeline-and-lock,
+  #game-screen .bottom-bar {
+    width: min(96vw, 920px) !important;
+    max-width: min(96vw, 920px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: none !important;
+  }
+
+  #game-screen #timeline-and-lock {
+    width: min(96vw, 920px) !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    column-gap: 10px !important;
+    margin: 2px auto 6px auto !important;
+  }
+
+  #game-screen .timeline-stack {
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  #game-screen .timeline {
+    height: 74px !important;
+  }
+
+  #game-screen .slot {
+    font-size: 18px !important;
+  }
+
+  #game-screen #btn-start-resolution {
+    min-width: 98px !important;
+    min-height: 56px !important;
+    font-size: 18px !important;
+    padding: 8px 10px !important;
+  }
+
+  #game-screen #ai-stats,
+  #game-screen #player-stats {
+    width: min(96vw, 920px) !important;
+    margin: 0 auto !important;
+  }
+
+  #game-screen .battle-hero {
+    grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #game-screen .hero-portrait {
+    width: 110px !important;
+    height: 110px !important;
+  }
+
+  #game-screen .hero-name {
+    font-size: 14px !important;
+  }
+
+  #game-screen .hero-hand-count {
+    font-size: 11px !important;
+  }
+
+  #game-screen .hero-panel-right {
+    padding-left: 0 !important;
+    min-width: 0 !important;
+  }
+
+  #game-screen .ability-orbit {
+    left: calc(100% + 2px) !important;
+    gap: 4px !important;
+  }
+
+  #game-screen .ability-orbit .ability-btn,
+  #game-screen .circle-action-btn {
+    width: 54px !important;
+    height: 54px !important;
+    font-size: 9px !important;
+    line-height: 1.02 !important;
+    padding: 4px !important;
+  }
+
+  #game-screen .bar-container {
+    width: 38px !important;
+    height: 76px !important;
+  }
+
+  #game-screen .bar-label,
+  #game-screen #ai-hp-label,
+  #game-screen #ai-stam-label,
+  #game-screen #p-hp-label,
+  #game-screen #p-stam-label {
+    font-size: 11px !important;
+  }
+
+  #game-screen .bottom-bar {
+    position: relative !important;
+    display: block !important;
+    min-height: 228px !important;
+    padding-bottom: 138px !important;
+  }
+
+  #game-screen #player-hand {
+    position: absolute !important;
+    right: 0 !important;
+    bottom: -2px !important;
+    width: min(56vw, 420px) !important;
+    height: 126px !important;
+    margin: 0 !important;
+  }
+
+  #game-screen #exert-controls {
+    position: absolute !important;
+    right: 0 !important;
+    bottom: 132px !important;
+    width: min(60vw, 430px) !important;
+    margin: 0 !important;
+    padding: 10px !important;
+  }
+
+  #game-screen .net-wait-indicator {
+    position: absolute !important;
+    right: 0 !important;
+    bottom: 106px !important;
+    max-width: min(60vw, 430px) !important;
+  }
+
+  #game-screen #action-controls {
+    position: fixed !important;
+    top: 6px !important;
+    left: 6px !important;
   }
 }
